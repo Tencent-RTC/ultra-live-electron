@@ -1,0 +1,81 @@
+{
+	"abilities": {
+		"opt.program_cache": {
+			"default": true
+		},
+		"opt.decoder_cache": {
+			"default": true
+		},
+		"opt.fb_pool_shrink": {
+			"default": true
+		},
+		"opt.fast_file_read": {
+			"default": true
+		},
+		"opt.async_report": {
+			"default": true
+		},
+		"opt.gpu_read_pixel": {
+			"default": true
+		},
+		"opt.ios_preload_image": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 499
+			}
+		},
+		"opt.sticker_perf_opt": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 499
+			}
+		},
+		"opt.pag_async_release": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 499
+			}
+		},
+		"opt.audio_cache": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 799
+			}
+		},
+		"opt.pag_merge_render": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 949
+			}
+		},
+		"bugfix.ignore_time_infinity": {
+			"default": true
+		},
+		"opt.img_auto_crop": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 949
+			}
+		},
+		"opt.video_lag": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 999
+			}
+		}
+	}
+}
