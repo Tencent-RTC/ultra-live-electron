@@ -1,0 +1,2 @@
+"predetect" = "检测_人体检测_bcdc84fec81e11ebaef37e49d327239e.opt.tnnp.wmc"
+"keypoint" = "0422_liu"
