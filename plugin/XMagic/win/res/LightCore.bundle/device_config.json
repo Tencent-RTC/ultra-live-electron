@@ -1,0 +1,389 @@
+{
+	"abilities": {
+		"opt.program_cache": {
+			"default": true
+		},
+		"opt.decoder_cache": {
+			"default": true
+		},
+		"opt.fb_pool_shrink": {
+			"default": true
+		},
+		"opt.fast_file_read": {
+			"default": true
+		},
+		"opt.async_report": {
+			"default": true
+		},
+		"opt.image_read_native": {
+			"default": true
+		},
+		"opt.gpu_read_pixel": {
+			"default": true
+		},
+		"opt.sticker_perf_opt": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 499
+			}
+		},
+		"opt.pag_async_release": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 499
+			}
+		},
+		"opt.multi_process_fence": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 499
+			}
+		},
+		"opt.audio_cache": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 799
+			}
+		},
+		"opt.pag_merge_render": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 949
+			}
+		},
+		"bugfix.ignore_time_infinity": {
+			"default": true
+		},
+		"opt.img_auto_crop": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 949
+			}
+		},
+		"opt.video_lag": {
+			"default": false,
+			"exception": {
+				"type": "thousandth",
+				"op": ">=",
+				"value": 999
+			}
+		}
+	},
+	"gpuModels": [
+		{
+			"gpu": "Mali-T860",
+			"filamentSupport": false,
+			"filamentWhiteList": [
+				"OPPO XXX"
+			]
+		},
+		{
+			"gpu": "Mali-T720",
+			"filamentSupport": false
+		},
+		{
+			"gpu": "GE8320",
+			"filamentSupport": false
+		},
+		{
+			"gpu": "Adreno (TM) 308",
+			"filamentSupport": false
+		},
+		{
+			"gpu": "Adreno (TM) 505",
+			"ace3dFlushSupport": false
+		}
+	],
+
+	"deviceModels": [
+		{
+			"device": "VIVO_V1732T",
+			"openclSupport": false
+		},
+		{
+			"device": "VIVO_vivo_Y71",
+			"openclSupport": false,
+			"shareGLContextError": true
+		},
+		{
+			"device": "VIVO_vivo_Y51A",
+			"openclSupport": false,
+			"shareGLContextError": true
+		},
+		{
+			"device": "VIVO_vivo_Y66i",
+			"shareGLContextError": true
+		},
+		{
+			"device": "VIVO_vivo_X9Plus",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "VIVO_vivo_X9s_Plus",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "VIVO_vivo_X9L",
+			"shareGLContextError": true
+		},
+		{
+			"device": "VIVO_vivo_V3Max_A",
+			"openclSupport": false,
+			"shareGLContextError": true,
+			"aiSupport": false
+		},
+		{
+			"device": "VIVO_vivo_Y79",
+			"kapuSupport": false,
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "GOOGLE_Pixel_4",
+			"GLExtensionBlackList": [
+				"glext.GL_EXT_shader_framebuffer_fetch"
+			]
+		},
+		{
+			"device": "VIVO_vivo_Xplay5A",
+			"GLExtensionBlackList": [
+				"glext.GL_EXT_shader_framebuffer_fetch"
+			]
+		},
+		{
+			"device": "OPPO_OPPO_A33",
+			"openclSupport": false,
+			"shareGLContextError": true,
+			"aiSupport": false
+		},
+		{
+			"device": "OPPO_OPPO_R17",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "OPPO_OPPO_R9s_Plus",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "OPPO_OPPO_R9_Plusm_A",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "OPPO_OPPO_R9_Plustm_A",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "HUAWEI_CAZ-AL10",
+			"renderBlackList": [
+				"render.fxaa"
+			]
+		},
+		{
+			"device": "HUAWEI_VKY-L09",
+			"kapuSupport": false
+		},
+		{
+			"device": "MOA-AL00",
+			"kapuSupport": false
+		},
+		{
+			"device": "HUAWEI_BND-AL10",
+			"kapuSupport": false
+		},
+		{
+			"device": "HUAWEI_BND-AL00",
+			"kapuSupport": false
+		},
+		{
+			"device": "HUAWEI_MAR-AL00",
+			"ace3dFlushSupport": false
+		},
+		{
+			"device": "HUAWEI_EML-AL00",
+			"ace3dFlushSupport": false
+		},
+		{
+			"device": "VIVO_V2111A",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "VIVO_V2106A",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "VIVO_V2054A",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "XIAOMI_M2011K2C",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "XIAOMI_M2102K1AC",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "XIAOMI_M2102K1C",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "XIAOMI_M2012K11C",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PEHM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDAM10",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDPM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PCLM50",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PEHT00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PEGM10",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDPT00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDNM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDSM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PEGT00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PCRM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PEXM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PEAM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PCLM10",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PBAM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PBAT00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PBFM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDYM20",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PBEM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PDVM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "OPPO_PCAM00",
+			"hairSegPreLoadSupport": false
+		},
+		{
+			"device": "XIAOMI_MI_9",
+			"enableImuSmooth": true
+		},
+		{
+			"device": "HUAWEI_AKA-AL10",
+			"enableImuSmooth": true
+		},
+		{
+			"device": "HUAWEI_HRY-AL00a",
+			"enableImuSmooth": true
+		},
+		{
+			"device": "VIVO_Y66i_A",
+			"fenceSupport": false
+		},
+		{
+			"device": "VIVO_Y66i",
+			"fenceSupport": false
+		},
+		{
+			"device": "VIVO_Y79",
+			"fenceSupport": false
+		},
+		{
+			"device": "OPPO_R11",
+			"fenceSupport": false
+		}
+	],
+
+	"sysVersionModels":[
+		{
+			"version": "EmotionUI_10.0",
+			"openclSupport": false
+		}
+	],
+
+	"androidVersionModels":[
+		{
+			"androidVersion": "6.0",
+			"filamentSupport": false
+		},
+		{
+			"androidVersion": "6.0.1",
+			"filamentSupport": false
+		}
+	]
+}
