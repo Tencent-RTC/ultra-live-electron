@@ -129,4 +129,6 @@ export default {
   'CPU:': 'CPU:',
   'RAM:': '内存:',
   'Frame Rate:': '帧率:',
+  'init RoomEngine and State failed': '初始化 RoomEngine 和应用状态失败',
+  'Please configure the basic information': '请在 `basic-info-config.js` 文件中配置基本信息',
 }

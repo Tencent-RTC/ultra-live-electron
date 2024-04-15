@@ -25,13 +25,12 @@ async function init(userInfo: Record<string, any>) {
       avatarUrl,
     });
   } catch (error) {
-    logger.error(`${logPrefix}onMounted init RoomEngine and State error:`, error);
+    logger.error(`${logPrefix}onMounted init RoomEngine and State failed:`, error);
     TUIMessageBox({
       title: t('Note'),
-      message: t('init RoomEngine and State error'),
+      message: t('init RoomEngine and State failed'),
       confirmButtonText: t('Sure'),
     });
-    return;
   }
 }
 
@@ -39,7 +38,12 @@ async function handleInit() {
   const currentUserInfo = await getBasicInfo();
   if (currentUserInfo) {
     init(currentUserInfo);
-
+  } else {
+    TUIMessageBox({
+      title: t('Note'),
+      message: t('Please configure the basic information'),
+      confirmButtonText: t('Sure'),
+    });
   }
 }
 handleInit();

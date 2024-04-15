@@ -129,4 +129,6 @@ export default {
   'CPU:': 'CPU:',
   'RAM:': 'RAM:',
   'Frame Rate:': 'Frame Rate:',
+  'init RoomEngine and State failed': 'init RoomEngine and State failed',
+  'Please configure the basic information': 'Please configure the basic information in `basic-info-config.js`',
 }

@@ -1,5 +1,5 @@
-import { getAppPath } from "./envUtils";
-import i18n from "../locales";
+import { getAppPath } from './envUtils';
+import i18n from '../locales';
 import NoBeautyIcon from '../common/icons/NoBeautyIcon.vue';
 import DermabrasionBeautyIcon from '../common/icons/DermabrasionBeautyIcon.vue';
 import WhitenBeautyIcon from '../common/icons/WhitenBeautyIcon.vue';
