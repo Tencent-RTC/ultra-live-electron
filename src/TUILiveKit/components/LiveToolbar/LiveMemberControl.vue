@@ -1,8 +1,15 @@
 <template>
     <div class="tui-member-control">
-        <div class="tui-member-control-container" v-for="(item, index) in controlList" :key="index" @click="item.fun()">
+        <div 
+          class="tui-member-control-container"
+          :class="{'danger': index === controlList.length - 1}"
+          v-for="(item, index) in controlList"
+          :key="index" 
+          @click="item.fun()"
+          
+        >
             <svg-icon :icon="item.icon"></svg-icon>
-            <span :class="index === controlList.length - 1 ? 'tui-member-control-options-last' : 'tui-member-control-options'" >{{item.text}}</span>
+            <span class="tui-member-control-options" >{{item.text}}</span>
         </div>
     </div>
 </template>
@@ -40,16 +47,6 @@ const controlList = ref([
   //   text: t('View Profile'),
   //   fun: handleViewProfile,
   // },
-  {
-    icon: UnMuteIcon,
-    text: t('Unmute'),
-    fun: handleMute,
-  },
-  {
-    icon: CloseCameraIcon,
-    text: t('Close the camera'),
-    fun: handleCloseCamera,
-  },
   // {
   //   icon: MicropositionIcon,
   //   text: t('Move seat'),
@@ -74,28 +71,6 @@ const controlList = ref([
 
 function handleViewProfile() {
   console.log(props.userId,'view profile')
-}
-
-async function handleMute() {
-  window.mainWindowPort?.postMessage({
-    key: "muteAudio",
-    data: {
-      userId: props.userId,
-    }
-  });
-  emit('on-close');
-  logger.log(`${logPrefix}muteAudio`)
-}
-
-async function handleCloseCamera(){
-  window.mainWindowPort?.postMessage({
-    key: "closeCamera",
-    data: {
-      userId: props.userId,
-    }
-  });
-  emit('on-close');
-  logger.log(`${logPrefix}closeCamera`)
 }
 
 function handleMoveSeat() {
@@ -133,40 +108,36 @@ async function handleKickOut() {
 @import '../../assets/variable.scss';
 
 .tui-member-control{
-  width: 10.4375rem;
-	height: 9rem;
-  box-shadow: 0.0625rem 0.0625rem 0.75rem 0.25rem $color-gray-7;
+  width: 7.5rem;
+	height: 4rem;
   border-radius: 0.25rem;
-	flex-shrink: 0;
-	filter: drop-shadow(0rem 3.4.6875rem 0.625rem #E9F0FB);
-	background: #FFF;
-	position: absolute;
-	right: -0.75rem;
+  position: absolute;
+	right: 0;
 	top: 2.5rem;
   z-index: 1;
+	flex-shrink: 0;
+	background-color: #2D323C;
+	
   &-container{
     display: flex;
-    padding: 14px 14px 0 14px;
+    height: 2rem;
+    line-height: 2rem;
+    padding-left: 1rem;
+    cursor: pointer;
+
+    &:hover {
+      background-color: $color-black;
+    }
   }
   &-options{
     padding-left:0.625rem;
-    color: #6B758A;
-    font-family: PingFang SC;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
-    line-height: normal;
-    letter-spacing: -0.24px;
-    &-last{
-      padding-left:0.625rem;
-      color: #E5395C;;
-      font-family: PingFang SC;
-      font-size: 0.875rem;
-      font-style: normal;
-      font-weight: 400;
-      line-height: normal;
-      letter-spacing: -0.24px;
-    }
+  }
+
+  .danger {
+    color: $color-danger;
   }
 }
 </style>

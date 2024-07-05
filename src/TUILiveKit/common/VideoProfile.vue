@@ -51,6 +51,10 @@ const handleCameraResolutionChange = (value: string) => {
   logger.debug(`${logPrefix}handleCameraResolutionChange: ${value}`)
   const [width, height] = value.split('_');
   currentSourceStore.setCurrentCameraResolution({ width: Number(width), height: Number(height) });
+  window.mainWindowPort?.postMessage({
+    key: "setCameraTestResolution",
+    data: { width: Number(width),  height:Number(height) }
+  });
 };
 
 watch(currentCameraId, (newValue, oldValue) => {
@@ -72,6 +76,6 @@ watch(currentCameraResolution, (newValue, oldValue) => {
 <style lang="scss" scoped>
 .select {
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 </style>

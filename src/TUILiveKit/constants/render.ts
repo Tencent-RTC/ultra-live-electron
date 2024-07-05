@@ -1,19 +1,19 @@
 export enum SettingMode {
-  SIMPLE = 'simple',
-  DETAIL = 'detail',
+  Simple = 'Simple',
+  Detail = 'Detail',
 }
 
 export enum BeautyMode {
-  NONUSE = 0,
-  BEAUTY = 1,
-  SEGMENTATION = 5,
+  NonUse = 0,
+  Beauty = 1,
+  Segmentation = 5,
 }
 
-export enum BeautyType {
-  ONECLICKBEAUTY = 'One Click Beauty',
-  FINEBEAUTY = 'Fine Beauty',
-  FILTER = 'Filters',
-  HEADORNAMENT = 'Head ornament',
-  FRAME = 'Frame',
-  VIRTUALBACGROUND = 'Virtual background', 
+export enum UIBeautyType {
+  OneClickBeauty = 'OneClickBeauty',
+  FineBeauty = 'FineBeauty',
+  Filters = 'Filter',
+  Headornament = 'Headornament',
+  Frame = 'Frame',
+  Segmentation = 'Segmentation', 
 }

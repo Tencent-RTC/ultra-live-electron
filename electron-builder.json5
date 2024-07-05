@@ -25,13 +25,17 @@
         "to": "./Frameworks"
       },
       {
-        "from": "plugin/XMagic/mac/",
+        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/mac/",
         "to": "./Resources/app/plugin/XMagic/mac/"
       }
     ],
     "target": ["dmg"],
     "entitlements": "scripts/entitlements.mac.plist",
     "entitlementsInherit": "scripts/entitlements.mac.plist",
+    "extendInfo": {
+      "NSCameraUsageDescription": "Need camera permission",
+      "NSMicrophoneUsageDescription": "Need microphone permission",
+    },
   },
   "win": {
     "artifactName": "${productName}_${version}.${ext}",
@@ -44,17 +48,17 @@
         ]
       },
       {
-        "from": "plugin/XMagic/win/${arch}/platforms/",
+        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/${arch}/platforms/",
         "to": "./platforms",
         "filter": ["**/*"],
       },
       {
-        "from": "plugin/XMagic/win/${arch}/",
+        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/${arch}/",
         "to": "./resources/app/plugin/XMagic/win/${arch}/",
         "filter": ["**/*"],
       },
       {
-        "from": "plugin/XMagic/win/res/",
+        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/res/",
         "to": "./resources/app/plugin/XMagic/win/res/",
         "filter": ["**/*"],
       },
@@ -67,6 +71,6 @@
     "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": true,
     "createDesktopShortcut": true,
-    "runAfterFinish": false,
+    "runAfterFinish": true,
   }
 }

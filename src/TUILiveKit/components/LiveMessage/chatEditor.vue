@@ -20,6 +20,10 @@ import { useI18n } from '../../locales'
 import useGetRoomEngine from "../../utils/useRoomEngine";
 import { useBasicStore } from '../../store/basic';
 import { useChatStore } from '../../store/chat';
+import { decodeSendTextMsg } from './util';
+
+const logger = console;
+const logPrefix = "[ChatEditor]";
 
 const { t }  = useI18n()
 const basicStore = useBasicStore();
@@ -30,32 +34,36 @@ const roomEngine = useGetRoomEngine();
 const sendMsg = ref('');
 const editorInputEle = ref();
 const sendMessage = async () => {
-  const msg = sendMsg.value.replace('\n', '');
+  const msg = decodeSendTextMsg(sendMsg.value);
   sendMsg.value = '';
   if (msg === '') {
     return;
   }
   try {
     const tim = roomEngine.instance?.getTIM();
-    const message = tim.createTextMessage({
-      to: roomId.value,
-      conversationType: TencentCloudChat.TYPES.CONV_GROUP,
-      payload: {
-        text: msg,
-      },
-    });
-    await tim.sendMessage(message);
-    chatStore.updateMessageList({
-      ID: Math.random().toString(),
-      type: 'TIMTextElem',
-      payload: {
-        text: msg,
-      },
-      nick: basicStore.userName || basicStore.userId,
-      from: basicStore.userId,
-      flow: 'out',
-      sequence: Math.random(),
-    });
+    if (tim) {
+      const message = tim.createTextMessage({
+        to: roomId.value,
+        conversationType: TencentCloudChat.TYPES.CONV_GROUP,
+        payload: {
+          text: msg,
+        },
+      });
+      await tim.sendMessage(message);
+      chatStore.updateMessageList({
+        ID: Math.random().toString(),
+        type: 'TIMTextElem',
+        payload: {
+          text: msg,
+        },
+        nick: basicStore.userName || basicStore.userId,
+        from: basicStore.userId,
+        flow: 'out',
+        sequence: Math.random(),
+      });
+    } else {
+      logger.error(`${logPrefix}sendMessage failed due to no TIM instance`);
+    }
   } catch (e) {
     /**
      * Message delivery failure
@@ -63,7 +71,7 @@ const sendMessage = async () => {
      * 消息发送失败
     **/
     // TUIMessage({ type: 'error', message: t('Failed to send the message') }); // To do: to implelement
-    console.warn(`Failed to send the message:`, e);
+    logger.warn(`${logPrefix}sendMessage failed to send the message:`, e);
   }
 };
 

@@ -1,11 +1,18 @@
 class Movable {
-  constructor(movable, container) {
+  constructor(movable, container, options = {
+    calcPositionOnly: false,
+    canExceedContainer: false,
+  }) {
     if (!movable) {
       console.error("The movable argument must be an HTML element.");
       return;
     }
     this.movable = movable;
     this.container = container || document.body;
+    this.options = {
+      calcPositionOnly: !!options.calcPositionOnly || false,
+      canExceedContainer: !!options.canExceedContainer || false
+    };
     // Map<string, Array<Function>>
     this.callbacksMap = new Map();
 
@@ -19,8 +26,8 @@ class Movable {
     this.onmousedown = this.onmousedown.bind(this);
     this.onmousemove = this.onmousemove.bind(this);
     this.onmouseup = this.onmouseup.bind(this);
-    // this.onmousemove5px = this.onmousemove5px.bind(this);
-    // this.onmouseup5px = this.onmouseup5px.bind(this);
+    this.onmousemove5px = this.onmousemove5px.bind(this);
+    this.onmouseup5px = this.onmouseup5px.bind(this);
 
     this.movable.addEventListener("mousedown", this.onmousedown, false);
   }
@@ -30,6 +37,10 @@ class Movable {
   }
 
   onmousedown(event) {
+    console.log("on Movable mouse down");
+    if (event.button !== 0)  {
+      return;
+    }
     event.preventDefault(); // Avoid select text content.
 
     var movableStyle = document.defaultView.getComputedStyle(this.movable);
@@ -39,31 +50,30 @@ class Movable {
     this.moveStartOfLeft = window.parseInt(event.screenX);
     this.moveStartOfTop = window.parseInt(event.screenY);
 
-    // this.movable.addEventListener('mousemove', this.onmousemove5px, false);
-    // this.movable.addEventListener('mouseup', this.onmouseup5px, false);
-    document.addEventListener("mousemove", this.onmousemove, false);
-    document.addEventListener("mouseup", this.onmouseup, false);
+    document.addEventListener('mousemove', this.onmousemove5px, false);
+    document.addEventListener('mouseup', this.onmouseup5px, false);
   }
 
   onmousemove5px(event) {
     // eslint-disable-next-line
     var leftMovedDistance = window.parseInt(event.screenX) - this.moveStartOfLeft;
     var topMovedDistance = window.parseInt(event.screenY) - this.moveStartOfTop;
-    if (Math.abs(leftMovedDistance) >= 5 || Math.abs(topMovedDistance >= 5)) {
+    if (Math.abs(leftMovedDistance) >= 5 || Math.abs(topMovedDistance) >= 5) {
       // 至少移动5像素，才开始真正的移动，避免鼠标点一下就立即移动
-      this.movable.removeEventListener("mousemove", this.onmousemove5px, false);
-      this.movable.removeEventListener("mouseup", this.onmouseup5px, false);
-      this.movable.addEventListener("mousemove", this.onmousemove, false);
-      this.movable.addEventListener("mouseup", this.onmouseup, false);
+      console.log("on Movable mouse move more than 5px");
+      document.removeEventListener("mousemove", this.onmousemove5px, false);
+      document.removeEventListener("mouseup", this.onmouseup5px, false);
+      document.addEventListener("mousemove", this.onmousemove, false);
+      document.addEventListener("mouseup", this.onmouseup, false);
     }
   }
   onmouseup5px(event) {
-    this.movable.removeEventListener("mousemove", this.onmousemove5px, false);
-    this.movable.removeEventListener("mouseup", this.onmouseup5px, false);
+    console.log("on Movable mouse up: onmouseup5px");
+    document.removeEventListener("mousemove", this.onmousemove5px, false);
+    document.removeEventListener("mouseup", this.onmouseup5px, false);
   }
 
   onmousemove(event) {
-    console.log("Moving");
     // eslint-disable-next-line
     var leftMovedDistance = window.parseInt(event.screenX) - this.moveStartOfLeft;
     var topMovedDistance = window.parseInt(event.screenY) - this.moveStartOfTop;
@@ -75,25 +85,30 @@ class Movable {
     var containerWidth = this.container.offsetWidth;
     var containerHeight = this.container.offsetHeight;
 
-    if (left < 0) {
-      left = 0;
-    } else if (left > containerWidth - movableWidth) {
-      left = containerWidth - movableWidth;
+    if (!this.options.canExceedContainer) {
+      if (left < 0) {
+        left = 0;
+      } else if (left > containerWidth - movableWidth) {
+        left = containerWidth - movableWidth;
+      }
+  
+      if (top < 0) {
+        top = 0;
+      } else if (top > containerHeight - movableHeight) {
+        top = containerHeight - movableHeight;
+      }
     }
 
-    if (top < 0) {
-      top = 0;
-    } else if (top > containerHeight - movableHeight) {
-      top = containerHeight - movableHeight;
+    if (!this.options.calcPositionOnly) {
+      this.movable.style.left = left + "px";
+      this.movable.style.top = top + "px";
     }
-
-    this.movable.style.left = left + "px";
-    this.movable.style.top = top + "px";
 
     this.emit("move", left, top);
   }
 
   onmouseup(event) {
+    console.log("on Movable mouse up: onmouseup");
     document.removeEventListener("mousemove", this.onmousemove, false);
     document.removeEventListener("mouseup", this.onmouseup, false);
 

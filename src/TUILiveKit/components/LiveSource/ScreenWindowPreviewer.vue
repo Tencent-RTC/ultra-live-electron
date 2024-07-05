@@ -49,7 +49,7 @@ onMounted(() => {
   margin-right: 2.5rem;
   width: 11.5rem;
   border-radius: 0.5rem;
-  border: 2px solid #e4eaf7;
+  border: 2px solid #383F4D;
   text-align: center;
   margin-bottom: 2.5rem;
   &:hover {

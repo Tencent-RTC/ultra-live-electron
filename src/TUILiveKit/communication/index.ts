@@ -1,8 +1,14 @@
+import { TRTCVideoRotation } from 'trtc-electron-sdk';
 import useDeviceManagerPlugin from "../utils/useDeviceManagerPlugin";
 import { TUIMediaSourceType } from "../utils/useMediaMixingPlugin";
 import { TUIMediaSourceViewModel } from '../store/mediaSources';
-import { TUIMediaDevice } from '@tencentcloud/tuiroom-engine-electron';
 import useGetRoomEngine from "../utils/useRoomEngine";
+import { TRTCXmagicFactory, XmagicLicense, } from "../utils/beauty";
+import TUIMessageBox from '../common/base/MessageBox';
+import { useI18n } from '../locales/index';
+import trtcCloud from '../utils/trtcCloud';
+
+const { t } = useI18n();
 
 const logger = console;
 const logPrefix = "[MainWindow Message Handler]";
@@ -22,11 +28,13 @@ export const messageChannels: {
 
 (window as any)._messageChannels = messageChannels; // To do: 待删除，方便调试
 
-function addMediaSource(data: Record<string, any>) {
+export async function addMediaSource(data: Record<string, any>) {
   const mediaSource: TUIMediaSourceViewModel = {
     sourceName: data.name,
+    aliasName: data.name,
     left: 0,
     top: 0,
+    muted: false,
     mediaSourceInfo: {
       sourceType: data.type,
       sourceId: data.id,
@@ -49,32 +57,85 @@ function addMediaSource(data: Record<string, any>) {
     if (data.beautyConfig) {
       mediaSource.beautyConfig = data.beautyConfig;
     }
+  }else if(data.type === TUIMediaSourceType.kScreen){
+    mediaSource.screenType = data.screenType;
   }
 
   if (mediaSource) {
     logger.log(`${logPrefix}addMediaSource:`, mediaSource);
-    mediaSourcesStore.addMediaSource(mediaSource);
-    mediaSourcesStore.selectMediaSource(mediaSource);
+    try {
+      await mediaSourcesStore.addMediaSource(mediaSource);
+      await mediaSourcesStore.selectMediaSource(mediaSource);
+    } catch (error) {
+      TUIMessageBox({
+        title: t('Note'),
+        message: (error as any).message,
+        confirmButtonText: t('Sure'),
+      });
+    }
   }
 }
 
+
+function checkRectAndResolution(
+  newSize: { width: number, height: number },
+  rect: { left: number, top: number, right: number, bottom: number },
+  rotation: TRTCVideoRotation
+) {
+  let width = rect.right - rect.left;
+  let height = rect.bottom - rect.top;
+  if (rotation === TRTCVideoRotation.TRTCVideoRotation90 || rotation === TRTCVideoRotation.TRTCVideoRotation270) {
+    const temp = width;
+    width = height;
+    height = temp;
+  }
+  const shrinkRate = width / newSize.width > height / newSize.height ? height / newSize.height : width / newSize.width;
+
+  if (rotation === TRTCVideoRotation.TRTCVideoRotation90 || rotation === TRTCVideoRotation.TRTCVideoRotation270) {
+    rect.right = rect.left + Math.round(newSize.height * shrinkRate);
+    rect.bottom = rect.top + Math.round(newSize.width * shrinkRate);
+  } else {
+    rect.right = rect.left + Math.round(newSize.width * shrinkRate);
+    rect.bottom = rect.top + Math.round(newSize.height * shrinkRate);
+  }
+  return rect;
+}
+ 
+
 async function _updateScreenImageMediaSource(data: Record<string, any>) {
+  logger.log(`${logPrefix}updateMediaSource predata:`, JSON.stringify(data.predata));
   if (data.id !== data.predata?.mediaSourceInfo.sourceId) {
     const newMediaSource: TUIMediaSourceViewModel = {
       sourceName: data.name,
+      aliasName: data.predata.aliasName,
       left: data.predata?.left,
       top: data.predata?.top,
+      muted: false,
       mediaSourceInfo: {
         sourceType: data.type,
         sourceId: data.id,
         zOrder: data.predata?.mediaSourceInfo.zOrder,
-        rect: data.predata?.mediaSourceInfo.rect
+        rect: checkRectAndResolution({ width: data.width, height: data.height }, data.predata?.mediaSourceInfo.rect, data.predata?.mediaSourceInfo.rotation),
+        rotation: data.predata?.mediaSourceInfo.rotation,
       }
     };
+
+    if(data.type === TUIMediaSourceType.kScreen){
+      newMediaSource.screenType = data.screenType;
+    }
+
     if (data.predata && newMediaSource) {
-      logger.log(`${logPrefix}updateMediaSource:`, data.predata, newMediaSource);
-      await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
-      await mediaSourcesStore.selectMediaSource(newMediaSource);
+      logger.log(`${logPrefix}updateMediaSource newdata:`, JSON.stringify(newMediaSource));
+      try {
+        await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
+        await mediaSourcesStore.selectMediaSource(newMediaSource);
+      } catch (error) {
+        TUIMessageBox({
+          title: t('Note'),
+          message: (error as any).message,
+          confirmButtonText: t('Sure'),
+        });
+      }
     } else {
       logger.error(`${logPrefix}updateMediaSource invalid data:`, data.predata, newMediaSource);
     }
@@ -84,10 +145,13 @@ async function _updateScreenImageMediaSource(data: Record<string, any>) {
 }
 
 async function _updateCameraMediaSource(data: Record<string, any>) {
+  logger.log(`${logPrefix}updateMediaSource predata:`, JSON.stringify(data.predata));
   const newMediaSource: TUIMediaSourceViewModel = {
     sourceName: data.name,
+    aliasName: data.predata.aliasName,
     left: data.predata?.left,
     top: data.predata?.top,
+    muted: false,
     resolution: {
       width: data.width,
       height: data.height
@@ -96,23 +160,32 @@ async function _updateCameraMediaSource(data: Record<string, any>) {
       sourceType: data.type,
       sourceId: data.id,
       zOrder: data.predata?.mediaSourceInfo.zOrder,
-      rect: data.predata?.mediaSourceInfo.rect,
-      mirrorType: data.mirrorType
+      rect: checkRectAndResolution({ width: data.width, height: data.height }, data.predata?.mediaSourceInfo.rect, data.predata?.mediaSourceInfo.rotation),
+      mirrorType: data.mirrorType,
+      rotation: data.predata?.mediaSourceInfo.rotation,
     },
     beautyConfig: data.beautyConfig
   };
-  logger.log(`${logPrefix}updateMediaSource:`, data.predata, newMediaSource);
+  logger.log(`${logPrefix}updateMediaSource newdata:`, JSON.stringify(newMediaSource));
 
 
-  if (data.id === data.predata?.mediaSourceInfo.sourceId) {
-    await mediaSourcesStore.updateMediaSource(newMediaSource);
-  } else {
-    await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
+  try {
+    if (data.id === data.predata?.mediaSourceInfo.sourceId) {
+      await mediaSourcesStore.updateMediaSource(newMediaSource);
+    } else {
+      await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
+    }
+    await mediaSourcesStore.selectMediaSource(newMediaSource);
+  } catch (error) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: (error as any).message,
+      confirmButtonText: t('Sure'),
+    });
   }
-  await mediaSourcesStore.selectMediaSource(newMediaSource);
 }
 
-async function updateMediaSource(data: Record<string, any>) {
+export async function updateMediaSource(data: Record<string, any>) {
   switch (data.type) {
   case TUIMediaSourceType.kScreen:
   case TUIMediaSourceType.kImage:
@@ -130,70 +203,22 @@ async function updateMediaSource(data: Record<string, any>) {
 async function handleUserApply(data: Record<string, any>) {
   const { agree } = data;
   const user = JSON.parse(data.user);
-  const userInfo = roomStore.remoteUserObj[user.userId];
-  if (userInfo) {
-    const requestId = userInfo.applyToAnchorRequestId;
-    requestId && await roomEngine.instance?.responseRemoteRequest({
-      requestId,
-      agree,
-    });
-    userInfo.agree = agree;
+  if (user.userId) {
+    roomStore.handleApplyToAnchorUser(user.userId, agree);
   }
-  roomStore.removeApplyToAnchorUser(user.userId);
-  messageChannels.childWindowPort?.postMessage({
-    key: "set-anchor-list",
-    data: JSON.stringify(userInfo)
-  });
-  messageChannels.childWindowPort?.postMessage({
-    key: "update-apply-list",
-    data: JSON.stringify(userInfo)
-  });
-}
-
-async function handleMuteAudio(data: Record<string, any>) {
-  const { userId } = data;
-  await roomEngine.instance?.closeRemoteDeviceByAdmin({
-    userId,
-    device: TUIMediaDevice.kMicrophone,
-  });
-}
-
-async function handleCloseCamera(data: Record<string, any>) {
-  const { userId } = data;
-  await roomEngine.instance?.closeRemoteDeviceByAdmin({
-    userId,
-    device: TUIMediaDevice.kCamera,
-  });
 }
 
 async function handleKickSeat(data: Record<string, any>) {
   const { userId } = data;
-  roomEngine.instance?.kickUserOffSeatByAdmin({
-    seatIndex: -1,
-    userId
-  });
-  messageChannels.childWindowPort?.postMessage({
-    key: "update-anchor-list",
-    data: userId
-  });
+  roomStore.kickUserOffSeat(userId);
 }
 
 async function handleKickOut(data: Record<string, any>) {
   const { userId } = data;
-  await roomEngine.instance?.kickRemoteUserOutOfRoom({
-    userId
-  });
-  messageChannels.childWindowPort?.postMessage({
-    key: "update-anchor-list",
-    data: userId
-  });
+  roomStore.kickUserOutOfRoom(userId);
 }
 
-function handleCloseVoiceChat(data: Record<string, any>){
-  roomStore.setIsShowVoiceChat(false)
-}
-
-function handleChildWindowMessage(event: MessageEvent<any>) {
+async function handleChildWindowMessage(event: MessageEvent<any>) {
   console.log(`${logPrefix}handleChildWindowMessage:`, event.data);
   const { key, data } = event.data;
 
@@ -203,9 +228,36 @@ function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   case "startCameraDeviceTest":
     deviceManagerPlugin.startCameraDeviceTest(data.windowID, data.rect);
+    if (data.log) {
+      trtcCloud?.log(data.log);
+    }
+    break;
+  case "setCameraTestRenderMirror":
+    deviceManagerPlugin.setCameraTestRenderMirror(data.mirror);
+    break;
+  case "setCameraTestResolution":
+    deviceManagerPlugin.setCameraTestResolution(data.width, data.height);
+    break;
+  case "setCameraTestDeviceId":
+    deviceManagerPlugin.setCameraTestDeviceId(data.cameraId);
     break;
   case "stopCameraDeviceTest":
     deviceManagerPlugin.stopCameraDeviceTest();
+    break;
+  case "setCameraTestVideoPluginPath":
+    if(data){
+      const beautyLibPath = await TRTCXmagicFactory.getEffectPluginLibPath();
+      const beautyInitParam = await TRTCXmagicFactory.buildEffectInitParam(XmagicLicense);
+      deviceManagerPlugin.setCameraTestVideoPluginPath(beautyLibPath);
+      deviceManagerPlugin.setCameraTestVideoPluginParameter(JSON.stringify(beautyInitParam));
+    }else{
+      deviceManagerPlugin.setCameraTestVideoPluginPath('');
+    }
+    break;
+  case "setCameraTestVideoPluginParameter":
+    deviceManagerPlugin.setCameraTestVideoPluginParameter(JSON.stringify({
+      beautySetting: Array.isArray(data) ? data : [data],
+    }));
     break;
   case "addMediaSource":
     addMediaSource(data);
@@ -216,20 +268,11 @@ function handleChildWindowMessage(event: MessageEvent<any>) {
   case "handleUserApply":
     handleUserApply(data);
     break;
-  case "muteAudio":
-    handleMuteAudio(data);
-    break;
-  case "closeCamera":
-    handleCloseCamera(data);
-    break;
   case "cancelWheatPosition":
     handleKickSeat(data);
     break;
   case "kickOut":
     handleKickOut(data);
-    break;
-  case "closeVoiceChat":
-    handleCloseVoiceChat(data);
     break;
   case "startTestSpeaker":
     deviceManagerPlugin.startSpeakerDeviceTest(data);
@@ -254,13 +297,13 @@ export function initCommunicationChannels(data: Record<string, any>) {
   roomStore = data.roomStore;
   const childChannel = new MessageChannel();
 
-  const childChannelServer = childChannel.port1
-  const childChannelClient = childChannel.port2
+  const childChannelServer = childChannel.port1;
+  const childChannelClient = childChannel.port2;
 
-  childChannelServer.onmessage = handleChildWindowMessage
+  childChannelServer.onmessage = handleChildWindowMessage;
   childChannelServer.onmessageerror = (event) => {
     console.log('onMessageFromChildWindowError', event.data)
-  }
+  };
   childChannelServer.start();
 
   console.log('port-to-child')

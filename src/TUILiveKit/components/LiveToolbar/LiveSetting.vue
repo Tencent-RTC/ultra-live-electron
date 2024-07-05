@@ -1,31 +1,33 @@
 <template> 
     <div class="tui-setting">
-        <div class="tui-setting-title" >
+        <div class="tui-setting-title tui-window-header" >
             <span>{{ t('Setting') }}</span>
-            <svg-icon :icon="CloseIcon" @click="handleCloseSetting"></svg-icon>
+            <button class="tui-icon" @click="handleCloseSetting">
+              <svg-icon :icon="CloseIcon"></svg-icon>
+            </button>
         </div>
         <div class="setting-body">
-        <div class="setting-tabs">
-          <div
-            v-for="(item, index) in settingTabsTitleList"
-            :key="index"
-            :class="['tabs-title', `${activeSettingTab === item.value ? 'active' : ''}`]"
-            @click="handleUpdateActiveTab(item.value)"
-          >
-            {{ item.label }}
+          <div class="setting-tabs">
+            <div
+              v-for="(item, index) in settingTabsTitleList"
+              :key="index"
+              :class="['tabs-title', `${activeSettingTab === item.value ? 'active' : ''}`]"
+              @click="handleUpdateActiveTab(item.value)"
+            >
+              {{ item.label }}
+            </div>
+          </div>
+          <div class="divide-line"></div>
+          <div class="setting-content">
+            <audio-setting-tab
+              v-if="activeSettingTab === 'audio'"
+              :mode="SettingMode.Detail"
+            ></audio-setting-tab>
+            <!-- <video-setting-tab
+              v-else-if="activeSettingTab === 'video'"
+            ></video-setting-tab> -->
           </div>
         </div>
-        <div class="divide-line"></div>
-        <div class="setting-content">
-          <audio-setting-tab
-            v-if="activeSettingTab === 'audio'"
-            :mode="SettingMode.DETAIL"
-          ></audio-setting-tab>
-          <!-- <video-setting-tab
-            v-else-if="activeSettingTab === 'video'"
-          ></video-setting-tab> -->
-        </div>
-      </div>
     </div>
 </template>
 <script setup lang="ts">
@@ -65,15 +67,14 @@ const resetCurrentView = () => {
 }
 </script>
 <style lang="scss" scoped>
+@import '../../assets/variable.scss';
+
 .tui-setting{
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow-y: scroll;
+    overflow-y: auto;
     &-title{
-        height: 4rem;
-        line-height: 2.5rem;
-        border-bottom: 1px solid rgba(230, 236, 245, 0.80);
         font-weight: 500;
         padding: 0 1.5rem 0 1.375rem;
         display: flex;
@@ -82,11 +83,12 @@ const resetCurrentView = () => {
     }
 }
 .setting-body {
-    height: 100%;
+    height: calc(100% - 2.75rem);
     display: flex;
+    background-color: #22262E;
     .setting-tabs {
       width:10.625rem;
-      background-color:#f0f3fa;
+      background-color:#383F4D;
       padding-top:0.4375rem;
       border-bottom-left-radius: 10px;
 
@@ -101,8 +103,8 @@ const resetCurrentView = () => {
         position: relative;
         cursor: pointer;
         &.active {
-          background-color: #1c66e5;
-          color: #fff;
+          background-color: #2D323E;
+          color: $color-primary;
           font-weight: 400;
         }
       }

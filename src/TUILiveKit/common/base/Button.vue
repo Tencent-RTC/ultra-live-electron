@@ -2,6 +2,7 @@
   <button
     :class="buttonClassList"
     :style="customStyle"
+    :disabled="props.disabled"
     @click="handleClick"
   >
     <span v-if="$slots.icon" class="button-icon">

@@ -151,11 +151,9 @@ function handleClickOutside() {
 
 .select-container {
   position: relative;
-  padding-top: 0.75rem;
   .select-content {
     position: relative;
-    border: 1px solid #E4E8EE;
-    background: linear-gradient(270deg, #F9FAFC 27.08%, rgba(249, 250, 252, 0.00) 106.25%);
+    border: 1px solid #383F4D;
     border-radius: 0.5rem;
     height: 2.625rem;
     padding: 0.625rem 1rem;
@@ -168,7 +166,7 @@ function handleClickOutside() {
     }
     .select-text {
       width: 0;
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       font-style: normal;
       font-weight: 500;
       line-height: 1.375rem;
@@ -191,8 +189,8 @@ function handleClickOutside() {
     max-height: 15.875rem;
     padding: 0.4375rem 0px;
     position: absolute;
-    background-color: #F9FAFC;
-    border: 1px solid #E4E8EE;;
+    background-color: #2D323C;
+    border: 1px solid #383F4D;
     border-radius: 0.5rem;
     overflow: auto;
     &.down {

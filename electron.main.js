@@ -4,6 +4,7 @@ const {
   systemPreferences,
   crashReporter,
   ipcMain,
+  Menu,
   // screen,
 } = require("electron");
 const path = require("path");
@@ -68,14 +69,20 @@ const windowMap = {
   child: null
 }
 
+let language = "zh-CN";
+
+function isZhCN() {
+  return language === "zh-CN";
+}
+
 async function createWindow(width = 1366, height = 668) {
   await checkAndApplyDeviceAccessPrivilege();
 
   windowMap.main = new BrowserWindow({
-    width,
-    height,
+    width: 1200 || width,
+    height: 650 || height,
     minWidth: 1200,
-    minHeight: 500,
+    minHeight: 650,
     frame: false,
     acceptFirstMouse: true, // only mac
     webPreferences: {
@@ -88,7 +95,7 @@ async function createWindow(width = 1366, height = 668) {
   windowMap.child = new BrowserWindow({
     show: false,
     width: 600,
-    height: 790,
+    height: 650,
     // parent: windowMap.main, // To do: 父子窗口在 Windows 和 Mac 上一致，暂时注释掉，后续确定不可行时，再删除。
     frame: false,
     acceptFirstMouse: true, // only mac
@@ -146,19 +153,17 @@ function bindIPCEvent() {
 
   ipcMain.on("on-close-window", () => {
     console.log("on-close-window event");
-    windowMap.child.close();
     windowMap.main.close();
+    windowMap.child.close();
   });
 
   ipcMain.on("open-child", (event, args) => {
     console.log("on open-child", args);
-    windowMap.child.webContents.send("show", args);
-
     const [width, height] = windowMap.main.getSize();
     switch (args.command) {
     case 'camera':
-      windowMap.child.setSize(600, 790, true);
-      windowMap.child.setContentSize(600, 790, true);
+      windowMap.child.setSize(600, 650, true);
+      windowMap.child.setContentSize(600, 650, true);
       break;
     case 'image':
       windowMap.child.setSize(600, 500, true);
@@ -178,11 +183,12 @@ function bindIPCEvent() {
     }
     windowMap.child.center();
     windowMap.child.show();
-  })
+    windowMap.child.webContents.send("show", args);
+  });
 
   ipcMain.on("close-child", () => {
     windowMap.child.hide();
-  })
+  });
 
   ipcMain.on("login", (event) => {
     if (event.sender === windowMap.main.webContents) {
@@ -190,12 +196,50 @@ function bindIPCEvent() {
     } else {
       windowMap.main.webContents.send("login", { from: 'child' });
     }
-  })
+  });
 
   ipcMain.on("port-to-child", (event) => {
     const port = event.ports[0];
     console.log("port-to-child", port);
     windowMap.child.webContents.postMessage("port-to-child", null, [port]);
+  });
+
+  ipcMain.on("set-language", (event, args) => {
+    console.log("set-language", args);
+    language = args;
+  });
+
+  ipcMain.on("show-context-menu", (event) => {
+    const template = [
+      {
+        label: isZhCN() ? "排序" : "Sort",
+        submenu: [
+          { "label": isZhCN() ? "上移" : "Move up", "click": () => { event.sender.send('context-menu-command', 'move-up'); } },
+          { "label": isZhCN() ? "下移" : "Move down", "click": () => { event.sender.send('context-menu-command', 'move-down'); } },
+          { "label": isZhCN() ? "移至顶部" : "Move to top", "click": () => {  event.sender.send('context-menu-command', 'move-top'); } },
+          { "label": isZhCN() ? "移至底部" : "Move to bottom", "click": () => {  event.sender.send('context-menu-command', 'move-bottom'); }},
+        ]
+      },
+      {
+        label: isZhCN() ? "变换" : "Transform",
+        submenu: [
+          { "label": isZhCN() ? "顺时针旋转90度" : "Rotate 90 degrees CW", "click": () => { event.sender.send('context-menu-command', 'transform-clockwise-90'); } },
+          { "label": isZhCN() ? "逆时针旋转90度" : "Rotate 90 degrees CCW", "click": () => { event.sender.send('context-menu-command', 'transform-anti-clockwise-90'); } },
+          { "label": isZhCN() ? "水平旋转" : "Flip horizontal", "click": () => {  event.sender.send('context-menu-command', 'transform-mirror-horizontal'); } },
+          { "label": isZhCN() ? "垂直旋转" : "Flip vertical", "click": () => {  event.sender.send('context-menu-command', 'transform-mirror-vertical'); }},
+          // { type: 'separator' },
+          // { "label": "还原", "click": () => {  event.sender.send('context-menu-command', 'transform-reset'); }},
+        ]
+      },
+      { type: "separator" },
+      { label: isZhCN() ? "隐藏" : "Hide", click: () => {  event.sender.send('context-menu-command', 'hide'); } },
+      // { label: "锁定", click: () => {  event.sender.send('context-menu-command', 'lock'); } },
+      { label: isZhCN() ? "编辑" : "Edit", click: () => {  event.sender.send('context-menu-command', 'edit'); } },
+      { type: 'separator' },
+      { label: isZhCN() ? "删除" : "Remove", click: () => {  event.sender.send('context-menu-command', 'remove'); } },
+    ]
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup({ window: BrowserWindow.fromWebContents(event.sender) })
   })
 }
 
@@ -213,6 +257,14 @@ function bindMainWindowEvent() {
     windowMap.main.webContents.send("native-window-handle", windowMap.main.getNativeWindowHandle());
     windowMap.main.webContents.send("window-type", "main");
   });
+
+  windowMap.main.on("closed", () => {
+    if (windowMap.child) {
+      windowMap.child.close();
+      windowMap.child = null;
+    }
+    windowMap.main = null;    
+  });
 }
 
 function bindChildWindowEvent() {
@@ -228,6 +280,19 @@ function bindChildWindowEvent() {
     windowMap.child.webContents.send("app-path", app.getAppPath());
     windowMap.child.webContents.send("native-window-handle", windowMap.child.getNativeWindowHandle());
     windowMap.child.webContents.send("window-type", "child");
+  });
+
+  windowMap.child.on("close", (event) => {
+    if (windowMap.main) {
+      event.preventDefault();
+      windowMap.child.hide();
+    }  
+  });
+
+  windowMap.child.on("closed", () => {
+    if (windowMap.child) {
+      windowMap.child = null;
+    }  
   });
 }
 

@@ -4,9 +4,10 @@
       {{t('Audience List')}}
     </div>
     <div class="tui-member-list">
-      <div v-for="item in remoteUserList" :key="item.userID" class="tui-member-list-container">
-        <img class="tui-avatar" :src="item.avatarUrl" alt="">
-        <span class="tui-name">{{item.userName || item.userID}}</span>
+      <div v-for="item in remoteUserList" :key="item.userId" class="tui-member-item">
+        <img class="tui-user-avatar" :src="item.avatarUrl" alt="">
+        <span class="tui-user-name">{{item.userName || item.userId}}</span>
+        <span class="tui-user-level">{{ 0 }}</span>
       </div>
     </div>
   </div>
@@ -28,30 +29,44 @@ const { remoteUserList }  = storeToRefs(roomStore);
 
 </script>
 <style scoped lang="scss">
+@import "../../assets/variable.scss";
+
+.tui-live-member {
+  height: 100%;
+}
+
+.tui-title {
+  font-size: 0.75rem;
+}
+
 .tui-member-list{
-  height: 18.25rem;
+  height: calc(100% - 2.5rem);
   overflow: auto;
 }
-.tui-avatar{
+.tui-user-avatar{
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 1.5rem;
   margin: 0.5rem;
 }
-.tui-name{
+.tui-user-name{
+  padding-right: 0.25rem;
   color: var(--G7, #D5E0F2);
-  font-family: PingFang SC;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-style: normal;
   font-weight: 400;
-  line-height: 1.375rem; /* 157.143% */
+  line-height: 1.375rem;
 }
-.tui-member-list-container {
+.tui-user-level {
+  padding: 0 0.5rem;
+  border-radius: 0.5rem;
+  background-color: $color-primary;
+}
+.tui-member-item {
   display: flex;
   align-items: center;
-  overflow-y: scroll;
+  overflow-y: auto;
   flex: 1;
-  margin-top: 0.625rem;
   &::-webkit-scrollbar {
     display: none;
   }

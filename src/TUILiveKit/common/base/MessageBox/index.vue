@@ -111,22 +111,21 @@ onMounted(async () => {
 }
 
 .tui-message-box {
-  width:30rem;
-	background-color:#FFFFFF;
-	position:absolute;
-	top:50%;
-	left:50%;
-	transform:translate(-50%,-50%);
-	display:flex;
-	flex-direction:column;
-	border-radius:1.25rem;
+  width: 18rem;
+  background-color: #FFFFFF;
+  position: absolute;
+  top: 3rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1rem;
   .tui-message-box-header {
-    height:4rem;
-    position:relative;
-    display:flex;
-    padding:0 1.5rem;
-    color:#000000;
-    align-items:center;
+    height: 2rem;
+    position: relative;
+    display: flex;
+    padding: 0 1.5rem;
+    color: #000000;
+    align-items: center;
     box-shadow:0rem 0.4375rem 0.625rem -0.3125rem rgba(230,236,245,0.8);
     .tui-dialog-header-title {
       font-size:1rem;
@@ -152,17 +151,17 @@ onMounted(async () => {
 }
 
 .tui-message-box-body {
-  flex:1;
-	padding:1.25rem 1.5rem;
-	font-size:0.875rem;
-	font-style:normal;
-	font-weight:400;
-	line-height:1.375rem;
-  color: #4f586b;
+  flex: 1;
+  padding: 0.5rem 0.5rem;
+  font-size: 0.875rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.375rem;
+  color: #4F586B;
 }
 
 .tui-message-box-footer {
-  padding:1.25rem 1.875rem;
+  padding: 0.5rem 1rem;
   display: flex;
   justify-content: flex-end;
 }

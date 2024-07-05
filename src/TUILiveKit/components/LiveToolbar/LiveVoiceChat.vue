@@ -1,42 +1,43 @@
 <template>
     <div class="tui-voice-chat">
-        <div class="tui-voice-chat-title" >
-            <span>{{ t('Continuous wheat management') }}</span>
-            <svg-icon :icon="CloseIcon" @click="handleCloseSetting"></svg-icon>
+        <div class="tui-voice-chat-title tui-window-header" >
+            <span>{{ t('Voice Chat Management') }}</span>
+            <button class="tui-icon" @click="handleCloseWindow">
+              <svg-icon :icon="CloseIcon"></svg-icon>
+            </button>
         </div>
-        <div class="tui-voice-chat-control">
-            <span class="tui-voice-chat-control-text">{{ t('Allow viewers to apply for continuous miking') }}</span>
+        <!-- <div class="tui-voice-chat-control">
+            <span class="tui-voice-chat-control-text">{{ t('Allow audience to apply for chat') }}</span>
             <SwitchControl v-model="isAllowed"></SwitchControl>
-        </div>
+        </div> -->
         <div class="tui-voice-chat-list-container" >
             <div class="tui-voice-chat-list" >
-                <div>
-                <span>{{ t('Apply for a mic link') }}</span>
-                <span v-if="isAllowed">{{applyNumber}}</span>
+                <div class="tui-voice-chat-list-title">
+                  <span>{{ t('Apply for chat') }}</span>
+                  <span v-if="isAllowed">{{applyNumber}}</span>
                 </div>
                 <div class="tui-voice-chat-member">
-                    <span v-if="!isAllowed" class="tui-voice-chat-status">{{ t('Not yet opened') }}</span>
+                    <span v-if="!isAllowed" class="tui-voice-chat-status">{{ t('Not allowed') }}</span>
                     <div v-else v-for="user in applyToAnchorList" :key="user.userId"  class="tui-voice-chat-apply">
                         <img class="tui-voice-chat-avatar" :src="user.avatarUrl" alt="">
                         <span class="tui-voice-chat-name">{{ user.userName || user.userId }}</span>
                         <div class="tui-voice-chat-options">
-                          <span class="tui-voice-chat-accept" @click="handleUserApply(user, true)">{{ t('accept')}}</span>
-                          <span class="tui-voice-chat-reject" @click="handleUserApply(user, false)">{{ t('rejection')}}</span>
+                          <span class="tui-voice-chat-accept" @click="handleUserApply(user, true)">{{ t('Accept')}}</span>
+                          <span class="tui-voice-chat-reject" @click="handleUserApply(user, false)">{{ t('Rejection')}}</span>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="tui-voice-chat-list">
-                <div>
-                    <span>{{ t('Current wheat position') }}</span>
+                <div class="tui-voice-chat-list-title">
+                    <span>{{ t('Chat Seat List') }}</span>
                     <span v-if="isAllowed">{{currentSeat}}</span>
                 </div>
                 <div class="tui-voice-chat-member">
-                    <span class="tui-voice-chat-status" v-if="!isAllowed">{{ t('Not yet opened') }}</span>
+                    <span class="tui-voice-chat-status" v-if="!isAllowed">{{ t('Not allowed') }}</span>
                     <div v-else class="tui-voice-chat-seat" v-for="( item, index ) in anchorList" :key="item.userInfo.userId || index">
                         <span class="tui-voice-chat-seatIndex">{{item.seat}}</span>
-                        <svg-icon v-if="!item.userInfo.avatarUrl" class="tui-voice-chat-avatar" :icon="item.icon"></svg-icon>
-                        <img v-else class="tui-voice-chat-avatar" :src="item.userInfo.avatarUrl" alt="">
+                        <img v-if="item.userInfo.avatarUrl" class="tui-voice-chat-avatar" :src="item.userInfo.avatarUrl" alt="">
                         <span class="tui-voice-chat-name"> {{ item.userInfo.userName || item.userInfo.userId }}</span>
                         <mic-more-icon class="tui-voice-chat-more"  @click.stop="handleShowMemberControl(item)" ></mic-more-icon>
                         <live-member-control v-if="controlUserId === item.userInfo.userId" 
@@ -63,18 +64,15 @@ import vClickOutside from '../../utils/vClickOutside';
 import LiveMemberControl from './LiveMemberControl.vue';
 import { useCurrentSourcesStore } from '../../store/currentSources';
 import { UserInfo } from '../../store/room';
-import useGetRoomEngine from '../../utils/useRoomEngine';
 
 const logger = console;
 const logPrefix = '[LiveVoiceChat]';
 
-const roomEngine = useGetRoomEngine();
 const sourcesStore = useCurrentSourcesStore();
 const { applyToAnchorList, currentAnchorList } = storeToRefs(sourcesStore);
 const { t } = useI18n();
 const controlUserId = ref('');
-const showMemberControl = ref(false);
-const isAllowed = ref(false);
+const isAllowed = ref(true);
 const applyNumber = computed(() => {
   return '(' + applyToAnchorList.value.length + ')'
 })
@@ -84,42 +82,42 @@ const currentSeat = computed(() => {
 })
 const anchorList = ref([
   {
-    seat: t('first position'),
+    seat: t('Position 1'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('second position'),
+    seat: t('Position 2'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('third position'),
+    seat: t('Position 3'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('fourth position'),
+    seat: t('Position 4'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('fifth position'),
+    seat: t('Position 5'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('sixth position'),
+    seat: t('Position 6'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('seventh position'),
+    seat: t('Position 7'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
   {
-    seat: t('eighth position'),
+    seat: t('Position 8'),
     icon: SeatIcon,
     userInfo: {} as UserInfo,
   },
@@ -160,10 +158,7 @@ const handleClose = () => {
 const handleClickOutsideMemberControl = () => {
   controlUserId.value = ''
 }
-const handleCloseSetting = () => {
-  window.mainWindowPort?.postMessage({
-    key: "closeVoiceChat",
-  });
+const handleCloseWindow = async () => {
   window.ipcRenderer.send("close-child");
   resetCurrentView();
 }
@@ -182,19 +177,18 @@ async function handleUserApply(user:any, agree: boolean) {
 }
 
 onBeforeUnmount(() => {
-  anchorList.value = anchorList.value.map(item => ({ ...item, userInfo: {} }));
-})
+  anchorList.value.forEach(item => {
+    item.userInfo = {} as UserInfo;
+  });
+});
 </script>
 <style scoped lang="scss">
 .tui-voice-chat{
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow-y: scroll;
+    overflow-y: auto;
     &-title{
-        height: 4rem;
-        line-height: 2.5rem;
-        border-bottom: 1px solid rgba(230, 236, 245, 0.80);
         font-weight: 500;
         padding: 0 1.5rem 0 1.375rem;
         display: flex;
@@ -209,35 +203,40 @@ onBeforeUnmount(() => {
         border-bottom: 1px solid rgba(230, 236, 245, 0.8);
         height: 3rem;
         &-text{
-            color: var(--G3, #4F586B);
-            font-family: PingFang SC;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             font-style: normal;
             font-weight: 400;
             line-height: 1.375rem; /* 157.143% */
         }
     }
     &-list-container{
+        height: calc(100% - 2.75rem);
         display: flex;
-        padding: 1rem 1.5rem;
-        justify-content: space-between
+        padding: 0.5rem;
+        justify-content: space-between;
+        background-color: #22262E;
     }
     &-list{
-        width: 50%;
+        width: 49.5%;
+
+        &-title {
+          height: 2rem;
+          line-height: 2rem;
+        }
     }
     &-member{
-        width:16.875rem;
-        height:23.875rem;
-        border-radius: 0.5rem;
-        border: 1px solid #E4E8EE;
-        background: rgba(240, 243, 250, 0.40);
-        margin-top: 1rem;
         position: relative;
+        height: calc(100% - 2rem);
+        width: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 0.5rem;
+        background-color: #383F4D;
+        color: #D5E0F2;
     }
     &-status{
         color: rgba(79, 88, 107, 0.40);
-        font-family: PingFang SC;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         font-style: normal;
         font-weight: 400;
         line-height: 1.375rem; /* 157.143% */
@@ -260,9 +259,7 @@ onBeforeUnmount(() => {
     &-name{
         flex: 1;
         padding-left: 0.5rem;
-        color: var(--G3, #4F586B);
-        font-family: PingFang SC;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         font-style: normal;
         font-weight: 500;
         line-height: 1.25rem; /* 166.667% */
@@ -272,8 +269,7 @@ onBeforeUnmount(() => {
     }
     &-accept{
         color: #1C66E5;
-        font-family: PingFang SC;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         font-style: normal;
         font-weight: 500;
         line-height: 1.25rem; /* 166.667% */
@@ -282,23 +278,22 @@ onBeforeUnmount(() => {
     &-reject{
         padding-left: 0.625rem;
         color: #8F9AB2;
-        font-family: PingFang SC;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         font-style: normal;
         font-weight: 500;
         line-height: 1.25rem; /* 166.667% */
         cursor: pointer;
     }
     &-seat{
+        height: 3.5rem;
+        line-height: 3.5rem;
         display: flex;
         align-items: center;
-        padding: 0.875rem 0.875rem 0 0.875rem;
+        padding: 0 0.875rem;
         position: relative;
     }
     &-seatIndex{
-        color: var(--G3, #4F586B);
-        font-family: PingFang SC;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         font-style: normal;
         font-weight: 400;
         line-height: 1.25rem; /* 166.667% */

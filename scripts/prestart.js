@@ -9,12 +9,12 @@ function rsyncQTDependency() {
     if (arch === "x64") {
       sourcePath = path.resolve(
         __dirname,
-        "../plugin/XMagic/win/x64/platforms/qwindows.dll"
+        "../node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/x64/platforms/qwindows.dll"
       );
     } else if (arch === "ia32") {
       sourcePath = path.resolve(
         __dirname,
-        "../plugin/XMagic/win/ia32/platforms/qwindows.dll"
+        "../node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/ia32/platforms/qwindows.dll"
       );
     } else {
       console.error("not supported arch:", arch);

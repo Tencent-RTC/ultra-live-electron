@@ -5,12 +5,12 @@ import { getUrlParam } from './envUtils';
  * @returns language
  */
 export function getLanguage() {
-  let language = getUrlParam('lang') || localStorage.getItem('TUILiveKit-language') || navigator.language || 'zh';
+  let language = getUrlParam('lang') || navigator.language || 'zh';
   language = language.replace(/_/, '-').toLowerCase();
 
   if (language === 'zh-cn' || language === 'zh') {
     language = 'zh-CN';
-  } else if (language === 'en' || language === 'en-us' || language === 'en-GB') {
+  } else {
     language = 'en-US';
   }
   return language;

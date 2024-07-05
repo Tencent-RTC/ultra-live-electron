@@ -1,26 +1,26 @@
 <template>
-    <div class="emoji-tool">
-      <svg-icon :icon="EmojiIcon" class="emoji-icon" @click.stop="handleEmojiToobar"></svg-icon>
+  <div class="emoji-tool">
+    <svg-icon :icon="EmojiIcon" class="emoji-icon" @click.stop="handleEmojiToobar"></svg-icon>
+    <div
+      v-show="showEmojiToolbar"
+      v-click-outside="handleClickOutsideEmojiToobar"
+      class="emoji-list"
+    >
       <div
-        v-show="showEmojiToolbar"
-        v-click-outside="handleClickOutsideEmojiToobar"
-        class="emoji-list"
+        v-for="(childrenItem, childrenIndex) in emojiList"
+        :key="childrenIndex"
+        class="emoji-item"
+        @click="chooseEmoji(childrenItem)"
       >
-        <div
-          v-for="(childrenItem, childrenIndex) in emojiList"
-          :key="childrenIndex"
-          class="emoji-item"
-          @click="chooseEmoji(childrenItem)"
-        >
-          <img :src="emojiUrl + emojiMap[childrenItem]" />
-        </div>
+        <img :src="emojiBaseUrl + emojiMap[childrenItem]" />
       </div>
     </div>
+  </div>
 </template>
   
 <script setup lang="ts">
 import { ref, defineEmits } from 'vue';
-import { emojiUrl, emojiMap, emojiList } from './util';
+import { emojiBaseUrl, emojiMap, emojiList } from './util';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import EmojiIcon from '../../common/icons/EmojiIcon.vue';
 import vClickOutside from '../../utils/vClickOutside';
@@ -56,7 +56,7 @@ const handleClickOutsideEmojiToobar = () => {
       left:0rem;
       display:flex;
       flex-wrap:wrap;
-      overflow-y:auto;
+      overflow-y: auto;
       background-color:rgba(15,16,20,1);
       padding:0.625rem;
       border-radius:0.5rem;
