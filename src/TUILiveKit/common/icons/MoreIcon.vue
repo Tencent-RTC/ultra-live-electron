@@ -1,5 +1,7 @@
 <template>
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M8.5 11C9.05228 11 9.5 11.4477 9.5 12C9.5 12.5523 9.05228 13 8.5 13C7.94772 13 7.5 12.5523 7.5 12C7.5 11.4477 7.94772 11 8.5 11ZM8.5 7C9.05228 7 9.5 7.44772 9.5 8C9.5 8.55228 9.05228 9 8.5 9C7.94772 9 7.5 8.55228 7.5 8C7.5 7.44772 7.94772 7 8.5 7ZM9.5 4C9.5 3.44771 9.05228 3 8.5 3C7.94771 3 7.5 3.44771 7.5 4C7.5 4.55228 7.94771 5 8.5 5C9.05228 5 9.5 4.55228 9.5 4Z" fill="#8F9AB2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <circle cx="12" cy="5" r="2" fill="currentColor"/>
+  <circle cx="12" cy="12" r="2" fill="currentColor"/>
+  <circle cx="12" cy="19" r="2" fill="currentColor"/>
 </svg>
 </template>

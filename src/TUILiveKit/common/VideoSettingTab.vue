@@ -31,60 +31,73 @@
       </div>
     </div>
     <div class="beauty-setting" v-if="props.withBeauty">
-      <span class="title">{{ t('Adjusting the video screen') }}  </span>
-      <BeautySelect></BeautySelect>
+      <BeautyConfigPanel :init-value="beautyProperties" @on-change="handleBeautyEffectChange" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, onBeforeUnmount, onMounted, Ref, ref } from 'vue';
+import { ref, Ref, defineProps, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
 import DeviceSelect from './DeviceSelect.vue';
 import VideoProfile from './VideoProfile.vue';
 import CameraMirror from '../common/icons/CameraMirror.vue';
 import CameraUnmirror from '../common/icons/CameraUnmirror.vue';
-import BeautySelect from '../common/BeautySelect.vue';
+import BeautyConfigPanel from '../common/BeautyConfigPanel.vue';
 import { useI18n } from '../locales/index';
 import { useCurrentSourcesStore } from '../store/currentSources';
+import { TRTCXmagicEffectProperty } from '../utils/beauty';
 // import useGetRoomEngine from '../utils/useRoomEngine';
 // import { TRTCVideoFillMode, TRTCVideoMirrorType, TRTCVideoRotation } from '@tencentcloud/tuiroom-engine-electron';
 // const roomEngine = useGetRoomEngine();
 const { t } = useI18n()
 const sourcesStore = useCurrentSourcesStore();
-const { isCurrentCameraMirrored } = storeToRefs(sourcesStore);
+const { isCurrentCameraMirrored, beautyProperties } = storeToRefs(sourcesStore);
 interface Props {
   withBeauty?: boolean;
 }
 const logger = console;
-const logPrefix = '[LiveCameraSource]';
+const logPrefix = '[VideoSettingTab]';
 const props = defineProps<Props>();
 
 const cameraPreviewRef: Ref<HTMLDivElement | undefined> = ref();
 const handleChangeMirror = async () => {
   logger.log(`${logPrefix}handleChangeMirror: ${isCurrentCameraMirrored.value}`);
   sourcesStore.setIsCurrentCameraMirrored(!isCurrentCameraMirrored.value);
+  window.mainWindowPort?.postMessage({
+    key: "setCameraTestRenderMirror",
+    data: {
+      mirror: isCurrentCameraMirrored.value
+    }
+  });
 }
 
 function startCameraPreview() {
   logger.log(`${logPrefix}startCameraPreview`, cameraPreviewRef.value, window.nativeWindowHandle);
-  if (cameraPreviewRef.value && window.nativeWindowHandle) {
-    const clientRect = cameraPreviewRef.value.getBoundingClientRect();
-    window.mainWindowPort?.postMessage({
-      key: "startCameraDeviceTest",
-      data: {
-        windowID: window.nativeWindowHandle,
-        rect: {
-          left: Math.round(clientRect.left * window.devicePixelRatio),
-          right: Math.round(clientRect.right * window.devicePixelRatio),
-          top: Math.round(clientRect.top * window.devicePixelRatio),
-          bottom: Math.round(clientRect.bottom * window.devicePixelRatio),
+  setTimeout(() => {
+    if (cameraPreviewRef.value && window.nativeWindowHandle) {
+      const bodyRect = document.body.getBoundingClientRect();
+      const clientRect = cameraPreviewRef.value.getBoundingClientRect();
+      window.mainWindowPort?.postMessage({
+        key: "startCameraDeviceTest",
+        data: {
+          windowID: window.nativeWindowHandle,
+          rect: {
+            left: Math.round(clientRect.left * window.devicePixelRatio),
+            right: Math.round(clientRect.right * window.devicePixelRatio),
+            top: Math.round(clientRect.top * window.devicePixelRatio),
+            bottom: Math.round(clientRect.bottom * window.devicePixelRatio),
+          },
+          log: `-----startCameraPreview
+            body area left:${bodyRect.left} right:${bodyRect.right} top:${bodyRect.top} bottom: ${bodyRect.bottom}
+            view area left:${clientRect.left} right:${clientRect.right} top:${clientRect.top} bottom: ${clientRect.bottom}
+            devicePixelRatio: ${window.devicePixelRatio}`
         }
-      }
-    });
-  } else {
-    logger.error(`${logPrefix}Preview camera failed, not DIV view or native window ID.`, cameraPreviewRef.value, window.nativeWindowHandle);
-  }
+      });
+    } else {
+      logger.error(`${logPrefix}Preview camera failed, not DIV view or native window ID.`, cameraPreviewRef.value, window.nativeWindowHandle);
+    }
+  }, 100);
 }
 
 function stopCameraPreview() {
@@ -95,21 +108,31 @@ function stopCameraPreview() {
   logger.log(`${logPrefix}stopCameraPreview finished`);
 }
 
-const onShow = () => {
-  logger.log(`${logPrefix}onShow`);
-  startCameraPreview();
+function handleBeautyEffectChange(properties: TRTCXmagicEffectProperty[]) {
+  logger.log(`${logPrefix}handleBeautyEffectChange:`, properties);
+  window.mainWindowPort?.postMessage({
+    key: "setCameraTestVideoPluginParameter",
+    data: properties
+  });
+  sourcesStore.setBeautyProperties(properties);
 }
 
 onMounted(() => {
   logger.log(`${logPrefix}onMounted`);
+  window.mainWindowPort?.postMessage({
+    key: "setCameraTestVideoPluginPath",
+    data: true
+  });
   startCameraPreview();
-  window.ipcRenderer.on('show', onShow);
 });
 
 onBeforeUnmount(() => {
   logger.log(`${logPrefix}onBeforeUnmount`);
-  stopCameraPreview()
-  window.ipcRenderer.off('show', onShow);
+  stopCameraPreview();
+  window.mainWindowPort?.postMessage({
+    key: "setCameraTestVideoPluginPath",
+    data: false
+  });
 });
 </script>
 
@@ -117,30 +140,32 @@ onBeforeUnmount(() => {
 .camera-setting-container{
   width: 100%;
   display: flex;
+  height: 4.625rem;
+  padding: 0.5rem 0;
 }
 .camera-setting{
-    width: 23.25rem;
+  width: 20rem;
 }
 .resolution-setting{
-    width: 7.125rem;
+    width: 12rem;
     padding-left: 0.75rem;
 }
 .beauty-setting{
-    padding-top: 1.25rem;
+  width: 100%;
+  height: calc(100% - 21.625rem);
 }
 .video-tab {
     width: 100%;
+    height: 100%;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
   }
   .title {
-    color: #4F586B;
-    font-family: PingFang SC;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
-    line-height: 1.375rem;
+    line-height: 1rem;
   }
   .video-preview-container {
     position: relative;
@@ -159,16 +184,15 @@ onBeforeUnmount(() => {
     }
   }
   .tui-camera-preview{
-    width: 34.5rem;
-    height: 19.75rem;
-    border-radius: 2%;
-    margin: 1rem 0;
+    width: 100%;
+    height: 17rem;
     overflow: hidden;
 }
   .mirror-container {
     display: flex;
     align-self: end;
     padding-left: 0.75rem;
+    font-size: 0;
     cursor: pointer;
   }
   .item {

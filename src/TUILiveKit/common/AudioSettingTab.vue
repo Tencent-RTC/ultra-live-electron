@@ -71,9 +71,9 @@ interface Props {
   audioVolume?: number,
 }
 const props = defineProps<Props>();
-const settingMode = props.mode || SettingMode.SIMPLE;
-const isSampleMode = computed(() => settingMode === SettingMode.SIMPLE);
-const isDetailMode = computed(() => settingMode === SettingMode.DETAIL);
+const settingMode = props.mode || SettingMode.Simple;
+const isSampleMode = computed(() => settingMode === SettingMode.Simple);
+const isDetailMode = computed(() => settingMode === SettingMode.Detail);
 
 const basicStore = useBasicStore();
 const { userId } = storeToRefs(basicStore);
@@ -148,7 +148,7 @@ async function handleSpeakerTest() {
 <style lang="scss" scoped>
 .audio-setting-tab {
   border-radius: 0.25rem;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   width: 100%;
   .item-setting {
     width: 100%;
@@ -202,15 +202,13 @@ async function handleSpeakerTest() {
 }
 .test{
   padding:0.375rem 1.375rem;
-	border:1px solid #1C66E5;
 	border-radius:2.25rem;
 	margin-left:0.625rem;
-	color:#1C66E5;
-	font-family:PingFang SC;
 	font-size:0.875rem;
 	font-style:normal;
 	font-weight:500;
 	line-height:1.375rem;
   margin-top: 0.75rem;
+  background-color: #383F4D;
 }
 </style>

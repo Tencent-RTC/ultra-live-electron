@@ -8,26 +8,39 @@ This project is a desktop/laptop live streaming tool, based on [Tencent Real-Tim
 
 - OS supported: Windows 10+.
 - Device need: camera, microphone and speaker.
-- Live streaming feature requires you to enable [Tencent TRTC servce](https://cloud.tencent.com/document/product/647/37099).
 
-## Clone the code and run for development
+## Getting started
+
+### Step 1: Create application
+1. Go to the [Application management](https://console.trtc.io/app) page in the TRTC console, select **Create Application**, enter an application name such as `TUIKitDemo`, and click **Confirm**.
+2. Click **Application Information** on the right of the application, note the `SDKAppID` and key:
+   - `SDKAppID`: A number in parentheses after 'TUIKitDemo'.
+   - `SDKSecretKey`: Click **Copy SDKSecretKey**.
+
+### Step 2: Clone the code and run in development mode
+1. Clone the repository
 ```
 git clone https://github.com/Tencent-RTC/ultra-live-electron.git
 
 cd ultra-live-electron
+```
 
+2. Open `src/config/basic-info-config.js` and fill in `SDKAppID` and `SDKSecretKey`.
+
+3. Run in development mode
+```
 npm install
 
 npm run start
 ```
 
-### Compiles and minifies for production
+### Step 3: Compiles and build for production
+The built installation package is in the `release` directory.
 ```
 npm run pack:win64
 ```
 
 ## Learn more about TUI-LiveKit-Electron and TRTC
-0. [Our web site](https://cloud.tencent.com/document/product/647)
-1. [Integrate TRTC Electron SDK](https://cloud.tencent.com/document/product/647/38549)
-2. [Online demostration App](https://cloud.tencent.com/document/product/647/17021)
-3. Online API document:  [中文](https://web.sdk.qcloud.com/trtc/electron/doc/zh-cn/trtc_electron_sdk/TRTCCloud.html)、[English](https://web.sdk.qcloud.com/trtc/electron/doc/en-us/trtc_electron_sdk/TRTCCloud.html)
+1. [Our web site](https://trtc.io/)
+2. [Online API document](https://trtc.io/document)
+3. [Github for phone](https://github.com/Tencent-RTC/TUILiveKit)

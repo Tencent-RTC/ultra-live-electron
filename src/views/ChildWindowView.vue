@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, Ref } from 'vue';
+import { onMounted, ref, Ref } from 'vue';
 import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIDeviceType, TUIDeviceState } from '@tencentcloud/tuiroom-engine-electron/plugins/device-manager-plugin';
 import LiveCameraSource from '../TUILiveKit/components/LiveSource/LiveCameraSource.vue';
@@ -17,9 +17,13 @@ import LiveScreenShareSource from '../TUILiveKit/components/LiveSource/LiveScree
 import LiveImageSource from '../TUILiveKit/components/LiveSource/LiveImageSource.vue';
 import LiveVoiceChat from '../TUILiveKit/components/LiveToolbar/LiveVoiceChat.vue';
 import LiveSetting from '../TUILiveKit/components/LiveToolbar/LiveSetting.vue';
+import TUIMessageBox from '../TUILiveKit/common/base/MessageBox';
 import { useCurrentSourcesStore } from '../TUILiveKit/store/currentSources';
 import useDeviceManagerPlugin from '../TUILiveKit/utils/useDeviceManagerPlugin';
 import trtcCloud from "../TUILiveKit/utils/trtcCloud";
+import { useI18n } from '../TUILiveKit/locales/index';
+
+const { t } = useI18n();
 
 const logger = console;
 const logPrefix = "[ChildWindowView]"
@@ -46,17 +50,11 @@ function initMainWindowMessageListener() {
       console.log(`${logPrefix}message from main window:`, event.data, event);
       const { key, data } = event.data;
       switch (key) {
-      case "voice-chat":
+      case "set-apply-list":
         currentSourceStore.setApplyToAnchorList(JSON.parse(data))
-        break;
-      case "update-apply-list":
-        currentSourceStore.updateApplyToAnchorList(JSON.parse(data))
         break;
       case "set-anchor-list":
         currentSourceStore.setAnchorList(JSON.parse(data))
-        break;
-      case "update-anchor-list":
-        currentSourceStore.updateAnchorList(data)
         break;
       case "reset":
         currentSourceStore.reset();
@@ -66,6 +64,9 @@ function initMainWindowMessageListener() {
         break;
       case "update-speaker-volume":
         currentSourceStore.updateSpeakerVolume(data);
+        break;
+      case "on-device-changed":
+        onDeviceChanged(data);
         break;
       default:
         logger.warn(`${logPrefix}message from main: not supported message key: ${key}`);
@@ -82,47 +83,100 @@ function initMainWindowMessageListener() {
   }
 }
 
-async function getMediaDeviceList() {
+function onDeviceChanged(data: { deviceId: string; type: TUIDeviceType; state: TUIDeviceState; }) {
+  logger.log(`${logPrefix}onDeviceChanged:`, data);
+  let deviceList = null;
+  if (data.type === TUIDeviceType.DeviceTypeCamera) {
+    deviceList = deviceManagerPlugin.getCameraDevicesList();
+    if (deviceList) {
+      currentSourceStore.setCameraList(deviceList);
+      if (data.state === TUIDeviceState.DeviceStateRemove && data.deviceId === currentSourceStore.currentCameraId) {
+        currentSourceStore.setCurrentCameraId(deviceList[0].deviceId);
+      }
+    }  
+  } else if (data.type === TUIDeviceType.DeviceTypeMic) {
+    if (data.state === TUIDeviceState.DeviceStateRemove || data.state === TUIDeviceState.DeviceStateAdd) {
+      deviceList = deviceManagerPlugin.getMicDevicesList();
+      deviceList && currentSourceStore.setMicrophoneList(deviceList);
+    } else if (data.state === TUIDeviceState.DeviceStateActive) {
+      currentSourceStore.setCurrentMicrophoneId(data.deviceId)
+    }
+  } else if (data.type === TUIDeviceType.DeviceTypeSpeaker) {
+    if (data.state === TUIDeviceState.DeviceStateRemove || data.state === TUIDeviceState.DeviceStateAdd) {
+      deviceList = deviceManagerPlugin.getSpeakerDevicesList();
+      deviceList && currentSourceStore.setSpeakerList(deviceList);
+    } else if (data.state === TUIDeviceState.DeviceStateActive) {
+      currentSourceStore.setCurrentSpeakerId(data.deviceId)
+    }
+  } else {
+    logger.warn(`${logPrefix}onDeviceChanged un-supported device type:`, data);
+  }
+}
+
+function refreshCameraDeviceList() {
   if (deviceManagerPlugin) {
     const cameraList = deviceManagerPlugin.getCameraDevicesList();
-    const microphoneList = deviceManagerPlugin.getMicDevicesList();
-    const speakerList = deviceManagerPlugin.getSpeakerDevicesList();
-    logger.debug(`${logPrefix}device list:`, cameraList, microphoneList, speakerList);
-    cameraList && currentSourceStore.setCameraList(cameraList);
-    microphoneList && currentSourceStore.setMicrophoneList(microphoneList);
-    speakerList && currentSourceStore.setSpeakerList(speakerList);
+    logger.debug(`${logPrefix}camera device list:`, cameraList);
+    if (cameraList && cameraList.length > 0) {
+      currentSourceStore.setCameraList(cameraList);
+    } else {
+      currentSourceStore.setCameraList([]);
+      TUIMessageBox({
+        title: t('Note'),
+        message: t('No camera'),
+        confirmButtonText: t('Sure'),
+      });
+    }
+  }
+}
 
-    // const cameraInfo = deviceManagerPlugin.getCurrentDevice(TUIDeviceType.DeviceTypeCamera);
-    // const micInfo = deviceManagerPlugin.getCurrentMicDevice();
-    // const speakerInfo = deviceManagerPlugin.getCurrentSpeakerDevice();
-    // if (cameraInfo) {
-    //   logger.log('current camera:', cameraInfo);
-    //   // currentSourceStore.setCurrentCameraId(cameraInfo.deviceId);
-    // }
-    // if (micInfo && micInfo.deviceId) {
-    //   currentSourceStore.setCurrentMicrophoneId(micInfo.deviceId);
-    // }
-    // if (speakerInfo && speakerInfo.deviceId) {
-    //   currentSourceStore.setCurrentSpeakerId(speakerInfo.deviceId);
-    // }
+function refreshMicrophoneDeviceList() {
+  if (deviceManagerPlugin) {
+    const microphoneList = deviceManagerPlugin.getMicDevicesList();
+    logger.debug(`${logPrefix}microphone device list:`, microphoneList);
+
+    if (microphoneList && microphoneList.length > 0) {
+      currentSourceStore.setMicrophoneList(microphoneList);
+    } else {
+      currentSourceStore.setMicrophoneList([]);
+      TUIMessageBox({
+        title: t('Note'),
+        message: t('No microphone'),
+        confirmButtonText: t('Sure'),
+      });
+    }
+  }
+}
+
+function refreshSpeakerDeviceList() {
+  if (deviceManagerPlugin) {
+    const speakerList = deviceManagerPlugin.getSpeakerDevicesList();
+    logger.debug(`${logPrefix}speaker device list:`, speakerList);
+
+    if (speakerList && speakerList.length > 0) {
+      currentSourceStore.setSpeakerList(speakerList);
+    } else {
+      currentSourceStore.setSpeakerList([]);
+      TUIMessageBox({
+        title: t('Note'),
+        message: t('No speaker'),
+        confirmButtonText: t('Sure'),
+      });
+    }
+  }
+}
+
+function refreshMediaDeviceList() {
+  if (deviceManagerPlugin) {
+    refreshCameraDeviceList();
+    refreshMicrophoneDeviceList();
+    refreshSpeakerDeviceList();
   } else {
     logger.warn(`${logPrefix}init device list failed, deviceManagerPlugin is not existed`);
   }
 }
 
-function onDeviceChanged(deviceId: string, type: TUIDeviceType, state: TUIDeviceState): void{
-  logger.debug(`${logPrefix}onDeviceChanged: deviceId:${deviceId}, type:${type}, state:${state}`);
-}
-
-onMounted(() => {
-  deviceManagerPlugin.on("onDeviceChanged", onDeviceChanged);
-});
-
-onBeforeUnmount(() => {
-  deviceManagerPlugin.off("onDeviceChanged", onDeviceChanged);
-});
-
-async function getScreenList() {
+async function refreshScreenList() {
   const thumbWidth = 640;
   const thumbHeight = 360;
   const  iconWidth = 48;
@@ -148,11 +202,11 @@ async function getScreenList() {
 
 const commandHandlers = new Map([
   ['camera', () => {
-    getMediaDeviceList();
+    refreshMediaDeviceList();
     currentViewName.value = 'camera';
   }],
   ['screen', () => {
-    getScreenList();
+    refreshScreenList();
     currentViewName.value = 'screen';
   }],
   ['image', () => {
@@ -162,13 +216,13 @@ const commandHandlers = new Map([
     currentViewName.value = 'voice-chat';
   }],
   ['setting', () => {
-    getMediaDeviceList();
+    refreshMediaDeviceList();
     currentViewName.value = 'setting';
   }],
 ]);
 
 window.ipcRenderer.on('show', (event, args: Record<string, any>) => {
-  console.log('on child show:', args);
+  logger.log(`${logPrefix}on child show`, args);
 
   const handler = commandHandlers.get(args?.command);
   if (handler) {
@@ -183,7 +237,12 @@ window.ipcRenderer.on('show', (event, args: Record<string, any>) => {
 });
 </script>
 <style scoped lang="scss" >
+@import "../TUILiveKit/assets/variable.scss";
+@import "../TUILiveKit/assets/global.scss";
+
 .child-window{
   height: 100%;
+  background-color: $color-background-primary;
+  color: $color-font-default;
 }
 </style>

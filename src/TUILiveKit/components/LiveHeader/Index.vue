@@ -1,10 +1,10 @@
 <template>
-    <header class="com-live-header">
+    <header class="tui-live-header tui-window-header">
       <div class="left">
         <svg-icon class="logo-icon">
           <logo-icon></logo-icon>
         </svg-icon>
-        <span>LiveKit</span>
+        <span class="title">LiveKit</span>
       </div>
       <div class="right">
         <div class="statistics">
@@ -14,7 +14,7 @@
             <i class="statistics-space" v-if="index < statisticsInfoList.length - 1"></i>
           </div>
         </div>
-        <div class="user-info-content" @click="handleUserControl">
+        <div class="user-info-content" @click="handleUserControl" v-click-outside="handleHideUserControl">
           <img class="avatar" :src="props.user.avatarUrl" alt="">
           <div class="name">{{ props.user.name || props.user.userId }}</div>
           <button class="tui-icon">
@@ -54,6 +54,7 @@ import MinimizeIcon from '../../common/icons/MinimizeIcon.vue';
 import MiniIcon from '../../common/icons/MiniIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
 import ArrowStrokeSelectDownIcon from '../../common/icons/ArrowStrokeSelectDownIcon.vue'
+import vClickOutside from '../../utils/vClickOutside';
 import { useBasicStore } from '../../store/basic';
 
 interface Props {
@@ -98,6 +99,10 @@ function handleUserControl() {
   showUserControl.value = !showUserControl.value;
 }
 
+function handleHideUserControl() {
+  showUserControl.value = false;
+}
+
 const onMinimize = () => {
   console.log("[LiveHeader]onMinimize");
   window.ipcRenderer.send("on-minimize-window", null);
@@ -127,26 +132,15 @@ const handleLogOut = () => {
     drop-shadow(0px 8px 40px rgba(23, 25, 31, 0.6))
     drop-shadow(0px 4px 12px rgba(23, 25, 31, 0.4));
 }
-.com-live-header {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-app-region: drag;
-
+.tui-live-header {
   width: 100%;
-  height: 3.5rem;
-  padding: 0.25rem 0;
-  line-height: 3rem;
+  height: 2.75rem;
+  line-height: 2.75rem;
   font-size: 0.75rem;
 
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-
-  button {
-    -webkit-app-region: no-drag;
-    border: none;
-    background-color: transparent;
-  }
 
   .logo-icon{
     width: 1.625rem;
@@ -155,33 +149,32 @@ const handleLogOut = () => {
   .left {
     display: inline-flex;
     align-items: center;
-    font-weight: 500;
     .tui-icon {
       margin-left: 0;
       margin-right: 0.25rem;
       font-size: 1.5rem;
     }
+    .title {
+      font-weight: 500;
+      font-size: 1rem;
+      padding-left: 0.6rem;
+    }
   }
   .statistics{
-    padding-right: 3.125rem;
     display: flex;
     position: relative;
     &-container{
       padding-right: 0.5rem;
     }
     &-text {
-      color: var(--G4, #6B758A);
-      font-family: PingFang SC;
-      font-size: 0.75rem;
+      color: $color-white;
       font-style: normal;
       font-weight: 400;
       line-height: 1.25rem; /* 166.667% */
     }
     &-value{
       padding: 0 0.375rem;
-      color: var(--G4, #6B758A);
-      font-family: PingFang SC;
-      font-size: 0.75rem;
+      color: $color-white;
       font-style: normal;
       font-weight: 400;
       line-height: 1.25rem; /* 166.667% */
@@ -192,7 +185,7 @@ const handleLogOut = () => {
       display: inline-block;
       height: 0.75rem;
       width: 0.0625rem;
-      background-color: var(--G4, #6B758A);
+      background-color: $color-white;
     }
   }
   .right {
@@ -202,18 +195,18 @@ const handleLogOut = () => {
       align-items: center;
       cursor: pointer;
       .avatar {
-        width: 1.75rem;
-        height: 1.75rem;
+        width: 1.5rem;
+        height: 1.5rem;
         border-radius: 50%;
       }
       .name {
         max-width:6.25rem;
         margin-left:0.625rem;
-        font-size:1rem;
+        font-size: 0.75rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: #636A7E;
+        color: $color-white;
       }
       .down-icon {
         margin-left:0.25rem;
@@ -226,11 +219,11 @@ const handleLogOut = () => {
   }
   .user-control-container {
     position: absolute;
-    top:3.375rem;
-    right:8.75rem;
+    top:3rem;
+    right:5.5rem;
     padding:0.625rem;
     min-width:6.25rem;
-    background:#ffffff;
+    background-color: #2D323C;
     border-radius:0.5rem;
     height:2.5rem;
     display: flex;
@@ -244,7 +237,7 @@ const handleLogOut = () => {
       width:0rem;
       border-top:0.625rem solid transparent;
       border-right:0.625rem solid transparent;
-      border-bottom:0.625rem solid #ffffff;
+      border-bottom:0.625rem solid #2D323C;
       border-left:0.625rem solid transparent;
     }
     &::after {
@@ -256,9 +249,12 @@ const handleLogOut = () => {
       top:-1.25rem;
       background-color: transparent;
     }
+    &:hover{
+      background-color: $color-black;
+    }
     .user-control-item-foot{
       text-align: center;
-      color: #4f586b;
+      color: $color-white;
       font-size:0.875rem;
       cursor: pointer;
     }
@@ -267,15 +263,7 @@ const handleLogOut = () => {
     display: flex;
     align-items: center;
     align-self: end;
-    padding: 0.5rem;
-    height: 3.5rem; 
-  }
-
-  .tui-icon {
-    display: flex;
-    font-size: 1rem;
-    cursor: pointer;
-    color: #606266;
+    height: 3rem; 
   }
 }
 </style>

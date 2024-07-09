@@ -1,5 +1,5 @@
 <template>
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
 <mask id="path-1-inside-1_2627_24242" fill="white">
 <rect x="1.59998" y="1.2002" width="8" height="13.6" rx="0.8"/>
 </mask>

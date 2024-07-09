@@ -1,7 +1,13 @@
 <template>
   <div class="tui-live-preview">
     <div class="tui-title tui-preview-title">
-      {{ roomName }}
+      <div class="tui-title-left">
+        {{ roomName }}
+      </div>
+      <div class="tui-title-right">
+        <span class="tui-statis-item tui-online-count">{{ remoteUserList.length }}{{ t("viewer") }}</span>
+        <span class="tui-statis-item tui-history-count">{{ historyRemoteUserCount }}{{ t("history viewer") }}</span>
+      </div>
     </div>
     <div class="tui-live-designer" ref="moveAndResizeContainerRef">
       <div class="tui-video-player" ref="nativeWindowsRef">
@@ -14,25 +20,41 @@
         :style="{ ...overlayPosition }"
       ></div>
     </div>
+    <SelectMediaSource
+      :moveAndResizeContainerRef="moveAndResizeContainerRef"
+      :selectedMediaSource="selectedMediaSource"
+      :previewLeft="previewLeft"
+      :previewTop="previewTop"
+      :previewScale="previewScale"
+      @on-mouse-move-select="onMouseMoveSelect"
+      />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, Ref, defineEmits, onMounted, onBeforeMount, onBeforeUnmount, onUnmounted, computed, watch} from 'vue';
+import { ref, Ref, defineEmits, onMounted, onBeforeUnmount, onUnmounted, computed, watch} from 'vue';
 import { storeToRefs } from 'pinia';
-import { TUIMediaSourceType, TUIMediaSource, TUIScreenCaptureSourceInfo } from '@tencentcloud/tuiroom-engine-electron/plugins/media-mixing-plugin';
-import { Rect, TRTCVideoResolution, TRTCVideoResolutionMode } from '@tencentcloud/tuiroom-engine-electron';
+import { TUIMediaSource } from '@tencentcloud/tuiroom-engine-electron/plugins/media-mixing-plugin';
+import { Rect, TRTCVideoResolutionMode } from '@tencentcloud/tuiroom-engine-electron';
+import SelectMediaSource from './SelectMediaSource.vue';
 import Movable from "../../common/base/Movable";
 import Resizable from "../../common/base/Resizable";
 import useMedisMixingPlugin from "../../utils/useMediaMixingPlugin";
 import { useBasicStore } from "../../store/basic";
+import { useRoomStore } from "../../store/room";
 import { useMediaSourcesStore, TUIMediaSourceViewModel } from '../../store/mediaSources';
 import { resolutionMap } from '../../utils/trtcCloud';
+import useContextMenu from './useContextMenu';
+import { useI18n } from "../../locales/index";
+import trtcCloud from '../../utils/trtcCloud';
 
+const { t } = useI18n();
 const basicStore = useBasicStore();
+const roomStore = useRoomStore();
 const mediaSourcesStore = useMediaSourcesStore();
 
 const { roomName } = storeToRefs(basicStore);
+const { remoteUserList, historyRemoteUserCount } = storeToRefs(roomStore);
 const { mixingVideoEncodeParam, mediaList, selectedMediaKey } = storeToRefs(mediaSourcesStore);
 
 const mixingVideoWidth = ref(0);
@@ -57,7 +79,7 @@ watch(
 );
 console.log("[LivePreview]mixingVideoSize:", mixingVideoWidth.value, mixingVideoHeight.value);
 
-const emits = defineEmits(["changeRect", "select"]);
+const emits = defineEmits(["changer-rect", "select", "edit-media-source"]);
 
 const mediaMixingPlugin = useMedisMixingPlugin();
 
@@ -108,7 +130,6 @@ const previewTop: Ref<number> = computed(() => {
 console.log("[LivePreview]previewTop:", previewTop.value);
 
 const selectedMediaSource: Ref<TUIMediaSourceViewModel | null> = ref(null);
-// To do: props.inputSourceList 也应该监听
 watch(
   () => selectedMediaKey,
   (newSelected, oldSelected) => {
@@ -136,7 +157,27 @@ watch(
     deep: true,
   }
 );
-console.log("[LivePreview]selectedMediaSource:", selectedMediaSource.value);
+
+const onMouseMoveSelect = (options: Record<string, any>) => {
+  console.log("[LivePreview]onMouseMoveSelect:", options);
+  if (overlayRef.value) {
+    overlayRef.value.dispatchEvent(new MouseEvent("mousedown", {
+      screenX: options.screenX,
+      screenY: options.screenY,
+      button: options.button,
+    }));
+  }
+}
+
+const { contextCommand } = useContextMenu(moveAndResizeContainerRef, selectedMediaSource);
+watch(contextCommand, (newVal) => {
+  console.log(`[LivePreview]watch contextCommand:`, newVal);
+  if (newVal && newVal === 'edit') {
+    emits("edit-media-source", selectedMediaSource.value);
+  } else {
+    // Do nothing. other commands have been handled in useContextMenu.
+  }
+});
 
 const selectedPreviewRect: Ref<Rect | null> = computed(() => {
   let result: Rect | null = null;
@@ -151,7 +192,6 @@ const selectedPreviewRect: Ref<Rect | null> = computed(() => {
   console.log("[LivePreview]selectedPreviewRect computed:", result);
   return result;
 });
-console.log("[LivePreview]selectedPreviewRect:", selectedPreviewRect.value);
 
 interface Position {
   left: string;
@@ -184,7 +224,6 @@ const overlayPosition: Ref<Position> = computed(() => {
   console.log("[LivePreview]overlayPosition computed:", result);
   return result;
 });
-console.log("[LivePreview]overlayPosition:", overlayPosition.value);
 
 let movableInstance: Movable | null;
 let resizableInstance: Resizable | null;
@@ -207,10 +246,10 @@ const onMove = (left: number, top: number) => {
       bottom: Math.round(newPreviewRect.bottom / previewScale.value),
     };
     // 3 emit new mix rect
-    emits("changeRect", newRectInMix);
+    emits("changer-rect", newRectInMix);
     if (selectedMediaSource.value) {
       selectedMediaSource.value.mediaSourceInfo.rect = newRectInMix;
-      mediaSourcesStore.updateMediaSource(selectedMediaSource.value);
+      mediaSourcesStore.updateMediaSourceRect(selectedMediaSource.value);
     }
   }
 };
@@ -232,10 +271,10 @@ const onResize = (left: number, top: number, width: number, height: number) => {
     bottom: Math.round(newPreviewRect.bottom / previewScale.value),
   };
   // 3 emit new mix rect
-  emits("changeRect", newRectInMix);
+  emits("changer-rect", newRectInMix);
   if (selectedMediaSource.value) {
     selectedMediaSource.value.mediaSourceInfo.rect = newRectInMix;
-    mediaSourcesStore.updateMediaSource(selectedMediaSource.value);
+    mediaSourcesStore.updateMediaSourceRect(selectedMediaSource.value);
   }
 };
 
@@ -252,16 +291,22 @@ const createNativeWindow = () => {
       });
       isNativeWindowCreated.value = true;
 
-      startLiving();
+      const bodyRect = document.body.getBoundingClientRect();
+      trtcCloud?.log(`-----createNativeWindow
+          body area left:${bodyRect.left} right:${bodyRect.right} top:${bodyRect.top} bottom: ${bodyRect.bottom}
+          view area left:${clientRect.left} right:${clientRect.right} top:${clientRect.top} bottom: ${clientRect.bottom}
+          devicePixelRatio: ${window.devicePixelRatio}`);
+
+      startLocalMediaMixing();
     } else {
       setTimeout(()=>{
         createNativeWindow();
-      }, 1000);
+      }, 100);
     }
   }
 }
 
-const startLiving = async () => {
+const startLocalMediaMixing = async () => {
   const { mixingVideoEncodeParam, backgroundColor } = mediaSourcesStore
   await mediaMixingPlugin.startPublish();
   await mediaMixingPlugin.updatePublishParams({
@@ -272,6 +317,7 @@ const startLiving = async () => {
 };
 
 const onPreviewAreaResize = (entries: ResizeObserverEntry[]) => {
+  console.debug(`[LivePreview]onPreviewAreaResize:`, entries);
   for(const entry of entries) {
     if (moveAndResizeContainerRef.value) {
       containerWidth.value = moveAndResizeContainerRef.value.offsetWidth;
@@ -291,91 +337,20 @@ const onPreviewAreaResize = (entries: ResizeObserverEntry[]) => {
         top: clientRect.top * window.devicePixelRatio,
         bottom: clientRect.bottom * window.devicePixelRatio,
       });
+
+      const bodyRect = document.body.getBoundingClientRect();
+      trtcCloud?.log(`-----onPreviewAreaResize
+          body area left:${bodyRect.left} right:${bodyRect.right} top:${bodyRect.top} bottom: ${bodyRect.bottom}
+          view area left:${clientRect.left} right:${clientRect.right} top:${clientRect.top} bottom: ${clientRect.bottom}
+          devicePixelRatio: ${window.devicePixelRatio}`);
+
     }
   }
 };
 
 const resizeObserver = new ResizeObserver(onPreviewAreaResize);
 
-const onContainerClick = (event: MouseEvent) => {
-  console.log(
-    "[LivePreview]onContainerClick event:",
-    event,
-    event.target,
-    event.currentTarget
-  );
-  const target = event.target;
-  if (target && target === nativeWindowsRef.value && moveAndResizeContainerRef.value) {
-    // calc click point coordinates in mix video image
-    console.log("[LivePreview]onContainerClick mix video image clicked");
-    const containerBounds =
-      moveAndResizeContainerRef.value.getBoundingClientRect();
-    const xInPreviewImage =
-      event.clientX - containerBounds.x - previewLeft.value;
-    const yInPreviewImage =
-      event.clientY - containerBounds.y - previewTop.value;
-    const xInImage = xInPreviewImage / previewScale.value;
-    const yInImage = yInPreviewImage / previewScale.value;
-    console.log(
-      "[LivePreview]onContainerClick click point coordinates in mix video:",
-      xInPreviewImage,
-      yInPreviewImage,
-      xInImage,
-      yInImage
-    );
-
-    let newSelected = {
-      sourceType: TUIMediaSourceType.kCamera,
-      sourceId: "",
-      zOrder: -1,
-    };
-    mediaList.value.forEach((item: TUIMediaSourceViewModel) => {
-      const source = item.mediaSourceInfo;
-      if (
-        source.rect &&
-        xInImage >= source.rect.left &&
-        xInImage <= source.rect.right &&
-        yInImage >= source.rect.top &&
-        yInImage <= source.rect.bottom
-      ) {
-        // 尚未找到，或者正在遍历的媒体源 zOrder 大于等已经找到的，则选择当前正在遍历的媒体源
-        if (!newSelected.sourceId || (source.zOrder && newSelected.zOrder <= source.zOrder)) {
-          newSelected.sourceId = source.sourceId;
-          newSelected.sourceType = source.sourceType;
-          newSelected.zOrder = source.zOrder || 0;
-        }
-      }
-    });
-
-    console.log(
-      "[LivePreview]onContainerClick find clicked media source:",
-      newSelected
-    );
-    mediaSourcesStore.setSelectedMediaKey(newSelected);
-  } else {
-    if (
-      target &&
-      (target === overlayRef.value ||
-        overlayRef.value?.contains(target as Node))
-    ) {
-      // continue to move or resize current selected media source
-      console.log("[LivePreview]onContainerClick overlayRef clicked");
-    } else {
-      // un-select current media source
-      console.log("[LivePreview]onContainerClick click outside of mixing video image");
-      mediaSourcesStore.setSelectedMediaKey({
-        sourceId: '',
-        sourceType: null,
-      });
-    }
-  }
-};
-
-onBeforeMount(() => {
-  console.log('onBeforeMount')
-});
-
-// 初始化基础数据
+// 创建 Movable 和 Resizable
 onMounted(() => {
   console.log("[LivePreview]onMounted init basic data");
   if (moveAndResizeContainerRef.value && overlayRef.value) {
@@ -386,16 +361,13 @@ onMounted(() => {
       containerWidth.value,
       containerHeight.value
     );
-    // listen container click event
-    moveAndResizeContainerRef.value.addEventListener(
-      "mousedown",
-      onContainerClick,
-      false
-    );
 
     movableInstance = new Movable(
       overlayRef.value,
-      moveAndResizeContainerRef.value
+      moveAndResizeContainerRef.value,
+      {
+        canExceedContainer: true,
+      }
     );
     if (movableInstance) {
       movableInstance.on("move", onMove);
@@ -408,7 +380,8 @@ onMounted(() => {
       moveAndResizeContainerRef.value,
       {
         keepRatio: true, // 按比例缩放，不支持任意修改宽高
-        stopPropagation: true, // 如果不支持 stopPropagation，和 Movable 一起使用时，也会出发 Movable 的点击事件
+        stopPropagation: true, // 如果不支持 stopPropagation，和 Movable 一起使用时，也会触发 Movable 的点击事件,
+        canExceedContainer: true,
       }
     );
     if (resizableInstance) {
@@ -435,26 +408,11 @@ onMounted(() => {
   }
 });
 
-// 创建 Movable 和 Resizable
-onMounted(() => {
-  console.log("[LivePreview]onMounted init movable and resizable instance");
-});
-
 onBeforeUnmount(()=> {
   console.log('onBeforeUnmount')
   if (nativeWindowsRef.value && resizeObserver) {
     resizeObserver.unobserve(nativeWindowsRef.value);
   }
-
-  if (moveAndResizeContainerRef.value) {
-    // un-listen container click event
-    moveAndResizeContainerRef.value.removeEventListener(
-      "mousedown",
-      onContainerClick,
-      false
-    );
-  }
-
   mediaMixingPlugin.stopPublish();
 });
 
@@ -463,6 +421,7 @@ onUnmounted(()=> {
   if (resizeObserver) {
     resizeObserver.disconnect();
   }
+  mediaMixingPlugin.setDisplayParams(new Uint8Array(8) ,{ left: 0, right: 0, top: 0, bottom: 0 });
 });
 </script>
 
@@ -474,13 +433,27 @@ onUnmounted(()=> {
   height: 100%;
 
   .tui-preview-title {
-    padding: 0 1rem;
-    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+
+    .tui-statis-item {
+      padding: 0 0.5rem;
+      border-right: 1px solid $color-split-line;
+
+      &:first-child {
+        padding-left: 0;
+      }
+      &:last-child {
+        padding-right: 0;
+        border-right: none;
+      }
+    }
   }
 
   .tui-live-designer {
     height: calc(100% - 2.5rem);
     position: relative;
+    overflow: hidden;
   }
 
   .tui-video-player {

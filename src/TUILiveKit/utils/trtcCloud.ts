@@ -1,7 +1,6 @@
 import TRTCCloud, { TRTCVideoResolution } from 'trtc-electron-sdk';
 
 const trtcCloud  = TRTCCloud.getTRTCShareInstance();
-(window as any)._trtcCloud = trtcCloud;
 
 export default trtcCloud;
 

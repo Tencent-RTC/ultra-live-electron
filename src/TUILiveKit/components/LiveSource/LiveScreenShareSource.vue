@@ -1,8 +1,10 @@
 <template>
-    <div>
-        <div class="tui-screen-title" >
-            <span>{{ t('Add shared screen') }}</span>
-            <svg-icon :icon="CloseIcon" @click="handleCloseSetting"></svg-icon>
+    <div class="tui-screen-share-source">
+        <div class="tui-screen-title tui-window-header" >
+            <span>{{ t('Add Capture') }}</span>
+            <button class="tui-icon"  @click="handleCloseWindow">
+              <svg-icon :icon="CloseIcon"></svg-icon>
+            </button>
         </div>
         <div class="tui-screen-middle">
             <div>
@@ -33,9 +35,9 @@
             </div>
         </div>
         <div class="tui-screen-footer" >
-            <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" :disabled="!selected" @click="handleAddScreen">{{ t('Add shared screen') }}</button>
-            <button v-else class="tui-button-confirm" :disabled="!selected || isSameScreen" @click="handleEditScreen">{{ t('Edit shared screen') }}</button>
-            <button class="tui-button-cancel" @click="handleCloseSetting">{{ t('Cancel') }}</button>
+            <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" :disabled="!selected" @click="handleAddScreen">{{ t('Add Capture') }}</button>
+            <button v-else class="tui-button-confirm" :disabled="!selected || isSameScreen" @click="handleEditScreen">{{ t('Edit Capture') }}</button>
+            <button class="tui-button-cancel" @click="handleCloseWindow">{{ t('Cancel') }}</button>
         </div>
     </div>
 </template>
@@ -72,7 +74,7 @@ const isSameScreen = computed(() => {
   return selected.value?.sourceId.toString() === props.data?.mediaSourceInfo?.sourceId ? true : false;
 });
 
-const handleCloseSetting = () => {
+const handleCloseWindow = () => {
   window.ipcRenderer.send("close-child");
   resetCurrentView();
 }
@@ -85,6 +87,7 @@ const handleAddScreen = () => {
       id: selected.value.sourceId.toString(),
       width: selected.value.width,
       height: selected.value.height,
+      screenType: selected.value.type,
     };
 
     window.mainWindowPort?.postMessage({
@@ -107,6 +110,7 @@ const handleEditScreen = () => {
       id: selected.value.sourceId.toString(),
       width: selected.value.width,
       height: selected.value.height,
+      screenType: selected.value.type,
       predata: JSON.parse(JSON.stringify(props.data)),
     };
 
@@ -155,12 +159,16 @@ watch(props, (val) => {
 });
 </script>
 <style scoped lang="scss">
+@import "../../assets/variable.scss";
+@import "../../assets/global.scss";
 @import './style.scss';
 
+.tui-screen-share-source {
+  height: 100%;
+  color: #D5E0F2;
+}
+
 .tui-screen-title{
-    height: 4rem;
-    line-height: 2.5rem;
-    border-bottom: 1px solid rgba(230, 236, 245, 0.80);
     font-weight: 500;
     padding: 0 1.5rem 0 1.375rem;
     display: flex;
@@ -169,11 +177,11 @@ watch(props, (val) => {
 }
 
 .tui-screen-middle{
-    height: auto;
+    height: calc(100% - 5.75rem);
     min-width: 12.5rem;
-    max-height: 37.5rem;
+    padding: 0.5rem 1.5rem;
     overflow: auto;
-    padding: 1rem 1.5rem;
+    background-color: $color-background-secondary;
 }
 
 .screen-list,
@@ -185,11 +193,12 @@ watch(props, (val) => {
     padding-left: 3.75rem;
 }
 .tui-screen-footer{
-    height: 4.375rem;
+    height: 3rem;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 4rem 1.5rem;;
+    padding: 0 1.5rem;;
+    background-color: $color-background-secondary;
 }
 .selected {
   color: #fff;

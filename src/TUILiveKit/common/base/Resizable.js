@@ -1,8 +1,19 @@
+const ResizeAnchorMode = {
+  Both: 0,
+  Corner: 1,
+  Edge: 2,
+}
+
 class Resizable {
   constructor(
     resizeTarget,
     container,
-    options = { keepRatio: false, stopPropagation: false }
+    options = { 
+      keepRatio: false, 
+      stopPropagation: false, 
+      anchorMode: ResizeAnchorMode.Both,
+      canExceedContainer: false
+    }
   ) {
     if (!resizeTarget) {
       console.error("The resizable argument must be an HTML element.");
@@ -12,8 +23,10 @@ class Resizable {
     this.resizeTarget = resizeTarget;
     this.container = container || document.body;
     this.options = {
-      keepRatio: options.keepRatio || false,
-      stopPropagation: options.stopPropagation || false,
+      keepRatio: !!options.keepRatio || false,
+      stopPropagation: !!options.stopPropagation || false,
+      anchorMode: options.anchorMode || ResizeAnchorMode.Both,
+      canExceedContainer: !!options.canExceedContainer || false
     };
     // Map<string, Array<Function>>
     this.callbacksMap = new Map();
@@ -78,16 +91,18 @@ class Resizable {
     bottomRightAnchor.className = "resize-anchor bottom-right-anchor";
     this.bottomRightAnchor = bottomRightAnchor;
 
-    if (!this.options.keepRatio) {
+    if (this.options.anchorMode === ResizeAnchorMode.Both || this.options.anchorMode.Edge) {
       this.resizeTarget.appendChild(topAnchor);
       this.resizeTarget.appendChild(leftAnchor);
       this.resizeTarget.appendChild(rightAnchor);
       this.resizeTarget.appendChild(bottomAnchor);
     }
-    this.resizeTarget.appendChild(topLeftAnchor);
-    this.resizeTarget.appendChild(topRightAnchor);
-    this.resizeTarget.appendChild(bottomLeftAnchor);
-    this.resizeTarget.appendChild(bottomRightAnchor);
+    if (this.options.anchorMode === ResizeAnchorMode.Both || this.options.anchorMode.Corner) {
+      this.resizeTarget.appendChild(topLeftAnchor);
+      this.resizeTarget.appendChild(topRightAnchor);
+      this.resizeTarget.appendChild(bottomLeftAnchor);
+      this.resizeTarget.appendChild(bottomRightAnchor);
+    }
   }
 
   initResizeEvent() {
@@ -102,7 +117,10 @@ class Resizable {
   }
 
   mousedown(event) {
-    console.log("on resizing mouse down");
+    console.debug("on Resizable mouse down");
+    if (event.button !== 0)  {
+      return;
+    }
     event.preventDefault(); // Avoid select text content.
     if (this.options.stopPropagation) {
       event.stopPropagation();
@@ -120,13 +138,7 @@ class Resizable {
     this.originLeft = window.parseInt(resizeTargetStyle.left);
     this.originWidth = this.resizeTarget.offsetWidth;
     this.originHeight = this.resizeTarget.offsetHeight;
-    console.log(
-      "resize origin:",
-      this.originTop,
-      this.originLeft,
-      this.originWidth,
-      this.originHeight
-    );
+    console.debug("resize origin:", this.originTop, this.originLeft, this.originWidth, this.originHeight);
 
     document.addEventListener("mousemove", this.mousemove, false);
     document.addEventListener("mouseup", this.mouseup, false);
@@ -157,7 +169,7 @@ class Resizable {
           // 需要调整 y 坐标
           top = this.originTop + this.originHeight - height;
         } else {
-          // 高度缩放比例小于高度缩放比例，保持当前高度，调整宽度
+          // 高度缩放比例小于宽度缩放比例，保持当前高度，调整宽度
           width = (height * this.originWidth) / this.originHeight;
           // 需要调整 x 坐标
           left = this.originLeft + this.originWidth - width;
@@ -168,6 +180,19 @@ class Resizable {
       result = this._resizeTop(event);
       top = result.top;
       height = result.height;
+
+      if (this.options.keepRatio) {
+        width = this.originWidth * height / this.originHeight;
+        if (width < 20) {
+          width = 20;
+          height = this.originHeight * width / this.originWidth;
+          top = this.originTop + this.originHeight - height;
+        } else if(!this.options.canExceedContainer && width > this.container.offsetWidth - this.originLeft) {
+          width = this.container.offsetWidth - this.originLeft;
+          height = this.originHeight * width / this.originWidth;
+          top = this.originTop + this.originHeight - height;
+        }
+      }
       break;
     case "top-right-anchor":
       result = this._resizeTop(event);
@@ -189,9 +214,32 @@ class Resizable {
       result = this._resizeLeft(event);
       left = result.left;
       width = result.width;
+
+      if (this.options.keepRatio) {
+        height = this.originHeight * width / this.originWidth;
+        if (height < 20) {
+          height = 20;
+          width = this.originWidth * height / this.originHeight;
+          left = this.originLeft + this.originWidth - width;
+        } else if (!this.options.canExceedContainer && height > this.container.offsetHeight - this.originTop) {
+          height = this.container.offsetHeight - this.originTop;
+          width = this.originWidth * height / this.originHeight;
+          left = this.originLeft + this.originWidth - width;
+        }
+      }
       break;
     case "right-anchor":
       width = this._resizeRight(event);
+      if (this.options.keepRatio) {
+        height = (width * this.originHeight) / this.originWidth;
+        if (height < 20) {
+          height = 20;
+          width = height * this.originWidth / this.originHeight;
+        } else if (!this.options.canExceedContainer && height > this.container.offsetHeight - this.originTop) {
+          height = this.container.offsetHeight - this.originTop;
+          width = height * this.originWidth / this.originHeight;
+        }
+      }
       break;
     case "bottom-left-anchor":
       height = this._resizeBottom(event);
@@ -211,6 +259,16 @@ class Resizable {
       break;
     case "bottom-anchor":
       height = this._resizeBottom(event);
+      if (this.options.keepRatio) {
+        width = (height * this.originWidth) / this.originHeight;
+        if (width < 20) {
+          width = 20;
+          height = width * this.originHeight / this.originWidth;
+        } else if (!this.options.canExceedContainer && width > this.container.offsetWidth - this.originLeft) {
+          width = this.container.offsetWidth - this.originLeft;
+          height = width * this.originHeight / this.originWidth;
+        }
+      }
       break;
     case "bottom-right-anchor":
       height = this._resizeBottom(event);
@@ -240,7 +298,7 @@ class Resizable {
     var left = this.originLeft + leftResizedDistance;
     var width = this.originWidth - leftResizedDistance;
 
-    if (left < 0) {
+    if (!this.options.canExceedContainer && left < 0) {
       left = 0;
       width = this.originWidth + this.originLeft;
     } else if (left > this.originLeft + this.originWidth - 20) {
@@ -260,7 +318,7 @@ class Resizable {
     var top = this.originTop + topResizedDistance;
     var height = this.originHeight - topResizedDistance;
 
-    if (top < 0) {
+    if (!this.options.canExceedContainer && top < 0) {
       top = 0;
       height = this.originHeight + this.originTop;
     } else if (top > this.originTop + this.originHeight - 20) {
@@ -281,7 +339,7 @@ class Resizable {
 
     if (width < 20) {
       width = 20; // 最小宽度
-    } else if (width > this.container.offsetWidth - this.originLeft) {
+    } else if (!this.options.canExceedContainer && width > this.container.offsetWidth - this.originLeft) {
       width = this.container.offsetWidth - this.originLeft;
     }
 
@@ -295,7 +353,7 @@ class Resizable {
 
     if (height < 20) {
       height = 20; // 最小高度
-    } else if (height > this.container.offsetHeight - this.originTop) {
+    } else if (!this.options.canExceedContainer && height > this.container.offsetHeight - this.originTop) {
       height = this.container.offsetHeight - this.originTop;
     }
 
@@ -335,7 +393,8 @@ class Resizable {
   emit(eventName, ...arg) {
     let callbacks = this.callbacksMap.get(eventName);
     if (callbacks) {
-      callbacks.forEach((callback) => {
+      const callbacksClone = callbacks.slice();
+      callbacksClone.forEach((callback) => {
         try {
           callback.apply(null, arg); // arg must be array
         } catch (error) {
@@ -365,18 +424,19 @@ class Resizable {
 
     this.callbacksMap.clear();
 
-    if (!this.options.keepRatio) {
+    if (this.options.anchorMode === ResizeAnchorMode.Both || this.options.anchorMode.Edge) {
       this.resizeTarget.removeChild(this.topAnchor);
       this.resizeTarget.removeChild(this.leftAnchor);
       this.resizeTarget.removeChild(this.rightAnchor);
       this.resizeTarget.removeChild(this.bottomAnchor);
     }
-
-    this.resizeTarget.removeChild(this.topLeftAnchor);
-    this.resizeTarget.removeChild(this.topRightAnchor);
-    this.resizeTarget.removeChild(this.bottomLeftAnchor);
-    this.resizeTarget.removeChild(this.bottomRightAnchor);
-
+    if (this.options.anchorMode === ResizeAnchorMode.Both || this.options.anchorMode.Corner) {
+      this.resizeTarget.removeChild(this.topLeftAnchor);
+      this.resizeTarget.removeChild(this.topRightAnchor);
+      this.resizeTarget.removeChild(this.bottomLeftAnchor);
+      this.resizeTarget.removeChild(this.bottomRightAnchor);
+    }
+    
     this.topLeftAnchor = null;
     this.topAnchor = null;
     this.topRightAnchor = null;

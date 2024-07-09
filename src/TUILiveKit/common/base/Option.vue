@@ -52,21 +52,21 @@ function handleChooseOption() {
 </script>
 
 <style lang="scss" scoped>
+@import '../../assets/variable.scss';
 
 .option-container {
   padding: 0.375rem 0.9375rem;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  color: #000;
   &.active {
-    color: var(--active-color-2);
+    color: $color-primary;
   }
   &:hover {
-    background-color: var(--hover-background-color);
+    background-color: $color-black;
   }
   .option-content {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     line-height: 1.375rem;
     font-weight: 500;
   }

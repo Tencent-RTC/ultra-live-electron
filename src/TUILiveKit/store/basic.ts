@@ -1,16 +1,20 @@
 import { defineStore } from "pinia";
 import { TRTCAppScene, TRTCStatistics } from "trtc-electron-sdk";
+import { useI18n } from '../locales/index';
+
+const { t } = useI18n();
 
 interface BasicState {
-  sdkAppId: number,
-  userId: string,
-  userSig: string,
-  userName: string,
-  avatarUrl: string,
-  roomId: string,
-  roomType: TRTCAppScene,
+  sdkAppId: number;
+  userId: string;
+  userSig: string;
+  userName: string;
+  avatarUrl: string;
+  useStringRoomId: boolean;
+  roomId: string;
   isLiving: boolean;
   activeSettingTab: string;
+  isOpenMic: boolean;
   statistics: Record<string, any>; // TRTCStatistics,
 }
 
@@ -21,10 +25,11 @@ export const useBasicStore = defineStore('basic', {
     userSig: '',
     userName: '',
     avatarUrl: '',
+    useStringRoomId: false,
     roomId: '',
-    roomType: TRTCAppScene.TRTCAppSceneLIVE,
     isLiving: false,
     activeSettingTab: 'audio',
+    isOpenMic: false,
     statistics: {
       appCpu: 0,
       downLoss: 0,
@@ -45,7 +50,9 @@ export const useBasicStore = defineStore('basic', {
       return state.statistics.localStatisticsArray?.[0]?.frameRate;
     },
     roomName(): string {
-      return `${this.userName || this.userId} 的直播间: ${this.roomId}`;
+      return t('sb. living room: NO.', {
+        userName: this.userName || this.userId,
+      }) + this.roomId;
     }
   },
   actions: {
@@ -66,9 +73,7 @@ export const useBasicStore = defineStore('basic', {
     },
     setRoomId(roomId: string) {
       this.roomId = roomId;
-    },
-    setRoomType(type: TRTCAppScene) {
-      this.roomType = type;
+      this.useStringRoomId = typeof roomId === 'string';
     },
     setBasicInfo(info: Record<string, any>) {
       if (!info) {
@@ -82,6 +87,9 @@ export const useBasicStore = defineStore('basic', {
       avatarUrl && this.setAvatarUrl(avatarUrl);
       roomId && this.setRoomId(roomId);
     },
+    setIsOpenMic(isOpen: boolean) {
+      this.isOpenMic = isOpen;
+    },
     setIsLiving(flag: boolean) {
       this.isLiving = flag;
     },
@@ -93,6 +101,7 @@ export const useBasicStore = defineStore('basic', {
     },
     reset() {
       this.roomId = '0';
+      this.useStringRoomId = false;
       this.isLiving = false;
       this.activeSettingTab = 'audio';
       this.statistics = {

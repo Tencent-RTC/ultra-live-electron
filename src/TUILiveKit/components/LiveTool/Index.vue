@@ -84,7 +84,6 @@ const handleShowTools = () => {
   cursor: pointer;
     &-text{
       text-align: center;
-      font-family: PingFang SC;
       font-size: 0.75rem;
       font-style: normal;
       font-weight: 400;
@@ -111,7 +110,6 @@ const handleShowTools = () => {
 }
 .text{
   text-align: center;
-  font-family: PingFang SC;
   font-size: 0.75rem;
   font-style: normal;
   font-weight: 400;

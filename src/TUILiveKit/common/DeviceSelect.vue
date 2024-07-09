@@ -108,6 +108,6 @@ async function handleChange(deviceId: string) {
 <style lang="scss" scoped>
 .select {
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 </style>

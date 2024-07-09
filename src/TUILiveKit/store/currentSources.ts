@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { TUIDeviceInfo, TUIDeviceType } from '@tencentcloud/tuiroom-engine-electron/plugins/device-manager-plugin';
 import { TRTCScreenCaptureSourceInfo } from '@tencentcloud/tuiroom-engine-electron';
 import { UserInfo } from './room';
-import { TUIBeautyProperty } from '../utils/beauty';
+import { TRTCXmagicEffectProperty, TRTCXmagicEffectCategory } from '../utils/beauty';
 
 const logger = console;
 const logPrefix = '[currentSources]';
@@ -28,7 +28,7 @@ interface TUICurrentMediaSourcesState {
     currentAnchorList: Array<UserInfo>;
     micVolume: number;
     speakerVolume: number;
-    currentBeautySetting: Array<TUIBeautyProperty>;
+    beautyProperties: Array<TRTCXmagicEffectProperty>;
 }
 
 export const useCurrentSourcesStore = defineStore('currentSources', {
@@ -49,10 +49,12 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
     currentAnchorList: [],
     micVolume: 0,
     speakerVolume: 0,
-    currentBeautySetting: [],
+    beautyProperties: [],
   }),
   getters:{
-
+    getBeautyPropertyByEffKey(state): Record<string, any> | null {
+      return (effKey: string) => state.beautyProperties.find(item => item.effKey === effKey) || null;
+    }
   },
   actions:{
     setCurrentCameraId(deviceId: string) {
@@ -71,6 +73,12 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
           deviceId,
         }
       });
+      window.mainWindowPort?.postMessage({
+        key: "setCameraTestDeviceId",
+        data: { 
+          cameraId: deviceId 
+        }
+      });
     },
     setCurrentMicrophoneId(deviceId: string) {
       this.currentMicrophoneId = deviceId;
@@ -86,6 +94,9 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
       if (!this.currentCameraId && deviceList.length > 0) {
         this.setCurrentCameraId(deviceList[0].deviceId);
         this.setCurrentCameraResolution(deviceList[0].deviceProperties.SupportedResolution[0]);
+      } else {
+        this.setCurrentCameraId('');
+        this.setCurrentCameraResolution(defaultCameraResolution);
       }
     },
     setMicrophoneList(deviceList: TUIDeviceInfo[]) {
@@ -116,22 +127,8 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
     setApplyToAnchorList(applyToAnchorList: any) {
       this.applyToAnchorList = applyToAnchorList;
     },
-    updateApplyToAnchorList(userInfo: any){
-      const userId = userInfo.userId;
-      const isUserIdInApplyToAnchorList = this.applyToAnchorList.some(item => item.userId === userId);
-      if(isUserIdInApplyToAnchorList) {
-        this.applyToAnchorList = this.applyToAnchorList.filter(item => item.userId !== userId);
-      } else {
-        this.applyToAnchorList.push(userInfo);
-      }
-    },  
-    setAnchorList(userInfo: any){
-      if(userInfo.agree) {
-        this.currentAnchorList.push(userInfo);
-      }
-    },
-    updateAnchorList(userId: any){
-      this.currentAnchorList = this.currentAnchorList.filter(item => item.userId !== userId);
+    setAnchorList(anchorList: any){
+      this.currentAnchorList = anchorList;
     },
     updateAudioVolume(volume: number) {
       this.micVolume = volume
@@ -139,18 +136,66 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
     updateSpeakerVolume(volume: number) {
       this.speakerVolume = volume
     },
-    setCurrentBeautySetting(setting: TUIBeautyProperty){
-      const currentSetting = Object.assign({},setting);
-      const index = this.currentBeautySetting.findIndex(obj => obj.effKey === currentSetting.effKey);
-      if (index !== -1) {
-        // 更新对象
-        Object.assign(this.currentBeautySetting[index], currentSetting)
-      } else{
-        this.currentBeautySetting.push(currentSetting)
+    setBeautyProperty(property: TRTCXmagicEffectProperty){
+      const currentProperty = Object.assign({}, property);
+      const excludedCategory = [TRTCXmagicEffectCategory.Segmentation, TRTCXmagicEffectCategory.Makeup, TRTCXmagicEffectCategory.Motion];
+      let indexToUpdate = -1;
+      switch (currentProperty.category) {
+      case TRTCXmagicEffectCategory.Beauty:
+      case TRTCXmagicEffectCategory.BodyBeauty:
+      case TRTCXmagicEffectCategory.Lut:
+        indexToUpdate = this.beautyProperties.findIndex(item => item.effKey === currentProperty.effKey);
+        if (indexToUpdate !== -1) {
+          Object.assign(this.beautyProperties[indexToUpdate], currentProperty);
+        } else{
+          this.beautyProperties.push(currentProperty);
+        }
+        break;
+      case TRTCXmagicEffectCategory.Motion:
+      case TRTCXmagicEffectCategory.Segmentation:
+      case TRTCXmagicEffectCategory.Makeup:
+        indexToUpdate = this.beautyProperties.findIndex(item => excludedCategory.indexOf(item.category) !== -1);
+        if (indexToUpdate !== -1) {
+          Object.assign(this.beautyProperties[indexToUpdate], currentProperty);
+        } else{
+          this.beautyProperties.push(currentProperty);
+        }
+        break;
+      case TRTCXmagicEffectCategory.AssetData:
+        indexToUpdate = this.beautyProperties.findIndex(item => item.category === TRTCXmagicEffectCategory.AssetData && item.effKey === currentProperty.effKey);
+        if (indexToUpdate !== -1) {
+          this.beautyProperties.splice(indexToUpdate, 1);
+        }
+        this.beautyProperties.push(currentProperty);
+        break;
+      default:
+        logger.warn(`${logPrefix}setBeautyProperty unsupported beauty effect category.`, property);
+        break;
       }
     },
-    setBeautySettings(settings: TUIBeautyProperty[]) {
-      this.currentBeautySetting = settings;
+    setBeautyProperty_1(setting: TRTCXmagicEffectProperty){
+      const currentSetting = Object.assign({},setting);
+      const index = this.beautyProperties.findIndex(obj => {
+        return obj.effKey === currentSetting.effKey 
+          || (currentSetting.category === TRTCXmagicEffectCategory.Segmentation && obj.category === TRTCXmagicEffectCategory.Segmentation);
+      });
+      if (index !== -1) {
+        Object.assign(this.beautyProperties[index], currentSetting);
+      } else{
+        this.beautyProperties.push(currentSetting);
+      }
+    },
+    setBeautyProperties(properties: TRTCXmagicEffectProperty[]) {
+      // this.beautyProperties = properties;
+      properties.forEach(item => this.setBeautyProperty(item));
+    },
+    clearFineBeauty() {
+      const fineBeautyProperty = this.beautyProperties.filter(item => item.category === TRTCXmagicEffectCategory.Beauty)
+      fineBeautyProperty.forEach(item => Object.assign(item, { effValue: "0"}));
+      window.mainWindowPort?.postMessage({
+        key: "setCameraTestVideoPluginParameter",
+        data: JSON.parse(JSON.stringify(fineBeautyProperty||[])),
+      });
     },
     reset() {
       this.currentCameraResolution = defaultCameraResolution;
@@ -169,6 +214,7 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
       this.currentAnchorList = [];
       this.micVolume = 0;
       this.speakerVolume = 0;
+      this.beautyProperties = [];
     },
   },
 })

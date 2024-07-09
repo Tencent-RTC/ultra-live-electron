@@ -35,7 +35,6 @@ function onInputColor() {
 }
 .text{
     color: var(--G7, #D5E0F2);
-    font-family: PingFang SC;
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 500;

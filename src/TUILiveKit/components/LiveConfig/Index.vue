@@ -1,61 +1,77 @@
 <template>
   <div class="tui-live-config">
-    <div class="tui-title">
-      <span @click="handleChangeSource" :class="[isShowSources ? 'is-active' : 'tui-source']">{{ t('Sources')}}</span>
+    <div class="tui-config-title">
+      <span @click="handleChangeSource" :class="[isShowSources ? 'is-active' : 'tui-config-title-source']">{{ t('Sources')}}</span>
       <!-- <span @click="handleChangeMaterial" :class="[isShowMaterial ? 'is-active is-active-material' : 'tui-material']">{{ t('Material')}}</span> -->
-      <span @click="toggleVideoResolutionMode" class="tui-resolution-mode-switch">
-        <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" />
-      </span>
     </div>
     <div v-if="isShowSources && !isHasSources" class="tui-config-list">
-      <span class="source-title">
-        {{ t('We support you in adding a rich variety of sources')}}
+      <span class="tui-config-notice">
+        {{ t('Support diverse types of media sources')}}
       </span>
-      <span v-for="item in mediaSourceMenuList" :key="item.text" class="source" @click="item.fun()">
+      <span v-for="item in mediaSourceMenuList" :key="item.text" class="btn-add-source" @click="item.fun()">
         <svg-icon :icon="item.icon" class="icon-container"></svg-icon>
-        <i class="text">
+        <i class=tui-menu-item-text>
           {{item.text}}
         </i>
       </span>
+      <span class="btn-add-source">
+        <live-image-source></live-image-source>
+      </span>  
     </div>
     <div v-if="isHasSources && !isShowMaterial" class="tui-media-source">
-      <div class="add-source" @click="handleOpenAddMedia"> 
+      <div class="tui-add-source-menu" @click="handleOpenAddMedia" v-click-outside="handleClickOutsideAdd" > 
         <svg-icon :icon="AddIcon" class="icon-container"></svg-icon>
-        <span class="text">{{ t('Add') }}</span>
+        <span class=tui-menu-item-text>{{ t('Add') }}</span>
       </div>
-      <div v-if="isShowAddMedia" class="add-media-source">
-        <span v-for="item in mediaSourceMenuList" :key="item.text" class="add-media" @click="item.fun()">
+      <div v-if="isShowAddMedia" class="tui-add-source-menu-popup">
+        <span v-for="item in mediaSourceMenuList" :key="item.text" class="tui-add-source-menu-item" @click="item.fun()">
           <svg-icon :icon="item.icon" class="icon-container"></svg-icon>
-          <i class="text">
+          <i class=tui-menu-item-text>
             {{item.text}}
           </i>
         </span>
+        <span class="tui-add-source-menu-item">
+          <live-image-source></live-image-source>
+        </span>  
       </div>
-      <div 
-        v-for="item in mediaList" 
-        :key="item.mediaSourceInfo.sourceId"  
-        class="item-container" 
-        :class="item.mediaSourceInfo.sourceId === selectedMediaKey.sourceId && item.mediaSourceInfo.sourceType === selectedMediaKey.sourceType ? 'selected' : ''"
-        ref="sourcesOptions" 
-        v-click-outside="handleClickOutside" 
-        @click="handleSelectSource(item)">
-        <div class="item-title">
-          <!-- <svg-icon :icon="CameraIcon" class="icon-container"></svg-icon> -->
-          <div class="item-title-name">{{ item.sourceName }}</div>
-          <div class="item-title-tool"><svg-icon :icon="MoreIcon" :size="2" class="icon-container" @click.stop.prevent="handleMore(item)"></svg-icon></div>
-        </div>
-        <!-- <div class="item-bottom">
-          <SwitchControl v-model="isMuteMediaSources" @click="handleMuteSource(item)"></SwitchControl>
-          <div class="item-icon">
-            <svg-icon :icon="SwitchSourcesMirror" class="icon-container"></svg-icon>
-            <svg-icon :icon="MoreIcon" :size="1" class="icon-container" @click.stop.prevent="handleMore(item)"></svg-icon>
+      <div class="tui-media-source-list" ref="mediaSourceListRef">
+        <div 
+          v-for="(item, index) in mediaList" 
+          :key="item.mediaSourceInfo.sourceId"
+          @mousedown="handleStartDrag($event, item)"
+          class="tui-media-source-item" 
+          :class="item.mediaSourceInfo.sourceId === selectedMediaKey.sourceId && item.mediaSourceInfo.sourceType === selectedMediaKey.sourceType ? 'selected' : ''"
+          v-click-outside="handleClickOutside" 
+          @click="handleSelectSource(item)">
+          <div class="tui-media-source-content">
+            <!-- <svg-icon :icon="CameraIcon" class="icon-container"></svg-icon> -->
+            <div class="item-name">{{ item.aliasName }}</div>
+            <div class="item-tools">
+              <button :class="['item-icon', 'icon-up', index === 0 ? 'disabled' : '']" :disabled="index === 0" @click.stop.prevent="handleChangeMediaOrder(item, 1)">
+                <svg-icon :icon="UpIcon" :size="1.5" class="icon-container"></svg-icon>
+              </button>
+              <button :class="['item-icon', 'icon-down', index === mediaList.length - 1 ? 'disabled' : '']" :disabled="index === mediaList.length - 1" @click.stop.prevent="handleChangeMediaOrder(item, -1)">
+                <svg-icon :icon="DownIcon" :size="1.5" class="icon-container"></svg-icon>
+              </button>
+              <button class="item-icon icon-mute" @click.stop.prevent="handleMuteMediaSource(item)">
+                <svg-icon :icon="!item.muted ? MediaSourceMute : MediaSourceUnmute" :size="1.5" class="icon-container"></svg-icon>
+              </button>
+              <button class="item-icon icon-more" @click.stop.prevent="handleMore(item)">
+                <svg-icon :icon="MoreIcon" :size="1.5" class="icon-container"></svg-icon>
+              </button>
+            </div>
           </div>
-        </div> -->
-        <div v-show="visibleMorePopupId === item.mediaSourceInfo.sourceId" class="item-more">
-          <!-- <span class="item-more-text">{{t('Rename')}}</span> -->
-          <span class="item-more-text" @click.stop="handleRemoveSource(item)">{{t('Remove source')}}</span>
-          <span class="item-more-text" @click.stop="handleEditSource(item)">{{t('Edit source')}}</span>
-        </div>  
+          <div v-show="visibleMorePopupId === item.mediaSourceInfo.sourceId" class="tui-edit-source-menu-popup">
+            <!-- <span class="item-more-text">{{t('Rename')}}</span> -->
+            <span class="edit-menu-item" @click.stop="handleRemoveSource(item)">{{t('Remove source')}}</span>
+            <span v-if="item.mediaSourceInfo.sourceType === TUIMediaSourceType.kImage" class="edit-menu-item">
+              <live-image-source :data="item"></live-image-source>
+            </span>
+            <span v-else class="edit-menu-item" @click.stop="handleEditSource(item)">
+              {{t('Edit source')}}
+            </span>
+          </div>  
+        </div>
       </div>
     </div>
     <!-- <div v-if="isShowMaterial" class="tui-material">
@@ -89,7 +105,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref, Ref } from 'vue';
+import { computed, ref, Ref, shallowRef, defineEmits } from 'vue';
 import { storeToRefs } from 'pinia';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import CameraIcon from '../../common/icons/CameraIcon.vue';
@@ -98,6 +114,8 @@ import TextIcon from '../../common/icons/TextIcon.vue';
 import MovieIcon from '../../common/icons/MovieIcon.vue';
 import AddIcon from '../../common/icons/AddIcon.vue';
 import SwitchSourcesMirror from '../../common/icons/SwitchSourcesMirror.vue';
+import UpIcon from '../../common/icons/UpIcon.vue';
+import DownIcon from '../../common/icons/DownIcon.vue';
 import MoreIcon from '../../common/icons/MoreIcon.vue';
 import VerticalScreenIcon from '../../common/icons/VerticalScreenIcon.vue';
 import HorizontalScreenIcon from '../../common/icons/HorizontalScreenIcon.vue';
@@ -109,15 +127,23 @@ import PlayingIcon from '../../common/icons/PlayingIcon.vue';
 import DraggablePoint from '../../common/base/DraggablePoint.vue';
 import SelectedIcon from '../../common/icons/SelectedIcon.vue';
 import ColorPicker from '../../common/base/ColorPicker.vue';
+import MediaSourceMute from '../../common/icons/MediaSourceMute.vue';
+import MediaSourceUnmute from '../../common/icons/MediaSourceUnmute.vue';
 import { TUIMediaSourceViewModel, useMediaSourcesStore } from '../../store/mediaSources';
 import { TUIMediaSourceType } from '@tencentcloud/tuiroom-engine-electron/plugins/media-mixing-plugin';
 import { TRTCVideoResolutionMode } from 'trtc-electron-sdk';
+import LiveImageSource from '../LiveSource/LiveImageSource.vue';
 
 type TUIMusicType = {
   icon: any;
   text: string;
   path: string;
 }
+
+const logger = console;
+const logPrefix = '[LiveConfig]';
+
+const emits = defineEmits(["edit-media-source"]);
 
 const mediaSourcesStore = useMediaSourcesStore();
 const { backgroundColor, selectedMediaKey, mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
@@ -128,20 +154,19 @@ const isShowSources = ref(true);
 const isShowMaterial = ref(false);
 const isShowAddMedia = ref(false);
 const visibleMorePopupId = ref('');
-const sourcesOptions = ref(null);
 const voiceRate = ref(0.3);
-const currentVoice = ref(30) // todo 改为获取到设备播放音量
+const currentVoice = ref(30); // todo 改为获取到设备播放音量
 const isMuteMediaSources = ref(true);
-const logger = console;
-const mediaSourceMenuList = ref([
+const mediaSourceListRef: Ref<HTMLElement|null> = ref(null);
+const mediaSourceMenuList = shallowRef([
   {
     icon: CameraIcon,
     text: t('Add Camera'),
     fun: handleAddCamera
   },
   {
-    icon: AddShareScreenIcon,
-    text: t('Add shared screen'),
+    icon: AddShareScreenIcon, 
+    text: t('Add Capture'),
     fun: handleAddShareScreen
   },
   // {
@@ -149,12 +174,7 @@ const mediaSourceMenuList = ref([
   //   text: t('Add PDF/PPT'),
   //   fun: handleAddText
   // },
-  {
-    icon: MovieIcon,
-    text: t('Add Image'),
-    fun: handleAddMovie
-  },
-])
+]);
 
 const materialOptionsList = ref([
   {
@@ -169,7 +189,7 @@ const materialOptionsList = ref([
     text: t('Additional'),
     fun: handleAddWriting,
   },
-])
+]);
 
 const selectedMusicList: Ref<Array<TUIMusicType>> = ref([]);
 const isHasMusic = computed(() => selectedMusicList.value.length > 0);
@@ -190,51 +210,52 @@ const bgmList = ref([
     text: t('Magical world'),
     path: '',
   }
-])
+]);
 const handleOpenAddMedia = () => {
   isShowAddMedia.value = !isShowAddMedia.value;
-}
+};
 
-function handleChangeMaterial() {
+const handleClickOutsideAdd = () => {
+  isShowAddMedia.value = false;
+};
+
+const handleChangeMaterial = () => {
   isShowSources.value = false;
   isShowMaterial.value = true;
-}
+};
 
-function handleChangeSource() {
+const handleChangeSource = () => {
   isShowSources.value = true;
   isShowMaterial.value = false;
-}
+};
 
 const handleMuteSource = (item: any) => {
   mediaSourcesStore.muteMediaSource(item, isMuteMediaSources.value)
-}
+};
 
 function handleAddCamera() {
   isShowAddMedia.value = false;
   window.ipcRenderer.send('open-child', {
     'command': 'camera'
-  })
+  });
 }
 
 function handleAddShareScreen() {
   isShowAddMedia.value = false;
   window.ipcRenderer.send('open-child', {
     'command': 'screen'
-  })
+  });
 }
 
 function handleAddText() {
   isShowAddMedia.value = false;
   window.ipcRenderer.send('open-child', {
     'command': 'file'
-  })
+  });
 }
 
-function handleAddMovie() {
-  isShowAddMedia.value = false;
-  window.ipcRenderer.send('open-child', {
-    'command': 'image'
-  })
+const handleChangeMediaOrder = (item: TUIMediaSourceViewModel, changeValue: number) => {
+  mediaSourcesStore.changeMediaOrder(item, changeValue);
 }
 
 const handleMore = (item: TUIMediaSourceViewModel) => {
@@ -242,53 +263,90 @@ const handleMore = (item: TUIMediaSourceViewModel) => {
   mediaSourcesStore.selectMediaSource(item);
 }
 
-const toggleVideoResolutionMode = () => {
-  if (mixingVideoEncodeParam.value.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape) {
-    mediaSourcesStore.updateResolutionMode(TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait);
-  } else {
-    mediaSourcesStore.updateResolutionMode(TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape);
-  }
-}
+const handleMuteMediaSource = (item: TUIMediaSourceViewModel) => {
+  mediaSourcesStore.muteMediaSource(item, !item.muted);
+} 
 
 const handleSelectSource = (item: TUIMediaSourceViewModel) => {
-  logger.log('[selectMediaSource]:', item);
+  logger.log(`${logPrefix}handleSelectSource:`, item);
   mediaSourcesStore.selectMediaSource(item);
 }
 
 const handleRemoveSource = (item: TUIMediaSourceViewModel) => {
-  logger.log('[removeMediaSource]:', item);
+  logger.log(`${logPrefix}handleRemoveSource:`, item);
   mediaSourcesStore.removeMediaSource(item);
 }
 
 const handleEditSource = (item: TUIMediaSourceViewModel) => {
-  logger.log('[handleEditSource]', item);
-  let command = '';
-  switch(item.mediaSourceInfo.sourceType) {
-  case TUIMediaSourceType.kCamera:
-    command = 'camera';
-    break;
-  case TUIMediaSourceType.kScreen:
-    command = 'screen';
-    break;
-  case TUIMediaSourceType.kImage:
-    command = 'image';
-    break;
-  default:
-    logger.error('handleEditSource: sourceType not supported', item.mediaSourceInfo.sourceType);
-  }
-  if (!command) {
-    return;
-  }
-  window.ipcRenderer.send('open-child', {
-    command,
-    data: JSON.parse(JSON.stringify(item)),
-  });
+  logger.log(`${logPrefix}handleEditSource:`, item);
+  emits("edit-media-source", item);
 }
 
 const handleClickOutside = () => {
-  // selectedItem.value = null;
   visibleMorePopupId.value = '';
 }
+
+const mediaSouceInMoving: Ref<TUIMediaSourceViewModel | null> = ref(null);
+const mediaSourceDivHeight: Ref<number|null> = ref(null);
+const oldIndex: Ref<number|null> = ref(null);
+const newIndex: Ref<number|null> = ref(null);
+const handleStartDrag = (event: MouseEvent, item: TUIMediaSourceViewModel) => {
+  logger.log(`${logPrefix}handleStartDrag:`, event, item);
+  mediaSouceInMoving.value = item;
+  mediaSourceDivHeight.value = (event.target as HTMLElement).offsetHeight;
+  if (mediaSourceListRef.value) {
+    const listBound = mediaSourceListRef.value.getBoundingClientRect();
+    const mouseDistanceFromScrollTop = event.clientY - listBound.top + mediaSourceListRef.value.scrollTop;
+    oldIndex.value = mouseDistanceFromScrollTop / mediaSourceDivHeight.value;
+    oldIndex.value = Math.floor(oldIndex.value);
+    logger.debug(`${logPrefix}handleStartDrag oldIndex:`, oldIndex.value);
+    mediaSourceListRef.value.addEventListener("mousemove", handleDragging);
+    mediaSourceListRef.value.addEventListener("mouseup", handleStopDrag);
+  }
+};
+
+const handleDragging = (event: MouseEvent) => {
+  logger.debug(`${logPrefix}handleDragging:`, event, event.target, event.currentTarget);
+  if (mediaSourceListRef.value && mediaSourceDivHeight.value && mediaSouceInMoving.value) {
+    const listBound = mediaSourceListRef.value.getBoundingClientRect();
+    const mouseDistanceFromScrollTop = event.clientY - listBound.top + mediaSourceListRef.value.scrollTop;
+    newIndex.value = mouseDistanceFromScrollTop / mediaSourceDivHeight.value;
+    newIndex.value = Math.floor(newIndex.value);
+    if (newIndex.value >= mediaList.value.length) {
+      return;
+    }
+
+    if (oldIndex.value !== newIndex.value) {
+      logger.debug(`${logPrefix}handleDragging oldIndex:`, oldIndex.value, `newIndex:`, newIndex.value);
+      if (oldIndex.value !== null && newIndex.value !== null) {
+        mediaSourcesStore.changeMediaOrder(mediaSouceInMoving.value, (oldIndex.value - newIndex.value));
+        mediaSourcesStore.selectMediaSource(mediaSouceInMoving.value);
+        oldIndex.value = newIndex.value;
+      }
+    }
+
+    const mouseDistanceFromTop = event.clientY - listBound.top;
+    if (mouseDistanceFromTop < mediaSourceDivHeight.value && mediaSourceListRef.value.scrollTop > 0) {
+      mediaSourceListRef.value.scrollBy(0, -mediaSourceDivHeight.value);
+    } else if (mouseDistanceFromTop > (listBound.height - mediaSourceDivHeight.value)
+      && mediaSourceListRef.value.scrollTop + listBound.height < mediaSourceListRef.value.scrollHeight
+    ) {
+      mediaSourceListRef.value.scrollBy(0, mediaSourceDivHeight.value);
+    }
+  }
+};
+
+const handleStopDrag = (event: MouseEvent) => {
+  logger.debug(`${logPrefix}handleStopDrag:`, event, event.target, event.currentTarget);
+  if (mediaSourceListRef.value) {
+    mediaSourceListRef.value.removeEventListener("mousemove", handleDragging);
+    mediaSourceListRef.value.removeEventListener("mouseup", handleStopDrag);
+  }
+  mediaSouceInMoving.value = null;
+  mediaSourceDivHeight.value = null;
+  oldIndex.value = null;
+  newIndex.value = null;
+};
 
 function handleAddBlueprint(){
   logger.log('[addBlueprint]');
@@ -313,273 +371,309 @@ const handleSelectMusic = (item: TUIMusicType) => {
 
 const onUpdateVoiceValue = (event: number) => {
   currentVoice.value = Math.floor(event);
-}
+};
 </script>
 
 <style scoped lang="scss">
 @import "../../assets/variable.scss";
 
-.tui-title{
-  padding-left: 1rem;
+.tui-live-config {
+  height: 100%;
 }
-.tui-resolution-mode-switch {
-  float: right;
-  cursor: pointer;
-  &:hover {
-    color: $color-anchor-hover;
-  }
+
+.tui-config-title {
+  padding: 0 1rem;
+  height: 2rem;
+  line-height: 2rem;
 }
-.tui-config-list{
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.source-title{
-  color: rgba(143, 154, 178, 1);
-  font-family: PingFang SC;
-  font-size: 0.875rem;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 1.375rem;
-  padding-top: 6.25rem;
-}
-.tui-source{
-  color:#8F9AB2;
-  cursor: pointer;
-}
-.tui-material{
-  color:#8F9AB2;
-  padding-left: 1rem;
-  cursor: pointer;
-}
+
 .is-active {
-  color: rgba(71, 145, 255, 1);
-  font-family: PingFang SC;
-  font-size: 1rem;
   padding: 0.375rem 0;
-  border-bottom: 2px solid #4791FF;
+  box-shadow: 0 0.125rem 0 0 $color-primary;
+  font-size: 1rem;
+  color: $color-primary;
     &-material {
       margin-left: 1rem;
     }
 }
+
 .icon-container{
   padding-right: 0.25rem;
-  cursor: pointer;
+  color: #8F9AB2;
+  &:hover {
+    color: $color-white;
+  }
 }
-.source{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 12.5rem;
-  height: 2.5rem;
-  border-radius: 6.25rem;
-  background: #383F4D;
-  margin: 1.5rem 0;
-  cursor: pointer;
-}
-.tui-media-source{
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.add-source{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14.75rem;
-	height: 2rem;
-  border-radius: 6.25rem;
-  background: #383F4D;
-  margin: 1.5rem 0;
-  cursor: pointer;
-}
-.add-media-source{
-  position: absolute;
-  top: 10rem;
-  fill: rgba(45, 50, 62, 0.80);
-  stroke-width: 1px;
-  stroke: rgba(255, 255, 255, 0.10);
-  filter: drop-shadow(0px 0px 26px rgba(12, 19, 40, 0.50));
-  backdrop-filter: blur(10px);
-  width: 100%;
-	height: 12.25rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 1;
-}
-.add-media{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 12.5rem;
-  height: 2.5rem;
-  border-radius: 6.25rem;
-  cursor: pointer;
-}
-.text{
+
+.tui-menu-item-text{
   color: #D5E0F2;
-  font-family: PingFang SC;
   font-size: 0.75rem;
   font-style: normal;
   font-weight: 400;
   line-height: 1.375rem;
 }
-.item-container{
+
+.tui-config-tab-title{
+  padding-left: 1rem;
+
+  .tui-config-title-source{
+    color:#8F9AB2;
+    cursor: pointer;
+  }
+}
+
+.tui-config-list{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .tui-config-notice{
+    color: #8F9AB2;
+    font-size: 0.75rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.375rem;
+    padding-top: 6.25rem;
+  }
+
+  .btn-add-source{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12.5rem;
+    height: 2.5rem;
+    border-radius: 6.25rem;
+    background: #383F4D;
+    margin: 1.5rem 0;
+    cursor: pointer;
+  }
+}
+
+.tui-media-source{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  height: calc(100% - 2rem);
+  overflow: auto;
+
+  .tui-add-source-menu{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14.75rem;
+    height: 2rem;
+    border-radius: 6.25rem;
+    background: #383F4D;
+    margin: 1.5rem auto;
+    cursor: pointer;
+  }
+
+  .tui-add-source-menu-popup{
+    position: absolute;
+    top: 3.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 0.25rem;
+    z-index: 1;
+    background-color: #2D323C;
+  }
+
+  .tui-add-source-menu-item{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 15rem;
+    height: 2.5rem;
+    cursor: pointer;
+    &:hover {
+      background-color: $color-black;
+    }
+  }
+}
+
+.tui-media-source-list {
+  flex: 1 1 auto;
+  height: calc(100% - 7rem);
+  width: 100%;
+  overflow-y: auto;
+  padding: 0 1rem;
+}
+
+.tui-media-source-item{
   width: 100%;
   position: relative;
   border-radius: 0.25rem;
-  margin-bottom: 0.5rem;
+  cursor: move;
 
   &:hover {
-    background: rgba(45, 50, 62, 0.80);
+    background-color: $color-black;
   }
 
   &.selected {
-    background-color: rgba(45, 50, 62, 0.60);
+    background-color: #2D323E;
   }
 }
-.item-title{
+
+.tui-media-source-content{
   display: flex;
   justify-content: space-between;
-  line-height: 3rem;
-  &-name{
+  font-size: 0.75rem;
+  line-height: 2.5rem;
+  .item-name{
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
-    width: 16rem;
+    width: 8rem;
     padding-left: 0.5rem;
   }
-  &-tool{
+
+  .item-tools{
+    display: flex;
+  }
+  .item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 2rem;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    &.disabled{
+      cursor: not-allowed;
+      opacity: 0.5;
+
+      span {
+        cursor: inherit;
+      }
+    }
+    &:focus-visible,
+    &:focus {
+      outline: none;
+    }
   }
 }
-.item-bottom{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 0.375rem;
-}
-.item-more{
+
+.tui-edit-source-menu-popup{
   position: absolute;
   width: 5.25rem;
-	height: 4rem;
   display: flex;
   flex-direction: column;
-  left: 12.25rem;
+  right: 0;
 	top: 2.125rem;
-  background: rgba(12, 19, 40, 0.50);
+  background-color: #2D323C;
   justify-content: center;
-  border: 1px solid rgba(45, 50, 62, 0.80);
-  border-radius: 0.3125rem;
+  border-radius: 0.25rem;
   z-index: 1;
-  &-text{
+  
+  .edit-menu-item{
     color: #D5E0F2;
-    font-family: PingFang SC;
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
     line-height: 1.375rem;
     width: 100%;
     height:1.75rem;
-    border-radius: 0.3125rem;
     padding-left: 0.75rem;
     cursor: pointer;
-  }
-  &-text:hover {
-    background: rgba(45, 50, 62, 0.80);
-  }
-}
-.item-icon{
-  display: flex;
-  align-items: center;
-}
-.drag-container{
-  width: 12rem;
-  margin-left: 0.25rem;
-}
-.tui-material{
-  padding-left: 1rem;
-}
-.options-container{
-  display: flex;
-  flex-direction: column;
-  padding-top: 0.625rem;
-  &-title{
-    color: var(--G5, #8F9AB2);
-    font-family: PingFang SC;
-    font-size: 0.875rem;
-    font-style: normal;
-    font-weight: 400;
-    line-height: 1.375rem;
-  }
-  &-option{
-    width:4rem;
-    height:2.5rem;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(56, 63, 77, 0.50);
-    border-radius: 0.3125rem;
-    margin-top: 0.375rem;
-  }
-  &-input{
-    margin-top: 0.375rem;
-  }
-  &-text{
-    color: var(--G7, #D5E0F2);
-    font-family: PingFang SC;
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: 400;
-    padding-left: 0.125rem;
-  }
-  &-music{
-    display: flex;
-    margin-top: 0.375rem;
-    &-box{
-      display: flex;
-      flex-direction: column;
-      padding-right: 0.75rem;
-      position: relative;
+
+    &:hover {
+      background-color: $color-black;
     }
-    &-text{
-      text-align: center;
-      font-family: PingFang SC;
-      font-size: 0.75rem;
-      font-style: normal;
-      font-weight: 400;
-      line-height: 1.25rem; /* 166.667% */
-      color: var(--G5, #8F9AB2);
+
+    .tui-image-source {
+      align-items: flex-start;
     }
   }
-  &-icon{
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.375rem;
-    background: rgba(28, 102, 229, 0.20);
-  }
-  &-selected{
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.375rem;
-    border: 1px solid #1C66E5;
-    background: rgba(28, 102, 229, 0.20);
-  }
-  &-draggable{
-    display: flex;
-    align-items: center;
-  }
 }
-.selected-icon{
-  width: 0.6875rem;
-  height: 0.6875rem;
-  flex-shrink: 0;
-  border-radius: 0px 0.375rem 0px 0.1875rem ;
-  border: 1px solid rgba(28, 102, 229, 0.20);
-  background: #1C66E5;
-  position: absolute;
-  left: 1.75rem;
-}
+
+// .tui-material{
+//   color:#8F9AB2;
+//   padding-left: 1rem;
+//   cursor: pointer;
+//   padding-left: 1rem;
+// }
+// .drag-container{
+//   width: 12rem;
+//   margin-left: 0.25rem;
+// }
+// .options-container{
+//   display: flex;
+//   flex-direction: column;
+//   padding-top: 0.625rem;
+//   &-title{
+//     color: var(--G5, #8F9AB2);
+//     font-size: 0.75rem;
+//     font-style: normal;
+//     font-weight: 400;
+//     line-height: 1.375rem;
+//   }
+//   &-option{
+//     width:4rem;
+//     height:2.5rem;
+//     flex-shrink: 0;
+//     display: flex;
+//     align-items: center;
+//     justify-content: center;
+//     background-color: rgba(56, 63, 77, 0.50);
+//     border-radius: 0.3125rem;
+//     margin-top: 0.375rem;
+//   }
+//   &-input{
+//     margin-top: 0.375rem;
+//   }
+//   &-text{
+//     color: var(--G7, #D5E0F2);
+//     font-size: 0.75rem;
+//     font-style: normal;
+//     font-weight: 400;
+//     padding-left: 0.125rem;
+//   }
+//   &-music{
+//     display: flex;
+//     margin-top: 0.375rem;
+//     &-box{
+//       display: flex;
+//       flex-direction: column;
+//       padding-right: 0.75rem;
+//       position: relative;
+//     }
+//     &-text{
+//       text-align: center;
+//       font-size: 0.75rem;
+//       font-style: normal;
+//       font-weight: 400;
+//       line-height: 1.25rem; /* 166.667% */
+//       color: var(--G5, #8F9AB2);
+//     }
+//   }
+//   &-icon{
+//     width: 2.5rem;
+//     height: 2.5rem;
+//     border-radius: 0.375rem;
+//     background: rgba(28, 102, 229, 0.20);
+//   }
+//   &-selected{
+//     width: 2.5rem;
+//     height: 2.5rem;
+//     border-radius: 0.375rem;
+//     border: 1px solid #1C66E5;
+//     background: rgba(28, 102, 229, 0.20);
+//   }
+//   &-draggable{
+//     display: flex;
+//     align-items: center;
+//   }
+// }
+// .selected-icon{
+//   width: 0.6875rem;
+//   height: 0.6875rem;
+//   flex-shrink: 0;
+//   border-radius: 0px 0.375rem 0px 0.1875rem ;
+//   border: 1px solid rgba(28, 102, 229, 0.20);
+//   background: #1C66E5;
+//   position: absolute;
+//   left: 1.75rem;
+// }
 </style>

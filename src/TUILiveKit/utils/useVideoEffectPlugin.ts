@@ -1,6 +1,6 @@
 import { TRTCVideoBufferType, TRTCVideoPixelFormat } from 'trtc-electron-sdk';
 import TUIVideoEffectPluginManager, { TUIVideoEffectPlugin } from '@tencentcloud/tuiroom-engine-electron/plugins/video-effect-plugin';
-import { getBeautyPluginLibPath, getBeautyInitParam, TUIBeautyProperty } from '../utils/beauty';
+import { TRTCXmagicFactory, XmagicLicense, TRTCXmagicEffectProperty } from "./beauty";
 
 const logger = console;
 
@@ -30,14 +30,17 @@ class TUIVideoEffectManager {
         TRTCVideoBufferType.TRTCVideoBufferType_Buffer,
         TRTCVideoPixelFormat.TRTCVideoPixelFormat_I420
       );
-      this.libPath = await getBeautyPluginLibPath();
-      this.initParam = await getBeautyInitParam();
+      TUIVideoEffectPluginManager.setCallback((pluginId: string, errorCode: number, errorMessage: string) => {
+        logger.log(`plugin event, pluginId : ${pluginId}, errorCode : ${errorCode}, errorMessage : ${errorMessage}`);
+      });
+      this.libPath = await TRTCXmagicFactory.getEffectPluginLibPath();
+      this.initParam = await TRTCXmagicFactory.buildEffectInitParam(XmagicLicense);
       this.inited = true;
       logger.log(`${this.logPrefix}init success.`, this.libPath, this.initParam?.licenseURL);
     }
   }
 
-  async startEffect(cameraId: string, beautyConfig: { beautySetting: TUIBeautyProperty[] }) {
+  async startEffect(cameraId: string, beautyConfig: { beautyProperties: TRTCXmagicEffectProperty[] }) {
     logger.debug(`${this.logPrefix}startEffect ${cameraId}`, beautyConfig);
     if (!this.inited) {
       await this.init();
@@ -51,12 +54,13 @@ class TUIVideoEffectManager {
         return;
       }
     }
-    setTimeout(() => {
-      !!plugin && plugin.setParameter(JSON.stringify({
-        beautySetting: beautyConfig.beautySetting
-      }));
-      logger.debug(`${this.logPrefix}startEffect ${cameraId} with setting:`, beautyConfig);
-    }, 3*1000);
+    setTimeout(()=> {
+      if (plugin) {
+        plugin.setParameter(JSON.stringify({
+          beautySetting: beautyConfig.beautyProperties
+        }));
+      }
+    }, 3000);
   }
 
   stopEffect(cameraId: string) {
@@ -80,12 +84,12 @@ class TUIVideoEffectManager {
     }
   }
 
-  updateEffect(cameraId: string, beautyConfig: { beautySetting: TUIBeautyProperty[] }) {
+  updateEffect(cameraId: string, beautyConfig: { beautyProperties: TRTCXmagicEffectProperty[] }) {
     logger.debug(`${this.logPrefix}updateEffect ${cameraId}`, beautyConfig);
     const plugin = this.beautyPluginMap.get(cameraId);
     if (plugin) {
       plugin.setParameter(JSON.stringify({
-        beautySetting: beautyConfig.beautySetting
+        beautySetting: beautyConfig.beautyProperties
       }));
     } else {
       logger.error(`${this.logPrefix}updateEffect failed. No effect plugin for camera:`, cameraId);
@@ -109,8 +113,8 @@ class TUIVideoEffectManager {
     });
     if (plugin) {
       this.beautyPluginMap.set(cameraId, plugin);
-      plugin.setParameter(JSON.stringify(this.initParam)); 
       plugin.enable(true);
+      plugin.setParameter(JSON.stringify(this.initParam)); 
       logger.debug(`${this.logPrefix}addPlugin success for camera: ${cameraId}`);
       return plugin;
     } else {
