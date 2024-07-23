@@ -167,7 +167,15 @@ TRTCXmagicEffectConstant["EFFECT_MOTION"]["handOptions"] = TRTCXmagicEffectConst
     icon: "./assets/beauty_panel/panel_icon/motions_icon/video_bubblegum.png",
     valueType: TRTCXmagicEffectValueType.NONE,
   }
-]); 
+]);
+
+const greenScreenBackgroundImageList = [
+  {
+    label: "绿幕/水滴",
+    label_en: "Green Screen/Water Drops",
+    icon: "./assets/virtual_bg/water-drops.jpg",
+  }
+];
 
 const virtualBackgroundImageList = [
   {
@@ -178,6 +186,12 @@ const virtualBackgroundImageList = [
 ]
 // Virtual background
 TRTCXmagicEffectConstant["EFFECT_SEGMENTATION"].options = TRTCXmagicEffectConstant["EFFECT_SEGMENTATION"].options.concat(
+  greenScreenBackgroundImageList.map(item => {
+    return {
+      ...TRTCXmagicEffectConstant["EFFECT_SEGMENTATION"].valueMeta.greenScreen,
+      ...item,
+    }
+  }),
   virtualBackgroundImageList.map(item => {
     return {
       ...TRTCXmagicEffectConstant["EFFECT_SEGMENTATION"].valueMeta.background,

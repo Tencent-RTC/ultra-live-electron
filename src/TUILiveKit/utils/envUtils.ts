@@ -16,7 +16,7 @@ export function getUrlParam(key: string) {
 }
 
 export async function isMainWindow() {
-  if (location.hash.indexOf('main-window') !== -1) {
+  if (location.hash.indexOf('tui-live-kit-main') !== -1) {
     true;
   } else {
     try {

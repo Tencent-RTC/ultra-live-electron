@@ -1,8 +1,8 @@
 {
   "name": "ultra-live-electron",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Tencent Cloud Living and Streaming Tool for desktop and laptop",
-  "main": "electron.main.js",
+  "main": "main.js",
   "author": "Tencent Cloud",
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -20,7 +20,7 @@
     "@tencentcloud/tuiroom-engine-electron": "2.4.0-alpha.2",
     "core-js": "^3.36.1",
     "pinia": "^2.1.7",
-    "trtc-electron-plugin-xmagic": "^0.0.13",
+    "trtc-electron-plugin-xmagic": "^0.0.16",
     "trtc-electron-sdk": "11.8.603-alpha.0",
     "vue": "^3.4.21",
     "vue-i18n": "^9.10.2",

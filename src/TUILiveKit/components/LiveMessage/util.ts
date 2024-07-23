@@ -1,6 +1,6 @@
 /**
  * Emoji input interface in the chat screen.
- * It should be noted that the emoticons in TUIRoomKit are copyrighted. The purchased IM service does not include the
+ * It should be noted that the emoticons in TUILiveKit are copyrighted. The purchased IM service does not include the
  * right to use the emoticons. Please replace them with your own emoticons when you go online, otherwise you will
  * face legal risks.
  * The yellow face emoji is copyrighted by Tencent Cloud. To use it, authorization is required.

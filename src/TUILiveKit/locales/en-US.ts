@@ -147,4 +147,5 @@ export default {
   'viewer': ' viewer',
   'history viewer': ' history viewer',
   'enter room': 'enter room',
+  'Loading...': 'Loading...',
 }

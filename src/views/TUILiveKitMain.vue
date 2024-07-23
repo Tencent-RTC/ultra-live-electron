@@ -1,18 +1,21 @@
 <template>
-  <live-kit ref="liveKitRef" @on-logout="handleLogout"/>
+  <TUILiveKitMain ref="liveKitRef" @on-logout="handleLogout"/>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
-import LiveKit from "../TUILiveKit/Index.vue";
+import TUILiveKitMain from "../TUILiveKit/Main.vue";
 import TUIMessageBox from '../TUILiveKit/common/base/MessageBox';
 import { useI18n } from '../TUILiveKit/locales';
-import { getBasicInfo } from '../config/basic-info-config';
 
 const logger = console;
 const logPrefix = '[LiveStudioView]';
 const liveKitRef = ref();
 const { t } = useI18n();
+
+const handleLogout = () => {
+  window.localStorage.removeItem('TUILiveKit-userInfo');
+}
 
 async function init(userInfo: Record<string, any>) {
   const { sdkAppId, userSig, userId, userName, avatarUrl} = userInfo;
@@ -34,23 +37,9 @@ async function init(userInfo: Record<string, any>) {
   }
 }
 
-async function handleInit() {
-  const currentUserInfo = await getBasicInfo();
-  if (currentUserInfo) {
-    init(currentUserInfo);
-  } else {
-    TUIMessageBox({
-      title: t('Note'),
-      message: t('Please configure the basic information'),
-      confirmButtonText: t('Sure'),
-    });
-  }
-}
-handleInit();
-
-const handleLogout = () => {
-  window.localStorage.removeItem('TUILiveKit-userInfo');
-}
+window.ipcRenderer.on("openTUILiveKit", (event: any, userInfo: Record<string, any>) => {
+  init(userInfo);
+});
 </script>
 
 <style scoped lang="scss">

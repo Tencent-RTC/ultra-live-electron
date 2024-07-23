@@ -1,5 +1,5 @@
 <template>
-  <div class="child-window">
+  <div class="tui-live-kit-child">
     <live-camera-source v-if="currentViewName === 'camera'" :data="dataInEdit"></live-camera-source>
     <live-screen-share-source v-if="currentViewName === 'screen'" :data="dataInEdit"></live-screen-share-source>
     <live-image-source v-if="currentViewName === 'image'" :data="dataInEdit"></live-image-source>
@@ -10,18 +10,19 @@
 
 <script setup lang="ts">
 import { onMounted, ref, Ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIDeviceType, TUIDeviceState } from '@tencentcloud/tuiroom-engine-electron/plugins/device-manager-plugin';
-import LiveCameraSource from '../TUILiveKit/components/LiveSource/LiveCameraSource.vue';
-import LiveScreenShareSource from '../TUILiveKit/components/LiveSource/LiveScreenShareSource.vue';
-import LiveImageSource from '../TUILiveKit/components/LiveSource/LiveImageSource.vue';
-import LiveVoiceChat from '../TUILiveKit/components/LiveToolbar/LiveVoiceChat.vue';
-import LiveSetting from '../TUILiveKit/components/LiveToolbar/LiveSetting.vue';
-import TUIMessageBox from '../TUILiveKit/common/base/MessageBox';
-import { useCurrentSourcesStore } from '../TUILiveKit/store/currentSources';
-import useDeviceManagerPlugin from '../TUILiveKit/utils/useDeviceManagerPlugin';
-import trtcCloud from "../TUILiveKit/utils/trtcCloud";
-import { useI18n } from '../TUILiveKit/locales/index';
+import LiveCameraSource from './components/LiveSource/LiveCameraSource.vue';
+import LiveScreenShareSource from './components/LiveSource/LiveScreenShareSource.vue';
+import LiveImageSource from './components/LiveSource/LiveImageSource.vue';
+import LiveVoiceChat from './components/LiveToolbar/LiveVoiceChat.vue';
+import LiveSetting from './components/LiveToolbar/LiveSetting.vue';
+import TUIMessageBox from './common/base/MessageBox';
+import { useCurrentSourcesStore } from './store/currentSources';
+import useDeviceManagerPlugin from './utils/useDeviceManagerPlugin';
+import trtcCloud from "./utils/trtcCloud";
+import { useI18n } from './locales/index';
 
 const { t } = useI18n();
 
@@ -29,7 +30,7 @@ const logger = console;
 const logPrefix = "[ChildWindowView]"
 
 const currentSourceStore = useCurrentSourcesStore();
-const currentViewName = ref(currentSourceStore.currentViewName);
+const { currentViewName } = storeToRefs(currentSourceStore);
 
 const deviceManagerPlugin = useDeviceManagerPlugin();
 
@@ -179,9 +180,10 @@ function refreshMediaDeviceList() {
 async function refreshScreenList() {
   const thumbWidth = 640;
   const thumbHeight = 360;
-  const  iconWidth = 48;
+  const iconWidth = 48;
   const iconHeight = 48;
 
+  logger.debug(`${logPrefix}refreshScreenList`)
   try {
     const screenCaptureList = await trtcCloud.getScreenCaptureSources(thumbWidth, thumbHeight, iconWidth, iconHeight);
     screenList.value = [];
@@ -196,7 +198,7 @@ async function refreshScreenList() {
     currentSourceStore.setScreenList(screenList.value);
     currentSourceStore.setWindowList(windowList.value);
   } catch (err) {
-    logger.error('获取屏幕/窗口列表失败：',err);
+    logger.error(`${logPrefix}refreshScreenList failed:`,err);
   }
 }
 
@@ -237,10 +239,10 @@ window.ipcRenderer.on('show', (event, args: Record<string, any>) => {
 });
 </script>
 <style scoped lang="scss" >
-@import "../TUILiveKit/assets/variable.scss";
-@import "../TUILiveKit/assets/global.scss";
+@import "./assets/variable.scss";
+@import "./assets/global.scss";
 
-.child-window{
+.tui-live-kit-child{
   height: 100%;
   background-color: $color-background-primary;
   color: $color-font-default;

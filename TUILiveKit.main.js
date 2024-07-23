@@ -64,10 +64,16 @@ async function checkAndApplyDeviceAccessPrivilege() {
   }
 }
 
+const basicInfo = {
+  userInfo: null,
+};
+
 const windowMap = {
   main: null,
   child: null
 }
+
+const logPrefix = "[TUILiveKit.main]";
 
 let language = "zh-CN";
 
@@ -86,7 +92,7 @@ async function createWindow(width = 1366, height = 668) {
     frame: false,
     acceptFirstMouse: true, // only mac
     webPreferences: {
-      preload: path.join(__dirname, "electron.preload.js"),
+      preload: path.join(__dirname, "TUILiveKit.preload.js"),
       nodeIntegration: true,
       contextIsolation: false,
       nodeIntegrationInWorker: true,
@@ -105,7 +111,7 @@ async function createWindow(width = 1366, height = 668) {
       nodeIntegration: true,
       nodeIntegrationInWorker: true,
       contextIsolation: false,
-      preload: path.join(__dirname, "electron.preload.js"),
+      preload: path.join(__dirname, "TUILiveKit.preload.js"),
     },
   });
 
@@ -138,12 +144,12 @@ function bindIPCEvent() {
   });
   
   ipcMain.on("on-minimize-window", () => {
-    console.log("on-minimize-window event");
+    console.log(`${logPrefix}on-minimize-window event`);
     windowMap.main.minimize();
   });
 
   ipcMain.on("on-maximize-window", (evt, flag) => {
-    console.log("on-maximize-window event:", flag);
+    console.log(`${logPrefix}on-maximize-window event:`, flag);
     if (flag) {
       windowMap.main.maximize();
     } else {
@@ -152,13 +158,13 @@ function bindIPCEvent() {
   });
 
   ipcMain.on("on-close-window", () => {
-    console.log("on-close-window event");
+    console.log(`${logPrefix}on-close-window event`);
     windowMap.main.close();
     windowMap.child.close();
   });
 
   ipcMain.on("open-child", (event, args) => {
-    console.log("on open-child", args);
+    console.log(`${logPrefix}on open-child`, args);
     const [width, height] = windowMap.main.getSize();
     switch (args.command) {
     case 'camera':
@@ -205,7 +211,7 @@ function bindIPCEvent() {
   });
 
   ipcMain.on("set-language", (event, args) => {
-    console.log("set-language", args);
+    console.log(`${logPrefix}set-language`, args);
     language = args;
   });
 
@@ -243,25 +249,50 @@ function bindIPCEvent() {
   })
 }
 
+let initMainWindowTimer = null;
+function initMainWindowPage() {
+  if (initMainWindowTimer) {
+    clearTimeout(initMainWindowTimer);
+    initMainWindowTimer = null;
+  }
+  console.log(`${logPrefix}main window: initMainWindowPage`);
+  if (basicInfo.userInfo) {
+    windowMap.main.webContents.send("window-type", "main");
+    setTimeout(() => {
+      windowMap.main.webContents.send("openTUILiveKit", basicInfo.userInfo);
+    }, 3000);
+  } else {
+    initMainWindowTimer = setTimeout(() => {
+      initMainWindowPage();
+    }, 300);
+  }
+}
+
 function bindMainWindowEvent() {
   windowMap.main.webContents.on("did-fail-load", () => {
-    console.log(`main window: did-fail-load, reload soon...`);
+    console.log(`${logPrefix}main window: did-fail-load, reload soon...`);
     setTimeout(() => {
       windowMap.main.reload();
     }, 1000);
   });
 
   windowMap.main.webContents.on("did-finish-load", () => {
+    console.log(`${logPrefix}main window: did-finish-load`);
     windowMap.main.webContents.send("app-path", app.getAppPath());
     windowMap.main.webContents.send("crash-file-path",`${crashFilePath}|${crashDumpsDir}`);
     windowMap.main.webContents.send("native-window-handle", windowMap.main.getNativeWindowHandle());
-    windowMap.main.webContents.send("window-type", "main");
+    initMainWindowPage();    
   });
 
   windowMap.main.on("closed", () => {
+    console.log(`${logPrefix}closed windowMap.main`);
     if (windowMap.child) {
       windowMap.child.close();
       windowMap.child = null;
+    }
+    if (initMainWindowTimer) {
+      clearTimeout(initMainWindowTimer);
+      initMainWindowTimer = null;
     }
     windowMap.main = null;    
   });
@@ -269,14 +300,14 @@ function bindMainWindowEvent() {
 
 function bindChildWindowEvent() {
   windowMap.child.webContents.on("did-fail-load", () => {
-    console.log(`child window: did-fail-load, reload soon...`);
+    console.log(`${logPrefix}child window: did-fail-load, reload soon...`);
     setTimeout(() => {
       windowMap.child.reload();
     }, 2000);
   });
 
   windowMap.child.webContents.on('did-finish-load', function(){
-    console.log('child did-finish-load');
+    console.log(`${logPrefix}child window: did-finish-load`);
     windowMap.child.webContents.send("app-path", app.getAppPath());
     windowMap.child.webContents.send("native-window-handle", windowMap.child.getNativeWindowHandle());
     windowMap.child.webContents.send("window-type", "child");
@@ -296,7 +327,7 @@ function bindChildWindowEvent() {
   });
 }
 
-app.whenReady().then(() => {
+function openTUILiveKit() {
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
@@ -304,46 +335,50 @@ app.whenReady().then(() => {
   const winHeight = height - 40;
 
   if (!app.isPackaged) {
-    console.log("Added Extension: installing vue-dev tool...");
+    console.log(`${logPrefix}Added Extension: installing vue-dev tool...`);
     const {
       default: installExtension,
       VUEJS_DEVTOOLS,
     } = require("electron-devtools-installer");
     installExtension(VUEJS_DEVTOOLS)
       .then((name) => {
-        console.log(`Added Extension:  ${name}`);
+        console.log(`${logPrefix}Added Extension:  ${name}`);
         createWindow(winWidth, winHeight);
       })
       .catch((err) => {
-        console.error("Added Extension failed: ", err);
+        console.error(`${logPrefix}Added Extension failed: `, err);
         createWindow(winWidth, winHeight);
       });
   } else {
-    console.log("Packaged env, create window without dev-tool extension.");
+    console.log(`${logPrefix}Packaged env, create window without dev-tool extension.`);
     createWindow(winWidth, winHeight);
   }
-});
+}
 
-// 当全部窗口关闭时退出。
-app.on("window-all-closed", () => {
-  // 在 macOS 上，除非用户用 Cmd + Q 确定地退出，
-  // 否则绝大部分应用及其菜单栏会保持激活。
-  if (process.platform !== "darwin") {
-    app.quit();
+const TUILiveKitMain = {
+  open: (args) => {
+    if (windowMap.main === null) {
+      if (args?.userInfo) {
+        basicInfo.userInfo = args.userInfo;
+      }
+      openTUILiveKit();
+    }
+  },
+  close: () => {
+    if (windowMap.main) {
+      windowMap.child?.close();
+      windowMap.main.close();
+    }
+  },
+  init: (args) => {
+    if (args?.userInfo) {
+      basicInfo.userInfo = args.userInfo;
+      initMainWindowPage();
+    } else {
+      console.error(`${logPrefix}init() invalid parameter`);
+    }
   }
-  process.exit(0);
-});
+}
 
-app.on("activate", () => {
-  // 在 macOS 上，当点击 dock 图标并且该应用没有打开的窗口时，
-  // 绝大部分应用会重新创建一个窗口。
-  if (windowMap.main === null) {
-    createWindow();
-  }
-});
-
-ipcMain.on('app-exit', () => {
-  windowMap.child?.close();
-  windowMap.main?.close();
-  app.exit();
-})
+exports.TUILiveKitMain = TUILiveKitMain;
+exports.default = TUILiveKitMain;

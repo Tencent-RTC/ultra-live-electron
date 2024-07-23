@@ -5,13 +5,17 @@
 <script setup lang="ts"></script>
 
 <style lang="scss">
+@import "./TUILiveKit/assets/variable.scss";
+@import "./TUILiveKit/assets/global.scss";
+
 html,
 body,
 #app {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #0F1014;
+  background-color: $color-background-primary;
+  color: $color-white;
 }
 
 #app {

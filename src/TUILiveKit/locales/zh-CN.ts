@@ -147,4 +147,5 @@ export default {
   'viewer': ' 人在看',
   'history viewer': ' 人看过',
   'enter room': '进入房间',
+  'Loading...': '加载中...',
 }

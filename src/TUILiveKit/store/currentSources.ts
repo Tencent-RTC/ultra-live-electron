@@ -157,12 +157,16 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
         indexToUpdate = this.beautyProperties.findIndex(item => excludedCategory.indexOf(item.category) !== -1);
         if (indexToUpdate !== -1) {
           Object.assign(this.beautyProperties[indexToUpdate], currentProperty);
+          indexToUpdate = this.beautyProperties.findIndex(item => item.category === TRTCXmagicEffectCategory.AssetData);
+          if (indexToUpdate !== -1) {
+            this.beautyProperties.splice(indexToUpdate, 1);
+          }
         } else{
           this.beautyProperties.push(currentProperty);
         }
         break;
       case TRTCXmagicEffectCategory.AssetData:
-        indexToUpdate = this.beautyProperties.findIndex(item => item.category === TRTCXmagicEffectCategory.AssetData && item.effKey === currentProperty.effKey);
+        indexToUpdate = this.beautyProperties.findIndex(item => item.category === TRTCXmagicEffectCategory.AssetData);
         if (indexToUpdate !== -1) {
           this.beautyProperties.splice(indexToUpdate, 1);
         }
