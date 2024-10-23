@@ -36,6 +36,8 @@ function handleValueChange(event: any) {
 </script>
   
   <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
   .tui-checkbox {
     position: relative;
     display: inline-block;
@@ -43,19 +45,19 @@ function handleValueChange(event: any) {
   }
   
   input {
-    color: #000000;
-    border: 1px solid rgba(79, 88, 107, 0.30);
+    color: $font-checkbox-input-color;
+    border: 1px solid $color-checkbox-input-border;
     border-radius:0.25rem;
     cursor: pointer;
   }
   
   input:focus {
-    border-color: #1C66E5;
+    border-color: $color-checkbox-input-focus-border;
     outline: 0;
   }
   
   input:disabled {
-    background-color: #2E323D;
+    background-color: $color-checkbox-input-disabled-background;
   }
   </style>
   

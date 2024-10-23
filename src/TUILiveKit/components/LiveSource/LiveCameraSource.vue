@@ -3,7 +3,7 @@
         <div class="tui-camera-title tui-window-header" >
             <span>{{ t('Add Camera') }}</span>
             <button class="tui-icon" @click="handleCloseSetting">
-              <svg-icon :icon="CloseIcon"></svg-icon>
+              <svg-icon class="tui-secondary-icon" :icon="CloseIcon"></svg-icon>
             </button>
         </div>
         <div class="tui-camera-middle" >
@@ -167,9 +167,7 @@ watch(props, async (val) => {
 });
 </script>
 <style scoped lang="scss">
-@import "../../assets/variable.scss";
 @import "../../assets/global.scss";
-@import './style.scss';
 
 .tui-camera-source{
     display: flex;
@@ -177,20 +175,20 @@ watch(props, async (val) => {
     justify-content: space-between;
     height: 100%;
     overflow-y: auto;    
-    color: #D5E0F2;
+    color: var(--text-color-primary);
 }
 .tui-camera-title{
     font-weight: 500;
+    color: var(--text-color-primary);
     padding: 0 1.5rem 0 1.375rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: $color-background-primary;
 }
 .tui-camera-middle{
     padding: 0 1.5rem;
     height: calc(100% - 5.75rem);
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-dialog);
 }
 .tui-camera-footer{
     height: 3rem;
@@ -198,7 +196,7 @@ watch(props, async (val) => {
     align-items: center;
     justify-content: flex-end;
     padding: 0 1.5rem;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-dialog);
 }
 .video{
     width: 100%;

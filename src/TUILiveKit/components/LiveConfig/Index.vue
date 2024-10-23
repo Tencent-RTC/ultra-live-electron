@@ -1,6 +1,6 @@
 <template>
   <div class="tui-live-config">
-    <div class="tui-config-title">
+    <div class="tui-config-title tui-title">
       <span @click="handleChangeSource" :class="[isShowSources ? 'is-active' : 'tui-config-title-source']">{{ t('Sources')}}</span>
       <!-- <span @click="handleChangeMaterial" :class="[isShowMaterial ? 'is-active is-active-material' : 'tui-material']">{{ t('Material')}}</span> -->
     </div>
@@ -20,7 +20,7 @@
     </div>
     <div v-if="isHasSources && !isShowMaterial" class="tui-media-source">
       <div class="tui-add-source-menu" @click="handleOpenAddMedia" v-click-outside="handleClickOutsideAdd" > 
-        <svg-icon :icon="AddIcon" class="icon-container"></svg-icon>
+        <svg-icon :icon="AddIcon" class="icon-container tui-menu-item-text"></svg-icon>
         <span class=tui-menu-item-text>{{ t('Add') }}</span>
       </div>
       <div v-if="isShowAddMedia" class="tui-add-source-menu-popup">
@@ -377,38 +377,57 @@ const onUpdateVoiceValue = (event: number) => {
 @import "../../assets/variable.scss";
 
 .tui-live-config {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  width:100%;
   height: 100%;
 }
 
 .tui-config-title {
+  position:absolute;
+  top: 0;
+  left: 0;
   padding: 0 1rem;
   height: 2rem;
   line-height: 2rem;
 }
 
 .is-active {
+  position:relative;
   padding: 0.375rem 0;
-  box-shadow: 0 0.125rem 0 0 $color-primary;
-  font-size: 1rem;
-  color: $color-primary;
+  font-size: $font-live-config-is-active-size;
+  color: var(--text-color-link);
     &-material {
       margin-left: 1rem;
     }
 }
 
+.is-active::after {
+    content: "";
+    position: absolute;
+    width: 3rem;
+    bottom: -0.09rem;
+    height: 0.125rem;
+    left: 0;
+    z-index: 9;
+    background-color: var(--text-color-link);
+}
+
 .icon-container{
   padding-right: 0.25rem;
-  color: #8F9AB2;
+  color: var(--button-color-primary-default);
   &:hover {
-    color: $color-white;
+    color: var(--button-color-primary-hover);
   }
 }
 
 .tui-menu-item-text{
-  color: #D5E0F2;
-  font-size: 0.75rem;
-  font-style: normal;
-  font-weight: 400;
+  color: var(--text-color-primary);
+  font-size: $font-live-config-menu-item-size;
+  font-style: $font-live-config-menu-item-style;
+  font-weight: $font-live-config-menu-item-weight;
   line-height: 1.375rem;
 }
 
@@ -416,7 +435,7 @@ const onUpdateVoiceValue = (event: number) => {
   padding-left: 1rem;
 
   .tui-config-title-source{
-    color:#8F9AB2;
+    color: $font-live-config-title-source-color;
     cursor: pointer;
   }
 }
@@ -427,10 +446,9 @@ const onUpdateVoiceValue = (event: number) => {
   align-items: center;
 
   .tui-config-notice{
-    color: #8F9AB2;
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: 400;
+    color: var(--text-color-secondary);
+    font-style: $font-live-config-notice-style;
+    font-weight: $font-live-config-notice-weiht;
     line-height: 1.375rem;
     padding-top: 6.25rem;
   }
@@ -442,7 +460,7 @@ const onUpdateVoiceValue = (event: number) => {
     width: 12.5rem;
     height: 2.5rem;
     border-radius: 6.25rem;
-    background: #383F4D;
+    background: var(--bg-color-input);
     margin: 1.5rem 0;
     cursor: pointer;
   }
@@ -463,7 +481,8 @@ const onUpdateVoiceValue = (event: number) => {
     width: 14.75rem;
     height: 2rem;
     border-radius: 6.25rem;
-    background: #383F4D;
+    background: var(--bg-color-input);
+    color: var(--text-color-primary);
     margin: 1.5rem auto;
     cursor: pointer;
   }
@@ -476,7 +495,7 @@ const onUpdateVoiceValue = (event: number) => {
     align-items: center;
     border-radius: 0.25rem;
     z-index: 1;
-    background-color: #2D323C;
+    background-color: var(--dropdown-color-default);
   }
 
   .tui-add-source-menu-item{
@@ -486,8 +505,9 @@ const onUpdateVoiceValue = (event: number) => {
     width: 15rem;
     height: 2.5rem;
     cursor: pointer;
+    background-color: var(--dropdown-color-default);
     &:hover {
-      background-color: $color-black;
+      background-color: var(--dropdown-color-hover);
     }
   }
 }
@@ -507,11 +527,11 @@ const onUpdateVoiceValue = (event: number) => {
   cursor: move;
 
   &:hover {
-    background-color: $color-black;
+    background-color: $color-live-config-media-source-hover-background;
   }
 
   &.selected {
-    background-color: #2D323E;
+    background-color: $color-live-config-media-source-select-background;
   }
 }
 
@@ -520,6 +540,7 @@ const onUpdateVoiceValue = (event: number) => {
   justify-content: space-between;
   font-size: 0.75rem;
   line-height: 2.5rem;
+  background-color: var(--bg-color-operate);
   .item-name{
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -537,11 +558,12 @@ const onUpdateVoiceValue = (event: number) => {
     justify-content: center;
     width: 2rem;
     border: none;
-    background-color: transparent;
+    background-color: var(--bg-color-operate);
     cursor: pointer;
     &.disabled{
       cursor: not-allowed;
       opacity: 0.5;
+      color: var(--button-color-primary-disabled);
 
       span {
         cursor: inherit;
@@ -561,13 +583,12 @@ const onUpdateVoiceValue = (event: number) => {
   flex-direction: column;
   right: 0;
 	top: 2.125rem;
-  background-color: #2D323C;
+  background-color: var(--dropdown-color-default);
   justify-content: center;
   border-radius: 0.25rem;
   z-index: 1;
   
   .edit-menu-item{
-    color: #D5E0F2;
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
@@ -578,7 +599,7 @@ const onUpdateVoiceValue = (event: number) => {
     cursor: pointer;
 
     &:hover {
-      background-color: $color-black;
+      background-color: var(--dropdown-color-hover);
     }
 
     .tui-image-source {

@@ -74,8 +74,12 @@ watch(currentCameraResolution, (newValue, oldValue) => {
 </script>
 
 <style lang="scss" scoped>
+@import "../assets/variable.scss";
+
 .select {
   width: 100%;
-  font-size: 0.75rem;
+  font-size: $font-video-profile-size;
+  background-color: var(--bg-color-input);
+  border-radius: 0.5rem;
 }
 </style>

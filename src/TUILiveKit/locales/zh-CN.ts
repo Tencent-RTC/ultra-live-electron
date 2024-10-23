@@ -1,4 +1,5 @@
 export default {
+  'No user ID': '缺少用户身份标识',
   'Sources': '画面源',
   'Material': '素材',
   'Support diverse types of media sources': '支持添加丰富多样的画面',
@@ -8,7 +9,6 @@ export default {
   'Edit Capture': '修改屏幕共享',
   'Add PDF/PPT': '添加 PDF/PPT',
   'Add Image': '添加图片',
-  'Edit Image': '编辑',
   'Choose Image': '选择图片',
   'Image': '图片',
   'Camera': '摄像头',
@@ -133,7 +133,7 @@ export default {
   'Please configure the basic information': '请在 `basic-info-config.js` 文件中配置基本信息',
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
-  'sb. living room: NO.': ({ named }) => `${named('userName')} '的直播间: `,
+  'sb. living room: NO.': ({ named }) => `${named('userName')} 的直播间: `,
   'Message chat can be used after the live starts': '直播开始后，消息聊天室将可用',
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
@@ -182,5 +182,5 @@ export default {
   'Vacant':'空灵',
   'Recording Room 1':'录音棚 1',
   'Recording Room 2':'录音棚 2',
-  'Melodious' : '悠扬'
+  'Melodious' : '悠扬',
 }

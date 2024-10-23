@@ -73,6 +73,7 @@ const handleShowTools = () => {
 </script>
 
 <style scoped lang="scss">
+@import "../../assets/variable.scss";
 .tui-title{
   display: flex;
   justify-content: space-between;
@@ -84,11 +85,11 @@ const handleShowTools = () => {
   cursor: pointer;
     &-text{
       text-align: center;
-      font-size: 0.75rem;
-      font-style: normal;
-      font-weight: 400;
+      font-size: $font-live-tool-title-left-text-size;
+      font-style: $font-live-tool-title-left-text-style;
+      font-weight: $font-live-tool-title-left-text-weight;
       line-height: 1.25rem; /* 166.667% */
-      background: var(--G2, linear-gradient(180deg, #A4BBDB 0%, rgba(164, 187, 219, 0.80) 100%));
+      background: $font-live-tool-title-left-text-background;
       background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -110,11 +111,11 @@ const handleShowTools = () => {
 }
 .text{
   text-align: center;
-  font-size: 0.75rem;
-  font-style: normal;
-  font-weight: 400;
+  font-size: $font-live-tool-text-size;
+  font-style: $font-live-tool-text-style;
+  font-weight: $font-live-tool-text-weight;
   line-height: 1.25rem; /* 166.667% */
-  background: var(--G2, linear-gradient(180deg, #A4BBDB 0%, rgba(164, 187, 219, 0.80) 100%));
+  background: $color-live-tool-text-background;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

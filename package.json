@@ -1,6 +1,6 @@
 {
   "name": "ultra-live-electron",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Tencent Cloud Living and Streaming Tool for desktop and laptop",
   "main": "main.js",
   "author": "Tencent Cloud",

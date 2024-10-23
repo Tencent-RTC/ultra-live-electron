@@ -1,5 +1,5 @@
 <template>
-  <div class="tui-live-kit-child">
+  <div class="tui-live-kit-child dark-theme">
     <live-camera-source
       v-if="currentViewName === 'camera'"
       :data="dataInEdit"
@@ -38,6 +38,7 @@ import useDeviceManager from './utils/useDeviceManager';
 import trtcCloud from "./utils/trtcCloud";
 import { useI18n } from './locales/index';
 import { useMusicDataStore } from './store/musicData';
+import { changeTheme } from './utils/utils';
 
 const logger = console;
 const logPrefix = '[ChildWindowView]';
@@ -91,6 +92,11 @@ function initMainWindowMessageListener() {
             data,
           });
         }
+      }
+        break;
+      case 'change-theme': {
+        const childWindowElement = document.querySelector('.tui-live-kit-child');
+        changeTheme(childWindowElement,data);
       }
         break;
       default:
@@ -311,7 +317,7 @@ window.ipcRenderer.on('show', (event: any, args: Record<string, any>) => {
 
 .tui-live-kit-child {
   height: 100%;
-  background-color: $color-background-primary;
-  color: $color-font-default;
+  background-color: $color-child-background;
+  color: $font-child-color;
 }
 </style>

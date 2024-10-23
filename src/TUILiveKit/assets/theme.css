@@ -1,0 +1,209 @@
+.dark-theme {
+  /* Text & Icon */
+  --text-color-primary: rgba(255, 255,255, 0.90);
+  --text-color-secondary: rgba(255, 255,255, 0.55);
+  --text-color-tertiary: rgba(255, 255,255, 0.40);
+  --text-color-disabled: rgba(255, 255,255, 0.28);
+  --text-color-button: rgba(255, 255,255, 1);
+  --text-color-button-disabled: rgba(255, 255,255, 0.42);
+  --text-color-link: #4086FF;
+  --text-color-link-hover: #2B6AD6;
+  --text-color-link-disabled: #243047;
+  --text-color-anti-primary: rgba(0, 0,0, 0.90);
+  --text-color-anti-secondary: rgba(0, 0,0, 0.55);
+  --text-color-warning: #E37F32;
+  --text-color-success: #3BA673;
+  --text-color-error: #E6594C;
+
+  /* Background */
+  --bg-color-topbar: #16171A;
+  --bg-color-operate: #1F2024;
+  --bg-color-dialog: #1F2024;
+  --bg-color-dialog-module: #2B2C30;
+  --bg-color-entrycard: #2B2C30;
+  --bg-color-function: #3A3C42;
+  --bg-color-bottombar: #2B2C30;
+  --bg-color-input: #2B2C30;
+  --bg-color-bubble-reciprocal: #2B2C30;
+  --bg-color-bubble-own: #5C9DFF;
+  --bg-color-default: #16171A;
+  --bg-color-tag-mask: rgba(0, 0, 0, 0.55);
+  --bg-color-mask: rgba(0, 0, 0, 0.55);
+  --bg-color-mask-disappeared: rgba(0, 0, 0, 0.55);
+  --bg-color-mask-begin: rgba(0, 0, 0, 0.90);
+  --bg-color-transparency: rgba(0, 0, 0, 0);
+
+  /* Border */
+  --stroke-color-primary: #3A3C42;
+  --stroke-color-secondary: #2B2C30;
+  --stroke-color-module: #4B494F;
+
+  /* Shadow */
+  --shadow-color: rgba(0, 0, 0, 0.06);
+
+  /* Status */
+
+  /* List */
+  --list-color-default: #1F2024;
+  --list-color-hover: #2B2C30;
+  --list-color-focused: #242047;
+
+  /* Button */
+
+  --button-color-primary-default: #4086FF;
+  --button-color-primary-hover: #2B6AD6;
+  --button-color-primary-active: #5C9DFF;
+  --button-color-primary-disabled: #243047;
+  --button-color-secondary-default: #3A3C42;
+  --button-color-secondary-hover: #2B2C30;
+  --button-color-secondary-active: #4B494F;
+  --button-color-secondary-disabled: #2B2C30;
+
+  /* Dropdown */
+  --dropdown-color-default: #2B2C30;
+  --dropdown-color-hover: #3A3C42;
+  --dropdown-color-active: #343537;
+
+  /* Scroll-Bar */
+  --scroll-bar-color-default: rgba(255, 255, 255, 0.14);
+  --scroll-bar-color-hover: rgba(255, 255, 255, 0.30);
+
+  /* Floating */
+  --floating-color-default: #2B2C30;
+  --floating-color-operate: #3A3C42;
+
+  /* Checkbox */
+  --checkbox-color-selected: #2B6AD6;
+
+  /* Toast */
+  --toast-color-warning: #35231A;
+  --toast-color-success: #22352C;
+  --toast-color-error: #422324;
+  --toast-color-default: #243047;
+
+  /* Tag */
+  --tag-color-level-1: #008FB2;
+  --tag-color-level-2: #2B6AD6;
+  --tag-color-level-3: #693CF0;
+  --tag-color-level-4: #C22F56;
+
+  /* Switch */
+  --switch-color-off: #008FB2;
+  --switch-color-on: #2B6AD6;
+  --switch-color-button: #FFFFFF;
+
+  /* Slider */
+  --slider-color-filled: #2B6AD6;
+  --slider-color-empty: #4B494F;
+  --slider-color-button: #FFFFFF;
+
+  /* Tab */
+  --tab-color-selected: #48494F;
+  --tab-color-unselected: #3A3C42;
+
+}
+
+.light-theme {
+  /* Text & Icon */
+  --text-color-primary: rgba(0, 0, 0, 0.90);
+  --text-color-secondary: rgba(0, 0, 0, 0.55);
+  --text-color-tertiary: rgba(0, 0, 0, 0.40);
+  --text-color-disabled: rgba(0, 0, 0, 0.28);
+  --text-color-button: rgba(255, 255,255, 1);
+  --text-color-button-disabled: rgba(255, 255,255, 1);
+  --text-color-link: #1C66E5;
+  --text-color-link-hover: #4588F5;
+  --text-color-link-disabled: #CCE2FF;
+  --text-color-anti-primary: rgba(0, 0,0, 0.90);
+  --text-color-anti-secondary: rgba(0, 0,0, 0.55);
+  --text-color-warning: #FF7200;
+  --text-color-success: #0ABF77;
+  --text-color-error: #E54545;
+
+  /* Background */
+  --bg-color-topbar: #F9FAFC;
+  --bg-color-operate: #FFFFFF;
+  --bg-color-dialog: #FFFFFF;
+  --bg-color-dialog-module: #F0F2F7;
+  --bg-color-entrycard: #F0F2F7;
+  --bg-color-function: #F0F2F7;
+  --bg-color-bottombar: #FFFFFF;
+  --bg-color-input: #F0F2F7;
+  --bg-color-bubble-reciprocal: #F0F2F7;
+  --bg-color-bubble-own: #CCE2FF;
+  --bg-color-default: #F0F2F7;
+  --bg-color-tag-mask: rgba(255, 255, 255, 0.55);
+  --bg-color-mask: rgba(0, 0, 0, 0.55);
+  --bg-color-mask-disappeared: rgba(255, 255, 255, 0.55);
+  --bg-color-mask-begin: #FFFFFF;
+  --bg-color-transparency: rgba(0, 0, 0, 0);
+
+  /* Border */
+  --stroke-color-primary: #E6E9F0;
+  --stroke-color-secondary: #F0F2F7;
+  --stroke-color-module: #E6E9F0;
+
+  /* Shadow */
+  --shadow-color: rgba(0, 0, 0, 0.06);
+
+  /* Status */
+
+  /* List */
+  --list-color-default: #FFFFFF;
+  --list-color-hover: #F9FAFC;
+  --list-color-focused: #EBF3FF;
+
+  /* Button */
+
+  --button-color-primary-default: #1C66E5;
+  --button-color-primary-hover: #4588F5;
+  --button-color-primary-active: #0D49BF;
+  --button-color-primary-disabled: #CCE2FF;
+  --button-color-secondary-default: #F0F2F7;
+  --button-color-secondary-hover: #F9FAFC;
+  --button-color-secondary-active: #E6E9F0;
+  --button-color-secondary-disabled: #F9FAFC;
+
+  /* Dropdown */
+  --dropdown-color-default: #FFFFFF;
+  --dropdown-color-hover: #F9FAFC;
+  --dropdown-color-active: #EBF3FF;
+
+  /* Scroll-Bar */
+  --scroll-bar-color-default: rgba(0, 0, 0, 0.12);
+  --scroll-bar-color-hover: rgba(0, 0, 0, 0.25);
+
+  /* Floating */
+  --floating-color-default: #FFFFFF;
+  --floating-color-operate: #F0F2F7;
+
+  /* Checkbox */
+  --checkbox-color-selected: #2F81EE;
+
+  /* Toast */
+  --toast-color-warning: #FFEEDB;
+  --toast-color-success: #DCFAE9;
+  --toast-color-error: #FFE7E6;
+  --toast-color-default: #EBF3FF;
+
+  /* Tag */
+  --tag-color-level-1: #00ABD6;
+  --tag-color-level-2: #4588F5;
+  --tag-color-level-3: #8157FF;
+  --tag-color-level-4: #F5457F;
+
+  /* Switch */
+  --switch-color-off: #00ABD6;
+  --switch-color-on: #4588F5;
+  --switch-color-button: #FFFFFF;
+
+  /* Slider */
+  --slider-color-filled: #4588F5;
+  --slider-color-empty: #E6E9F0;
+  --slider-color-button: #FFFFFF;
+
+  /* Tab */
+  --tab-color-selected: #2F81EE;
+  --tab-color-unselected: #F0F2F7;
+
+}

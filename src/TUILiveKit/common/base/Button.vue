@@ -52,8 +52,10 @@ const buttonClassList = computed(() => [
 </script>
 
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .button-primary {
-  --shadow-color: rgba(28, 102, 229, 0.20);
+  --shadow-color: $color-button-shadow;
 }
 .tui-button {
   display: inline-flex;
@@ -62,23 +64,23 @@ const buttonClassList = computed(() => [
   text-align: center;
   cursor: pointer;
   transition: background-color 0.2s ease-in-out;
-  border: 1px solid #1C66E5;
+  border: 1px solid $color-button-border;
   font-weight:400;
   line-height:1.375rem;
   white-space: nowrap;
-  background-color: #1C66E5;
+  background-color: $color-button-background;
   outline: none;
-  color: #FFFFFF;
+  color: $font-button-color;
   &:hover {
-    background: #144FB6;
-    border: 1px solid #144FB6;
+    background: $color-button-hover-background;
+    border: 1px solid $color-button-hover-border;
     outline: none;
   }
 }
 .tui-button-primary {
-  background-color: transparent;
-  border: 1px solid #4791FF;
-  color: #4791FF;
+  background-color: $color-button-primary-background;
+  border: 1px solid $color-button-primary-border;
+  color: $font-button-primary-color;
   font-size:0.875rem;
   font-weight:500;
   line-height:1.375rem;
@@ -110,13 +112,13 @@ const buttonClassList = computed(() => [
 }
 
 .tui-button-text {
-  border: 0 solid transparent;
-  background-color: transparent;
-  color: #4F586B;
+  border: 0 solid $color-button-text-border;
+  background-color: $color-button-text-background;
+  color: $font-button-text-color;
   &:hover {
-    border: 0 solid transparent;
-    background-color: transparent;
-    color: #4F586B;
+    border: 0 solid $color-button-text-hover-border;
+    background-color: $color-button-text-hover-background;
+    color: $font-button-text-hover-color;
   }
   &::after {
     border: none;

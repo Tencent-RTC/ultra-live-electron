@@ -79,11 +79,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .tui-slider {
   position: relative;
   width: 100%;
   height: 1rem;
-  background-color: transparent;
+  background-color: $color-tui-slider-backgriund;
   cursor: pointer;
 }
 
@@ -94,7 +96,7 @@ onBeforeUnmount(() => {
   transform: translateY(-50%);
   left: 0;
   right: 0;
-  background-color: lightgray;
+  background-color: $color-tui-slider-line-background;
 }
 
 .tui-slider-thumb {

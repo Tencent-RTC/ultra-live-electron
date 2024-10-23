@@ -146,6 +146,8 @@ async function handleSpeakerTest() {
 </script>
 
 <style lang="scss" scoped>
+@import "../assets/variable.scss";
+
 .audio-setting-tab {
   border-radius: 0.25rem;
   font-size: 0.75rem;
@@ -173,9 +175,9 @@ async function handleSpeakerTest() {
     display: inline-block;
     margin-bottom:0.5rem;
     width:100%;
-    color:#4f586b;
-    font-size:0.875rem;
-    font-weight:400;
+    color:$font-audio-setting-tab-title-color;
+    font-size:$font-audio-setting-tab-title-size;
+    font-weight:$font-audio-setting-tab-title-weight;
   line-height:1.375rem;
   }
   .mic-bar-container {
@@ -184,9 +186,9 @@ async function handleSpeakerTest() {
     .mic-bar {
       width:0.1875rem;
       height:0.375rem;
-      background-color: #D5E0F2;
+      background-color: $color-audio-setting-tab-mic-bar-background;
       &.active {
-        background-color: #27C39F;
+        background-color: $color-audio-setting-tab-mic-bar-active-background;
       }
     }
   }
@@ -204,11 +206,11 @@ async function handleSpeakerTest() {
   padding:0.375rem 1.375rem;
 	border-radius:2.25rem;
 	margin-left:0.625rem;
-	font-size:0.875rem;
+	font-size:$font-audio-setting-tab-test-size;
 	font-style:normal;
-	font-weight:500;
+	font-weight:$font-audio-setting-tab-test-weight;
 	line-height:1.375rem;
   margin-top: 0.75rem;
-  background-color: #383F4D;
+  background-color: var(--button-color-primary-default);
 }
 </style>

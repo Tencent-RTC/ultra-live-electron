@@ -3,7 +3,7 @@
         <div class="tui-setting-title tui-window-header" >
             <span>{{ t('Setting') }}</span>
             <button class="tui-icon" @click="handleCloseSetting">
-              <svg-icon :icon="CloseIcon"></svg-icon>
+              <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
             </button>
         </div>
         <div class="setting-body">
@@ -67,7 +67,7 @@ const resetCurrentView = () => {
 }
 </script>
 <style lang="scss" scoped>
-@import '../../assets/variable.scss';
+@import '../../assets/global.scss';
 
 .tui-setting{
     display: flex;
@@ -85,34 +85,34 @@ const resetCurrentView = () => {
 .setting-body {
     height: calc(100% - 2.75rem);
     display: flex;
-    background-color: #22262E;
+    background-color: var(--bg-color-dialog);
     .setting-tabs {
-      width:10.625rem;
-      background-color:#383F4D;
-      padding-top:0.4375rem;
+      width: 10.625rem;
+      background-color: var(--bg-color-dialog);
+      padding-top: 0.4375rem;
       border-bottom-left-radius: 10px;
 
       .tabs-title {
         width: 100%;
-        height:2.25rem;
-        padding-left:2rem;
-        font-weight:400;
-        font-size:0.875rem;
-        color:#4f586b;
+        height: 2.25rem;
+        padding-left: 2rem;
+        font-weight: $font-live-setting-body-tab-title-weight;
+        font-size: $font-live-setting-body-tab-title-size;
+        color: var(--text-color-primary);
         line-height:2.25rem;
         position: relative;
         cursor: pointer;
         &.active {
-          background-color: #2D323E;
-          color: $color-primary;
-          font-weight: 400;
+          background-color: var(--list-color-focused);
+          color: var(--text-color-link);
+          font-weight: $font-live-setting-body-tab-title-active-weight;
         }
       }
     }
     .divide-line {
       width: 1px;
       height: 100%;
-      background: transparent;
+      background: $color-live-setting-divide-line-background;
     }
     .setting-content {
       flex-grow: 1;

@@ -3,7 +3,7 @@
         <div class="tui-voice-chat-title tui-window-header" >
             <span>{{ t('Voice Chat Management') }}</span>
             <button class="tui-icon" @click="handleCloseWindow">
-              <svg-icon :icon="CloseIcon"></svg-icon>
+              <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
             </button>
         </div>
         <!-- <div class="tui-voice-chat-control">
@@ -183,13 +183,14 @@ onBeforeUnmount(() => {
 });
 </script>
 <style scoped lang="scss">
+@import "../../assets/global.scss";
 .tui-voice-chat{
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow-y: auto;
     &-title{
-        font-weight: 500;
+        font-weight: $font-live-voice-chat-title-weight;
         padding: 0 1.5rem 0 1.375rem;
         display: flex;
         align-items: center;
@@ -200,12 +201,12 @@ onBeforeUnmount(() => {
         align-items: center;
         justify-content: space-between;
         margin: 0 1.5rem;
-        border-bottom: 1px solid rgba(230, 236, 245, 0.8);
+        border-bottom: 1px solid $color-live-voice-chat-control-border;
         height: 3rem;
         &-text{
-            font-size: 0.75rem;
-            font-style: normal;
-            font-weight: 400;
+            font-size: $font-live-voice-chat-control-text-size;
+            font-style: $font-live-voice-chat-control-text-style;
+            font-weight: $font-live-voice-chat-control-text-weight;
             line-height: 1.375rem; /* 157.143% */
         }
     }
@@ -214,7 +215,10 @@ onBeforeUnmount(() => {
         display: flex;
         padding: 0.5rem;
         justify-content: space-between;
-        background-color: #22262E;
+        background-color: var(--bg-color-dialog);
+    }
+    &-list-title{
+      font-size: 0.75rem;
     }
     &-list{
         width: 49.5%;
@@ -231,14 +235,14 @@ onBeforeUnmount(() => {
         overflow-y: auto;
         overflow-x: hidden;
         border-radius: 0.5rem;
-        background-color: #383F4D;
-        color: #D5E0F2;
+        background-color: var(--bg-color-dialog-module);
+        color: $font-live-voice-chat-member-color;
     }
     &-status{
-        color: rgba(79, 88, 107, 0.40);
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 400;
+        color: $font-live-voice-chat-status-color;
+        font-size: $font-live-voice-chat-status-size;
+        font-style: $font-live-voice-chat-status-style;
+        font-weight: $font-live-voice-chat-status-weight;
         line-height: 1.375rem; /* 157.143% */
         position: absolute;
         top: 50%;
@@ -259,28 +263,28 @@ onBeforeUnmount(() => {
     &-name{
         flex: 1;
         padding-left: 0.5rem;
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 500;
+        font-size: $font-live-voice-chat-name-size;
+        font-style: $font-live-voice-chat-name-style;
+        font-weight: $font-live-voice-chat-name-weight;
         line-height: 1.25rem; /* 166.667% */
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
     }
     &-accept{
-        color: #1C66E5;
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 500;
+        color: $font-live-voice-chat-accept-color;
+        font-size: $font-live-voice-chat-accept-size;
+        font-style: $font-live-voice-chat-accept-style;
+        font-weight: $font-live-voice-chat-accept-weight;
         line-height: 1.25rem; /* 166.667% */
         cursor: pointer;
     }
     &-reject{
         padding-left: 0.625rem;
-        color: #8F9AB2;
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 500;
+        color: $font-live-voice-chat-reject-color;
+        font-size: $font-live-voice-chat-reject-size;
+        font-style: $font-live-voice-chat-reject-style;
+        font-weight: $font-live-voice-chat-reject-weight;
         line-height: 1.25rem; /* 166.667% */
         cursor: pointer;
     }
@@ -291,11 +295,12 @@ onBeforeUnmount(() => {
         align-items: center;
         padding: 0 0.875rem;
         position: relative;
+        color: var(--text-color-secondary);
     }
     &-seatIndex{
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 400;
+        font-size: $font-live-voice-chat-seatIndex-size;
+        font-style: $font-live-voice-chat-seatIndex-style;
+        font-weight: $font-live-voice-chat-seatIndex-weight;
         line-height: 1.25rem; /* 166.667% */
     }
     &-more{

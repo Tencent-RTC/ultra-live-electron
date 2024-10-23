@@ -3,7 +3,7 @@
     <div class="tui-bgm-window-title tui-window-header">
       <span>{{ t("AddBGM") }}</span>
       <button class="tui-icon" @click="handleCloseSetting">
-        <svg-icon :icon="CloseIcon"></svg-icon>
+        <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
       </button>
     </div>
     <div class="tui-bgm-window-content">
@@ -229,7 +229,7 @@ function postMessage(key: string, data: object | number | string | undefined){
 
 </script>
 <style scoped lang="scss">
-@import "../../assets/variable.scss";
+@import "../../assets/global.scss";
 .tui-add-bgm-window {
   display: flex;
   flex-direction: column;
@@ -254,7 +254,7 @@ function postMessage(key: string, data: object | number | string | undefined){
     align-items: center;
     width: 100%;
     height: 100%;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-dialog);
   }
 
   .tui-audio-control {
@@ -283,15 +283,16 @@ function postMessage(key: string, data: object | number | string | undefined){
   .tui-audio-list {
     width: 90%;
     height: 75%;
-    border-top:1px solid $color-divider-line;
+    border-top:1px solid var(--stroke-color-primary);
     padding-top:1rem;
+    color: var(--text-color-primary);
 
     .tui-audio-list-area {
       height: 100%;
       margin-top: 1rem;
       padding: 1rem;
       border-radius: 1.5rem;
-      border: 1px solid $color-divider-line;
+      border: 1px solid var(--stroke-color-primary);
 
       .tui-audio-list-scroll-area {
         height: 100%;
@@ -303,7 +304,6 @@ function postMessage(key: string, data: object | number | string | undefined){
           align-items: center;
           padding: 0.5rem;
           border-radius: 0.5rem;
-
           .tui-audio-item-icon {
             display: flex;
             align-items: center;
@@ -312,10 +312,10 @@ function postMessage(key: string, data: object | number | string | undefined){
             height: 4rem;
             margin-right: 1.5rem;
             border-radius: 0.5rem;
-            background-color: $color-divider-line;
+            background-color: var(--dropdown-color-hover);
 
             .musicListIcon{
-              color:$color-icon-music-list;
+              color: var(--text-color-link);
             }
           }
 
@@ -328,6 +328,7 @@ function postMessage(key: string, data: object | number | string | undefined){
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            color: var(--text-color-primary);
           }
         }
 
@@ -345,7 +346,7 @@ function postMessage(key: string, data: object | number | string | undefined){
               width: 4rem;
               height: 2.5rem;
               border-radius: 1.5rem;
-              border: 1px solid $color-play-button;
+              border: 1px solid $color-add-bgm-autio-item-play-button-border;
               margin-left: 2rem;
               cursor: pointer;
               display: flex;
@@ -353,7 +354,7 @@ function postMessage(key: string, data: object | number | string | undefined){
               justify-content: center;
 
               .tui-play-music-icon{
-                color:$color-play-button;
+                color: $color-add-bgm-play-music-icon;
               }
             }
 
@@ -364,19 +365,19 @@ function postMessage(key: string, data: object | number | string | undefined){
               width: 4rem;
               height: 2.5rem;
               border-radius: 1.5rem;
-              border: 1px solid $color-delete-button;
+              border: 1px solid $color-add-bgm-autio-item-delete-button-border;
               cursor: pointer;
               margin-left: 0.5rem;
 
               .tui-delete-music-icon{
-                color:$color-delete-button;
+                color: $color-add-bgm-autio-item-delete-button-border;
               }
             }
           }
         }
         
         .tui-audio-item-active {
-          background-color: $color-background-active;
+          background-color: var(--dropdown-color-active);
         }
       }
     }

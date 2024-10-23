@@ -134,9 +134,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
+@import "../assets/variable.scss";
 .camera-setting-container{
   width: 100%;
   display: flex;
+  align-items: center;
   height: 4.625rem;
   padding: 0.5rem 0;
 }
@@ -144,12 +146,16 @@ onBeforeUnmount(() => {
   width: 20rem;
 }
 .resolution-setting{
-    width: 12rem;
-    padding-left: 0.75rem;
+  width: 12rem;
+  padding-left: 0.75rem;
 }
 .beauty-setting{
   width: 100%;
   height: calc(100% - 21.625rem);
+  background-color: var(--bg-color-dialog-module);
+  border: 1px solid var(--stroke-color-primary);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 .video-tab {
     width: 100%;
@@ -157,45 +163,52 @@ onBeforeUnmount(() => {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-  }
-  .title {
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: 400;
-    line-height: 1rem;
-  }
-  .video-preview-container {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-top: calc(100% * 9 / 16);
-    background-color: #000000;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    .video-preview {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-  }
-  .tui-camera-preview{
-    width: 100%;
-    height: 17rem;
-    overflow: hidden;
 }
-  .mirror-container {
-    display: flex;
-    align-self: end;
-    padding-left: 0.75rem;
-    font-size: 0;
-    cursor: pointer;
-  }
-  .item {
+.title {
+  color: var(--text-color-tertiary);
+  font-size: $font-video-setting-tab-size;
+  font-style: $font-video-setting-tab-style;
+  font-weight: $font-video-setting-tab-weight;
+  line-height: 1rem;
+}
+.video-preview-container {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-top: calc(100% * 9 / 16);
+  background-color: $color-video-setting-tab-preview-container-background;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  .video-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    height: 1.25rem;
-    cursor: pointer;
-    color: var(--font-color-3);
+    height: 100%;
   }
+}
+.tui-camera-preview{
+  width: 100%;
+  height: 17rem;
+  overflow: hidden;
+}
+.mirror-container {
+  display: flex;
+  align-self: end;
+  padding-left: 0.75rem;
+  font-size: $font-video-setting-tab-mirror-container-size;
+  cursor: pointer;
+  span {
+    background-color: var(--bg-color-input);
+    color: var(--text-color-primary);
+    border: 1px solid var(--stroke-color-primary);
+    border-radius: 0.5rem;
+  }
+}
+.item {
+  width: 100%;
+  height: 1.25rem;
+  cursor: pointer;
+  color: var(--font-color-3);
+}
 </style>

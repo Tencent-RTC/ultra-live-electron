@@ -102,6 +102,8 @@ async function createWindow(width = 1366, height = 668) {
     minWidth: 1200,
     minHeight: 650,
     frame: false,
+    transparent: true,
+    backgroundColor: 'rgba(0, 0, 0, 0)',
     acceptFirstMouse: true, // only mac
     webPreferences: {
       preload: path.join(__dirname, "TUILiveKit.preload.js"),
@@ -116,6 +118,8 @@ async function createWindow(width = 1366, height = 668) {
     height: 650,
     // parent: windowMap.main, // To do: 父子窗口在 Windows 和 Mac 上一致，暂时注释掉，后续确定不可行时，再删除。
     frame: false,
+    transparent: true,
+    backgroundColor: 'rgba(0, 0, 0, 0)',
     acceptFirstMouse: true, // only mac
     skitTaskbar: true,
     resizable: false,
@@ -197,8 +201,8 @@ function bindIPCEvent() {
       break;
     case 'voice-chat':
     case 'add-bgm':
-    case 'audio-effect':
-    case 'alter-voice':
+    case 'reverb-voice':
+    case 'change-voice':
     case 'setting':
       windowMap.child?.setSize(600, 560, true);
       windowMap.child?.setContentSize(600, 560, true);

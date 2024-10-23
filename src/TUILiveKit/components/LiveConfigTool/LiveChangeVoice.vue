@@ -3,7 +3,7 @@
     <div class="tui-change-voice-title tui-window-header">
       <span>{{ t("Change Voice") }}</span>
       <button class="tui-icon" @click="handleCloseSetting">
-        <svg-icon :icon="CloseIcon"></svg-icon>
+        <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
       </button>
     </div>
     <div class="tui-change-voice-container">
@@ -15,8 +15,8 @@
     </div>
     </div>
     <div class="tui-change-voice-footer">
-    <div class="tui-operate-button tui-operate-confirm" @click="onConfirmSelect">{{t("Confirm")}}</div>
-    <div class="tui-operate-button" @click="handleCloseSetting">{{ t("Cancel") }}</div>
+    <div class="tui-button-confirm" @click="onConfirmSelect">{{t("Confirm")}}</div>
+    <div class="tui-button-cancel" @click="handleCloseSetting">{{ t("Cancel") }}</div>
     </div>
   </div>
 </template>
@@ -144,7 +144,7 @@ function handleCloseSetting(){
 }
 </script>
 <style scoped lang="scss">
-@import "../../assets/variable.scss";
+@import "../../assets/global.scss";
 .tui-change-voice-window {
   display: flex;
   flex-direction: column;
@@ -167,7 +167,7 @@ function handleCloseSetting(){
     width: 100%;
     height:85%;
     padding:1.5rem;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-dialog);
     display:flex;
     align-items: center;
     justify-content: center;
@@ -192,15 +192,16 @@ function handleCloseSetting(){
       .tui-change-voice-text{
         width:200%;
         text-align: center;
+        color: var(--text-color-primary);
       }
     }
 
     .normal-item{
-      color:$color-audio-effect-default;
+      color: $font-change-voice-normal-item-color;
     }
 
     .active-item{
-      color:$color-audio-effect-active;
+      color: $font-change-voice-active-item-color;
     }
 
     .active-item::before{
@@ -219,28 +220,8 @@ function handleCloseSetting(){
     width: 100%;
     height: 10%;
     padding-right: 2rem;
-    background-color: $color-background-secondary;
-    border-top:1px solid $color-divider-line;
-
-    .tui-operate-button{
-      width:5.5rem;
-      height:2rem;
-      background-color: $color-white;
-      color:$color-play-button;
-      font-weight: 2px;
-      border-radius:1rem;
-      border:1.5px solid $color-play-button;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      cursor:pointer;
-    }
-    
-    .tui-operate-confirm{
-      background-color: $color-play-button;
-      color:$color-font-default;
-      margin-right:1rem;
-    }
+    background-color: var(--bg-color-dialog);
+    border-top:1px solid var(--stroke-color-primary);
   }
 }
 </style>

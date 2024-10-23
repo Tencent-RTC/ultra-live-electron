@@ -1,9 +1,9 @@
 <template>
   <div class="tui-live-tool">
-    <div class="tui-live-tool-title">
+    <div class="tui-live-tool-title" :class="{'tui-title': !isCollapse}">
       <div>{{t("Live Tools")}}</div>
       <div class="tui-live-tool-switch" @click="switchLiveTool">
-        <svg-icon :icon="isCollapse  ? ArrowDownRotateIcon : ArrowDownIcon"></svg-icon>
+        <svg-icon class="svg-icon" :icon="isCollapse  ? ArrowDownRotateIcon : ArrowDownIcon"></svg-icon>
         <span>{{ isCollapse  ? t("Unfold") : t("Collapse") }}</span>
       </div>
     </div>
@@ -113,18 +113,21 @@ const liveToolButtonList = [
     .tui-live-tool-switch {
       display: flex;
       align-items: center;
-      color: #919AB0;
-      font-size: 0.8rem;
+      color: var(--text-color-secondary);
+      font-size: $font-live-config-tool-switch-size;
       cursor: pointer;
+
+      .svg-icon {
+        color: var(--text-color-secondary);
+      }
     }
   }
 
   .tui-live-tool-container {
     display: flex;
     flex-wrap: wrap;
-    padding:0.3rem 1rem;
-    border-top:1px solid $color-divider-line;
-    color: $color-font-gray;
+    padding: 0.3rem 1rem;
+    color: var(--bg-color-operate);
 
     .tui-live-tool-button-container {
       box-sizing: border-box;
@@ -144,26 +147,27 @@ const liveToolButtonList = [
         position: relative;
         align-items: center;
         height: 3.5rem;
-        width:100%;
-
+        width: 100%;
+        
         .tui-live-tool-button-icon {
           position: absolute;
           top: 0.5rem;
         }
 
         .tui-live-tool-button-desc {
-          position:absolute;
+          position: absolute;
           bottom: 0;
-          width:120%;
-          text-align:center;
+          width: 120%;
+          text-align: center;
+          color: var(--text-color-secondary);
         }
       }
     }
     
     .tui-live-tool-disable-button,
     .tui-live-tool-disable-button:hover{
-      color: #666666;
-      cursor:not-allowed;
+      color: $font-live-config-tool-disable-button-hover-color;
+      cursor: not-allowed;
     }
   }
 }

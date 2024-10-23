@@ -37,6 +37,8 @@ const badgeClass = computed(() => ['tui-badge', `tui-badge-${props.type}`, props
 </script>
 
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .tui-badge { 
   position: relative; 
   display: inline-block; 
@@ -47,19 +49,19 @@ const badgeClass = computed(() => ['tui-badge', `tui-badge-${props.type}`, props
     display: inline-block;
     padding: 0.125rem 0.3125rem; 
     font-size: 0.625rem;
-    color: #FFFFFF;
+    color: $font-badge-color;
     transform: translateY(-50%) translateX(100%); 
     border-radius: 0.625rem; 
   } 
 } 
 .tui-badge-primary { 
   .tui-badge-count  { 
-    background-color: #1C66E5;
+    background-color: $color-badge-background;
      }
   }
   .tui-badge-danger { 
     .tui-badge-count { 
-      background-color: #F23C5B;
+      background-color: $color-badge-count-background;
     } 
   } 
   .tui-badge-isDot { 

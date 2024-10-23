@@ -106,8 +106,12 @@ async function handleChange(deviceId: string) {
 </script>
 
 <style lang="scss" scoped>
+@import "../assets/variable.scss";
+
 .select {
   width: 100%;
-  font-size: 0.75rem;
+  font-size: $font-device-select-size;
+  background-color: var(--bg-color-input);
+  border-radius: 0.5rem;
 }
 </style>

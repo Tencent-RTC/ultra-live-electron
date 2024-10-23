@@ -128,8 +128,9 @@ onUnmounted(() => {
 
 .tui-live-message{
   height: 100%;
+  background-color: var(--bg-color-operate);
   .tui-title {
-    font-size: 0.75rem;
+    font-size: $font-live-message-tui-title-size;
   }
   &-list-container {
     height: calc(100% - 6.75rem);
@@ -146,10 +147,10 @@ onUnmounted(() => {
   }
   &-title{
     padding: 0.5rem 1rem 0.25rem 1rem;
-    color: var(--G5, #8F9AB2);
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: 500;
+    color: var(--text-color-tertiary);
+    font-size: $font-live-message-title-size;
+    font-style: $font-live-message-title-style;
+    font-weight: $font-live-message-title-weight;
     line-height: 1.25rem;
   }
   &-list{
@@ -161,25 +162,26 @@ onUnmounted(() => {
   }
   &-item{
     padding: 0.375rem 0;
+    color: var(--text-color-primary);
     &-level {
       padding: 0 0.5rem;
       border-radius: 0.5rem;
-      background-color: $color-primary;
+      background-color: $color-live-message-item-level-background;
     }
     &-nick{
       padding-left: 0.25rem;
-      color: #80BEF6;
-      font-size: 0.75rem;
-      font-style: normal;
-      font-weight: 500;
+      color: var(--text-color-primary);
+      font-size: $font-live-message-item-nick-size;
+      font-style: $font-live-message-item-nick-style;
+      font-weight: $font-live-message-item-nick-weight;
       line-height: 1.25rem;
     }
     &-message{
       padding-left: 0.25rem;
-      color: #D5E0F2;
-      font-size: 0.75rem;
-      font-style: normal;
-      font-weight: 500;
+      color: $font-live-message-item-message-color;
+      font-size: $font-live-message-item-message-size;
+      font-style: $font-live-message-item-message-style;
+      font-weight: $font-live-message-item-message-weight;
       line-height: 1.25rem;
     }
     &-content {
@@ -196,8 +198,8 @@ onUnmounted(() => {
     height: calc(100% - 2.5rem);
     text-align: center;
     padding-top: 10rem;
-    font-size: 0.75rem;
-    color: #8F9AB2;
+    font-size: $font-live-message-disabled-size;
+    color: $font-live-message-disabled-color;
   }
 }
 </style>

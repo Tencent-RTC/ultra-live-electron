@@ -7,16 +7,13 @@ $color-danger: #FF4949;
 $color-background-primary: #0F1014;
 $color-background-secondary: #22262E;
 
-$color-icon-music-list:#1C66E5;
-$color-font-default: white;
-$color-font-primary: $color-primary;
-$color-font-gray:#8F9AB2;
-$color-play-button:#1C66E5;
-$color-delete-button:#E5395C;
 $color-divider-line:#383F4D;
-$color-background-active:#000000;
-$color-audio-effect-active:#1C66E5;
-$color-audio-effect-default:#4E5461;
+$color-reverb-voice-active:#1C66E5;
+$color-icon-default:#ADB6CC;
+$font-size-tips: 0.75rem;
+$font-default-color: #FFFFFF;
+$font-primary-color: #1890FF;
+$font-gray-color:#8F9AB2;
 
 $color-gray-1: #FFFFFF;
 $color-gray-2: #FAFAFA;
@@ -38,3 +35,366 @@ $color-anchor-active: #0050B3;
 $color-background: #17181A;
 $color-background-1: rgba(250, 249, 241, 0.05);
 $color-background-hover: rgba(250, 249, 241, 0.1);
+
+// MessageBox
+$color-message-box-mask: rgba(15, 16, 20, 0.6);
+$color-mexxage-box-background: #FFFFFF;
+$color-message-box-header: #000000;
+$color-message-box-shadow: rgba(230,236,245,0.8);
+$color-message-box-close: #4f586b;
+$font-message-box-title-color: #0f1014;
+
+// Badge
+$font-badge-color: #FFFFFF;
+$color-badge-background: #1C66E5;
+$color-badge-count-background: #F23C5B;
+
+// Button
+$color-button-shadow: rgba(28, 102, 229, 0.20);
+$color-button-border: #1C66E5;
+$color-button-background: #1C66E5;
+$color-button-hover-background: #144FB6;
+$color-button-hover-border: #144FB6;
+$color-button-primary-border: #4791FF;
+$color-button-primary-background: rgba(0, 0, 0, 0);
+$color-button-text-background: rgba(0, 0, 0, 0);
+$color-button-text-hover-background: rgba(0, 0, 0, 0);
+$color-button-text-border: rgba(0, 0, 0, 0);
+$color-button-text-hover-border: rgba(0, 0, 0, 0);
+$font-button-color: #FFFFFF;
+$font-button-primary-color: #4791FF;
+$font-button-text-color: #4F586B;
+$font-button-text-hover-color: #4F586B;
+
+// CheckBox
+$font-checkbox-input-color: #000000;
+$color-checkbox-input-border: rgba(79, 88, 107, 0.30);
+$color-checkbox-input-focus-border: #1C66E5;
+$color-checkbox-input-disabled-background: #2E323D;
+
+// ColorPicker
+$color-picker-input-container-background: rgba(56, 63, 77, 0.50);
+$color-picker-input-background: rgba(0, 0, 0, 0);
+$font-picker-text-color: #D5E0F2;
+$font-picker-text-size: 0.75rem;
+$font-picker-text-weight: 500;
+
+// Select
+$color-select-container-content-border: #383F4D;
+$color-select-container-content-disabled-background: rgba(255, 255, 255, 0.50);
+$color-select-dropdown-container-background: #2D323C;
+$color-select-dropdown-container-border: #383F4D;
+$font-select-container-content-disabled-color: #8F9AB2;
+$font-select-text-size: 0.75rem;
+$font-select-text-style: normal;
+$font-select-text-weight: 500;
+
+// Slider
+$color-tui-slider-backgriund: rgba(0,0,0,0);
+$color-tui-slider-line-background: rgb(211,211,211);
+
+// SwitchControl
+$color-switch-background: #BDBDBD;
+$color-switch-is-checked-background: rgba(28, 102, 229, 1);
+$color-switch-core-background: #FFFFFF;
+$color-switch-core-box-shadow: rgba(0, 0, 0, 0.2);
+
+// AudioControl
+$color-audio-container-background: #383F4D;
+
+// AudioSettingTab
+$color-audio-setting-tab-mic-bar-background: #D5E0F2;
+$color-audio-setting-tab-mic-bar-active-background: #27C39F;
+$color-audio-setting-tab-test-background: #383F4D;
+$font-audio-setting-tab-title-color: #4f586b;
+$font-audio-setting-tab-title-size: 0.875rem;
+$font-audio-setting-tab-title-weight: 400;
+$font-audio-setting-tab-test-size: 0.875rem;
+$font-audio-setting-tab-test-weight: 500;
+$font-audio-setting-tab-test-style: normal;
+
+// BeautyConfigPanel
+$color-beauty-config-panel-border: #383f4d;
+$color-beauty-config-panel-input-type-range-runnable-background: lightgray;
+$color-beauty-config-panel-input-type-range-background: rgba(0, 0, 0, 0);
+$color-beauty-config-panel-input-type-range-line-background: rgb(211,211,211);
+$color-beauty-config-tab-nav-button-background: rgba(0, 0, 0, 0);
+$font-beauty-config-panel-item-color: #8f9ab2;
+$font-beauty-config-panel-size: 0.75rem;
+
+// DeviceSelect
+$font-device-select-size: 0.75rem;
+
+// SpeakerControl
+$color-speaker-container-background: #383F4D;
+
+// VideoProfile
+$font-video-profile-size: 0.75rem;
+
+// VideoSettingTab
+$color-video-setting-tab-preview-container-background: #000000;
+$font-video-setting-tab-size: 0.75rem;
+$font-video-setting-tab-weight: 400;
+$font-video-setting-tab-style: normal;
+$font-video-setting-tab-mirror-container-size: 0;
+
+// LiveConfig
+$font-live-config-is-active-size: 1rem;
+$font-live-config-icon-container-color: #8F9AB2;
+$font-live-config-icon-container-hover-color: $color-white;
+$font-live-config-menu-item-color: #D5E0F2;
+$font-live-config-menu-item-size: $font-size-tips;
+$font-live-config-menu-item-style: normal;
+$font-live-config-menu-item-weight: 400;
+$font-live-config-title-source-color: #8F9AB2;
+$font-live-config-notice-color: #8F9AB2;
+$font-live-config-notice-style: normal;
+$font-live-config-notice-weiht: 400;
+$color-live-config-btn-add-source-background: #383F4D;
+$color-live-config-item-icon-background: rgba(0, 0, 0, 0);
+$color-live-config-media-source-hover-background: #000000;
+$color-live-config-media-source-select-background: #2D323E;
+
+// LiveConfigTool
+$font-live-config-tool-switch-color: #919AB0;
+$font-live-config-tool-switch-size: 0.8rem;
+$font-live-config-tool-container-color: $font-gray-color;
+$font-live-config-tool-disable-button-hover-color: #666666;
+
+// LiveAddBgm
+$color-add-bgm-window-content-background: #22262E;
+$color-add-bgm-music-list-icon: #1C66E5;
+$color-add-bgm-autio-item-play-button-border: #1C66E5;
+$color-add-bgm-autio-item-delete-button-border: #E5395C;
+$color-add-bgm-autio-item-active-background: #000000;
+$color-add-bgm-play-music-icon: #1C66E5;
+
+// LiveChangeVoice
+$font-change-voice-normal-item-color: #4E5461;
+$font-change-voice-active-item-color: #1C66E5;
+$font-change-voice-operate-confirm-color: #FFFFFF;
+$font-change-voice-operate-button-color: #1C66E5;
+$font-change-voice-operate-button-weight: 0.125rem;
+$color-change-voice-play-button: #1C66E5;
+$color-change-voice-footer-background: #22262E;
+$color-change-voice-container-background: #22262E;
+
+// LiveReverbVoice
+$color-reverb-voice-container-background: #22262E;
+$color-reverb-voice-footer-background: #22262E;
+$font-reverb-voice-normal-item-color: #4E5461;
+$font-reverb-voice-active-item-color: #1C66E5;
+$font-reverb-voice-operate-button-color: #1C66E5;
+$font-reverb-voice-operate-button-confirm-color: #1C66E5;
+
+// LiveController
+$color-live-controller-is-choose-background: #8F9AB2;
+$color-live-controller-is-normal-background: #383F4D;
+$color-live-controller-button-switch-background: #1C66E5;
+$color-live-controller-is-living-border: #ed414d;
+$color-live-controller-is-living-background: rgba(0, 0, 0, 0);
+$color-live-controller-text-background: linear-gradient(180deg, #A4BBDB 0%, rgba(164, 187, 219, 0.80) 100%);
+$color-live-controller-right-custom: #9B9FA6;
+$font-live-controller-text-color: #D5E0F2;
+$font-live-controller-text-size: 0.75rem;
+$font-live-controller-text-style: normal;
+$font-live-controller-text-weight: 400;
+$font-live-controller-text-living-color: #ed414d;
+
+// LiveHeader
+$color-live-header-control-container-filter-color: drop-shadow(0px 8px 40px rgba(23, 25, 31, 0.6)) drop-shadow(0px 4px 12px rgba(23, 25, 31, 0.4));
+$color-live-header-statistics-space-background: #FFFFFF;
+$color-live-header-user-control-container-background: #2D323C;
+$color-live-header-user-control-container-before-border-bottom: #2D323C;
+$color-live-header-user-control-container-before-border-other: rgba(0, 0, 0, 0);
+$color-live-header-user-control-container-after-background: rgba(0, 0, 0, 0);
+$color-live-header-user-control-container-hover-background: #000000;
+$font-live-header-size: 0.75rem;
+$font-live-header-left-tui-icon-size: 1.5rem;
+$font-live-header-left-title-size: 1rem;
+$font-live-header-left-title-weight: 500;
+$font-live-header-statistics-text-color: #FFFFFF;
+$font-live-header-statistics-text-style: normal;
+$font-live-header-statistics-text-weight: 400;
+$font-live-header-statistics-value-color: #FFFFFF;
+$font-live-header-statistics-value-style: normal;
+$font-live-header-statistics-value-weight: 400;
+$font-live-header-right-user-info-name-color: #FFFFFF;
+$font-live-header-right-user-info-name-size: 0.75rem;
+$font-live-header-user-control-container-item-foot-color: #FFFFFF;
+$font-live-header-user-control-container-item-foot-size: 0.875rem;
+
+// LiveMember
+$font-live-member-title-size: 0.75rem;
+$font-live-member-user-name-color: #D5E0F2;
+$font-live-member-user-name-size: 0.75rem;
+$font-live-member-user-name-style: normal;
+$font-live-member-user-name-weight: 400;
+$color-live-member-user-level-background: #1890FF;
+
+// chatEditor
+$color-chat-editor-border: rgba(213,224,242,0.20);
+$color-chat-editor-background: rgba(15, 16, 20, 1);
+$font-chat-editor-content-input-background: rgba(0, 0, 0, 0);
+$font-chat-editor-content-input-color: #FFFFFF;
+$font-chat-editor-content-input-placeholder-color: rgba(143, 154, 178, 0.7);
+$font-chat-editor-content-input-placeholder-size: 0.875rem;
+$font-chat-editor-content-input-placeholder-weight: 400;
+
+// emoji
+$color-emoji-list-background: rgba(15,16,20,1);
+
+// MessageText
+$font-message-text-list-nick-color: #D5E0F2;
+$font-message-text-list-nick-size: 0.75rem;
+$font-message-text-list-nick-style: normal;
+$font-message-text-list-nick-weight: 500;
+$font-message-text-box-color: #D5E0F2;
+
+// LiveMessage/Index
+$color-live-message-item-level-background: #1890FF;
+$font-live-message-tui-title-size: 0.75rem;
+$font-live-message-title-color: #8F9AB2;
+$font-live-message-title-size: 0.75rem;
+$font-live-message-title-style: normal;
+$font-live-message-title-weight: 500;
+$font-live-message-item-nick-color: #80BEF6;
+$font-live-message-item-nick-size: 0.75rem;
+$font-live-message-item-nick-style: normal;
+$font-live-message-item-nick-weight: 500;
+$font-live-message-item-message-color: #D5E0F2;
+$font-live-message-item-message-size: #D5E0F2;
+$font-live-message-item-message-style: normal;
+$font-live-message-item-message-weight: 500;
+$font-live-message-disabled-color: #8F9AB2;
+$font-live-message-disabled-size: 0.75rem;
+
+// LivePreview/Index
+$color-live-preview-media-overlay-background: rgba(0, 0, 0, 0);
+$color-live-preview-media-overlay-border: rgba(0, 0, 0, 0);
+$color-live-preview-resize-anchor-border: rgba(0, 0, 0, 0);
+
+// LiveCameraSource
+$font-live-camera-source-color: #D5E0F2;
+$color-live-camera-title-background: #0F1014;
+$color-live-camera-middle-background: #22262E;
+$color-live-camera-footer-background: #22262E;
+
+// LiveImageSource
+$font-live-image-source-text-color: #D5E0F2;
+$font-live-image-source-text-size: 0.75rem;
+$font-live-image-source-text-style: normal;
+$font-live-image-source-text-weight: 400;
+
+// LiveScreenShareSource
+$font-live-screen-share-source-color: #D5E0F2;
+$font-live-screen-share-title-weight: 500;
+$font-live-screen-share-selected-color: #FFFFFF;
+$color-live-screen-share-middle-background: #22262E;
+$color-live-screen-share-footer-background: #22262E;
+$color-live-screen-share-selected-background: #1c66e5;
+
+// ScreenWindowPreviewer
+$color-screen-window-previewer-border: #383F4D;
+$color-screen-window-previewer-hover-border: #1c66e5;
+$font-screen-window-previewer-name-size: 0.75rem;
+$font-screen-window-previewer-name-style: normal;
+$font-screen-window-previewer-name-weight: 400;
+
+// LiveSource/style.scss
+$color-style-scss-button-confirm-background: #1C66E5;
+$color-style-scss-button-cancel-background: #FFFFFF;
+$color-style-scss-button-cancel-border: #1C66E5;
+$color-style-scss-button-disabled-background: #8C8C8C;
+$font-style-scss-button-confirm-color: #FFFFFF;
+$font-style-scss-button-confirm-size: 0.75rem;
+$font-style-scss-button-confirm-weight: 500;
+$font-style-scss-button-confirm-style: normal;
+$font-style-scss-button-disabled-color: #FFFFFF;
+$font-style-scss-button-cancel-color: #1C66E5;
+$font-style-scss-button-cancel-size: 0.75rem;
+$font-style-scss-button-cancel-style: normal;
+$font-style-scss-button-cancel-weight: 500;
+
+// LiveTool
+$color-live-tool-title-left-text-background: linear-gradient(180deg, #A4BBDB 0%, rgba(164, 187, 219, 0.80) 100%);
+$color-live-tool-text-background: linear-gradient(180deg, #A4BBDB 0%, rgba(164, 187, 219, 0.80) 100%);
+$font-live-tool-title-left-text-size: 0.75rem;
+$font-live-tool-title-left-text-style: normal;
+$font-live-tool-title-left-text-weight: 400;
+$font-live-tool-text-size: 0.75rem;
+$font-live-tool-text-style: normal;
+$font-live-tool-text-weight: 400;
+
+// LiveMenberContral
+$color-live-member-control-background: #2D323C;
+$color-live-member-control-container-hover-background: #000000;
+$font-live-member-control-options-size: 0.75rem;
+$font-live-member-control-options-style: normal;
+$font-live-member-control-options-weight: 400;
+$font-live-member-control-danger-color: #FF4949;
+
+// LiveSetting
+$font-live-setting-title-weight: 500;
+$font-live-setting-body-tab-title-size: 0.875rem;
+$font-live-setting-body-tab-title-weight: 400;
+$font-live-setting-body-tab-title-color: #4f586b;
+$font-live-setting-body-tab-title-active-color: #1890FF;
+$font-live-setting-body-tab-title-active-weight: 400;
+$color-live-setting-body-tab-title-active-background: #2D323E;
+$color-live-setting-body-background: #22262E;
+$color-live-setting-body-tabs-background: #383F4D;
+$color-live-setting-divide-line-background: rgba(0, 0, 0, 0);
+
+// LiveVoiceChat
+$color-live-voice-chat-control-border: rgba(230, 236, 245, 0.8);
+$color-live-voice-chat-list-container-background: #22262E;
+$color-live-voice-chat-member-background: #383F4D;
+$font-live-voice-chat-title-weight: 500;
+$font-live-voice-chat-control-text-size: 0.75rem;
+$font-live-voice-chat-control-text-style: normal;
+$font-live-voice-chat-control-text-weight: 400;
+$font-live-voice-chat-member-color: #D5E0F2;
+$font-live-voice-chat-status-color: rgba(79, 88, 107, 0.40);
+$font-live-voice-chat-status-size: 0.75rem;
+$font-live-voice-chat-status-style: normal;
+$font-live-voice-chat-status-weight: 400;
+$font-live-voice-chat-name-size: 0.75rem;
+$font-live-voice-chat-name-style: normal;
+$font-live-voice-chat-name-weight: 500;
+$font-live-voice-chat-accept-color: #1C66E5;
+$font-live-voice-chat-accept-size: 0.75rem;
+$font-live-voice-chat-accept-style: normal;
+$font-live-voice-chat-accept-weight: 500;
+$font-live-voice-chat-reject-color: #8F9AB2;
+$font-live-voice-chat-reject-size: 0.75rem;
+$font-live-voice-chat-reject-style: normal;
+$font-live-voice-chat-reject-weight: 500;
+$font-live-voice-chat-seatIndex-size: 0.75rem;
+$font-live-voice-chat-seatIndex-style: normal;
+$font-live-voice-chat-seatIndex-weight: 400;
+
+// Child
+$color-child-background: #0F1014;
+$font-child-color: #FFFFFF;
+
+// Main
+$color-main-background: #0F1014;
+$color-main-live-config-container-background: #22262E;
+$color-main-live-config-tool-background: #22262E;
+$color-main-live-preview-container-background: #22262E;
+$color-main-live-controller-container-background: #22262E;
+$color-main-live-member-container-background: #22262E;
+$color-main-live-message-container-background: #22262E;
+$font-main-color: #FFFFFF;
+$font-main-size: 0.75rem;
+
+// App
+$color-app-background: rgba(0, 0, 0, 0);
+$font-app-color: #FFFFFF;
+$font-app-family: Avenir, Helvetica, Arial, sans-serif;
+
+// App-external
+$color-app-external-background: rgba(0, 0, 0, 0);
+$font-app-external-color: #FFFFFF;
+$font-app-external-family: Avenir, Helvetica, Arial, sans-serif;

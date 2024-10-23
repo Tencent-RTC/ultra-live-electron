@@ -52,7 +52,7 @@ export const useBasicStore = defineStore('basic', {
     roomName(): string {
       return t('sb. living room: NO.', {
         userName: this.userName || this.userId,
-      }) + this.roomId;
+      });
     }
   },
   actions: {

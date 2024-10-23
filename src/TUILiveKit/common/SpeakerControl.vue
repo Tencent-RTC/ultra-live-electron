@@ -52,24 +52,28 @@ onMounted(async () => {
 </script>
   
   <style lang="scss" scoped>
+  @import "../assets/variable.scss";
    .speaker-container{
+      position: relative;
       width: 8rem;
       height: 2.5rem;
       display: block;
-      background: #383F4D;
+      background: var(--tab-color-unselected);
       border-radius: 0.25rem;
       display: flex;
       padding-left: 0.5rem;
       margin-right: 0.375rem;
       display: flex;
       align-items: center;
+      color: $color-icon-default;
     }
     .icon-container {
       padding-left: 0.25rem;
     }
     .drag-container{
+      position: absolute;
       width: 4.5rem;
-      margin-left: 0.5rem;
+      left: 2.5rem;
     }
   </style>
  

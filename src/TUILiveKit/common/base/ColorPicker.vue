@@ -20,24 +20,26 @@ function onInputColor() {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .input-container{
     display: flex;
     align-items: center;
-    background-color: rgba(56, 63, 77, 0.50);
+    background-color: $color-picker-input-container-background;
     border-radius: 0.375rem;
     width: 14.625rem;
 }
 .input{
     border: none;
     outline: none;
-    background: transparent;
+    background: $color-picker-input-background;
 }
 .text{
-    color: var(--G7, #D5E0F2);
-    font-size: 0.75rem;
+    color: $font-picker-text-color;
+    font-size: $font-picker-text-size;
     font-style: normal;
-    font-weight: 500;
+    font-weight: $font-picker-text-weight;
     line-height: 1.25rem;
     padding-left: 0.125rem;
 }

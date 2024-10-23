@@ -2,7 +2,8 @@
   <div class="tui-live-preview">
     <div class="tui-title tui-preview-title">
       <div class="tui-title-left">
-        {{ roomName }}
+        <span>{{ roomName }}</span>
+        <span class="tui-title-room-id">{{ roomId }}</span>
       </div>
       <div class="tui-title-right">
         <span class="tui-statis-item tui-online-count">{{ remoteUserList.length }}{{ t("viewer") }}</span>
@@ -51,7 +52,7 @@ const basicStore = useBasicStore();
 const roomStore = useRoomStore();
 const mediaSourcesStore = useMediaSourcesStore();
 
-const { roomName } = storeToRefs(basicStore);
+const { roomName, roomId } = storeToRefs(basicStore);
 const { remoteUserList, historyRemoteUserCount } = storeToRefs(roomStore);
 const { mixingVideoEncodeParam, mediaList, selectedMediaKey } = storeToRefs(mediaSourcesStore);
 
@@ -434,6 +435,15 @@ onUnmounted(()=> {
     display: flex;
     justify-content: space-between;
 
+    .tui-title-left {
+      display: flex;
+      align-items: center;
+
+      .tui-title-room-id {
+        margin-left: 0.5rem;
+      }
+    }
+
     .tui-statis-item {
       padding: 0 0.5rem;
       border-right: 1px solid $color-divider-line;
@@ -465,8 +475,8 @@ onUnmounted(()=> {
     top: 0;
     min-width: 1px;
     min-height: 1px;
-    background-color: transparent;
-    border: 0.125rem solid transparent;
+    background-color: $color-live-preview-media-overlay-background;
+    border: 0.125rem solid $color-live-preview-media-overlay-border;
     cursor: move;
   }
 }
@@ -475,7 +485,7 @@ onUnmounted(()=> {
 @import "../../assets/variable.scss";
 .tui-live-preview  {
   .resize-anchor {
-    border-color: transparent;
+    border-color: $color-live-preview-resize-anchor-border;
   }
 }
 </style>

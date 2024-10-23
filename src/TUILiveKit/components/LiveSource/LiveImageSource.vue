@@ -5,7 +5,7 @@
         <svg-icon :icon="CameraIcon" class="icon-container"></svg-icon>
         <i class="text">{{ t('Add Image') }}</i>
       </span>
-      <span v-else>{{ t('Edit Image') }}</span>
+      <span v-else>{{ t('Edit source') }}</span>
     </span>
 </template>
 <script setup lang="ts">
@@ -155,7 +155,7 @@ watch(props, (val) => {
 </script>
 
 <style scoped lang="scss">
-@import './style.scss';
+@import '../../assets/global.scss';
 
 .tui-image-source{
   display: flex;
@@ -176,10 +176,10 @@ watch(props, (val) => {
   cursor: pointer;
 }
 .text {
-  color: #D5E0F2;
-  font-size: 0.75rem;
-  font-style: normal;
-  font-weight: 400;
+  color: var(--text-color-primary);
+  font-size: $font-live-image-source-text-size;
+  font-style: $font-live-image-source-text-style;
+  font-weight: $font-live-image-source-text-weight;
   line-height: 1.375rem;
 }
 </style>./type-define./types./constant

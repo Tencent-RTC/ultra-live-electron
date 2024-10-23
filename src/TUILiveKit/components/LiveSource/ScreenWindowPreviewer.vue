@@ -42,18 +42,18 @@ onMounted(() => {
 </script>
   
 <style scoped lang="scss">
-  
+@import "../../assets/variable.scss";
 .screen-window-previewer {
   list-style: none;
   display: inline-block;
   margin-right: 2.5rem;
   width: 11.5rem;
   border-radius: 0.5rem;
-  border: 2px solid #383F4D;
+  border: 2px solid var(--stroke-color-primary);
   text-align: center;
   margin-bottom: 2.5rem;
   &:hover {
-    border-color: #1c66e5;
+    border-color: var(--button-color-primary-default);
   }
 }
 

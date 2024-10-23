@@ -1,4 +1,5 @@
 export default {
+  'No user ID': 'No user ID',
   'Sources': 'Sources',
   'Material': 'Material',
   'Support diverse types of media sources': 'Support diverse types of media sources',
@@ -8,7 +9,6 @@ export default {
   'Edit Capture': 'Edit Capture',
   'Add PDF/PPT': 'Add PDF/PPT',
   'Add Image': 'Add Image',
-  'Edit Image': 'Edit',
   'Choose Image': 'Choose Image',
   'Image': 'Image',
   'Camera': 'Camera',
@@ -182,5 +182,5 @@ export default {
   'Vacant' : 'Vacant',
   'Recording Room 1' : 'Recording Room 1',
   'Recording Room 2' : 'Recording Room 2',
-  'Melodious' : 'Melodious'
+  'Melodious' : 'Melodious',
 }

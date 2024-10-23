@@ -18,21 +18,25 @@ const handleTextMessageShowContext = (text: string) => decodeMessageText(text);
 </script>
   
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .tui-live-message-list-nick{
-    color: #D5E0F2;
+    color: $font-message-text-list-nick-color;
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 500;
     line-height: 1.25rem;
     padding-left: 0.5rem;
 }
+
 .text-img {
     width: 1.25rem;
     height: 1.25rem;
     vertical-align: middle;
 }
+
 .text-box {
-    color:#D5E0F2;
+    color: var(--text-color-primary);
     line-height: 1.25rem;
 }
 </style>

@@ -386,8 +386,7 @@ export default {
   width: 100%;
   height: 100%;
   border-radius: 0.5rem;
-  border: 1px solid #383f4d;
-  font-size: .75rem;
+  font-size: $font-beauty-config-panel-size;
 }
 
 .tui-form {
@@ -404,6 +403,7 @@ export default {
   width: 30%;
   padding-right: 0.5rem;
   text-align: right;
+  color: var(--text-color-secondary);
 }
 .tui-form-range {
   width: 40%;
@@ -412,6 +412,7 @@ export default {
   width: 30%;
   padding-left: 0.5rem;
   text-align: left;
+  color: var(--text-color-secondary);
 }
 
 .tui-beauty-tabs {
@@ -424,21 +425,21 @@ export default {
   line-height: 2rem;
   overflow-x: auto;
   overflow-y: hidden;
-  background-color: #2D323C;
+  color: var(--text-color-secondary);
 }
 
 .tui-tab-nav-button {
   margin: 0 0.25rem;
   padding: 0.0625rem 0.125rem;
   border: none;
-  background: transparent;
+  background: $color-beauty-config-tab-nav-button-background;
   color: inherit;
   cursor: pointer;
 
   &.is-active {
     padding-bottom: 0.375rem;
-    color: $color-primary;
-    box-shadow: 0 0.125rem 0 0 $color-primary;
+    color: var(--text-color-link);
+    box-shadow: 0 0.125rem 0 0 var(--text-color-link);
   }
 }
 
@@ -449,12 +450,14 @@ export default {
 .tui-beauty-tabs-panels {
   height: calc(100% - 2rem);
   padding-top: 2rem;
+  background-color: var(--bg-color-dialog);
 }
 
 .tui-tab-panel {
   width: 100%;
   height: 100%;
   overflow: auto;
+  background-color: var(--bg-color-dialog);
 
   &.tui-no-form {
     height: calc(100% + 2rem);
@@ -482,7 +485,7 @@ export default {
   width: 3rem;
   margin: 0.5rem 0.375rem 0 0.375rem;
   text-align: center;
-  color: #8f9ab2;
+  color: var(--text-color-primary);
   cursor: pointer;
 }
 
@@ -508,6 +511,8 @@ export default {
   width: 3rem;
   height: 3rem;
   border-radius: 0.5rem;
+  color:blue;
+  background-color: var(--bg-color-entrycard);
 }
 
 .tui-virtual-image {
@@ -522,11 +527,12 @@ export default {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  color: var(--text-color-secondary);
 }
 
 input[type='range'] {
   -webkit-appearance: none;
-  background: transparent;
+  background: $color-beauty-config-panel-input-type-range-background;
   cursor: pointer;
 }
 
@@ -537,7 +543,7 @@ input[type=range]:focus {
 input[type='range']::-webkit-slider-runnable-track {
   -webkit-appearance: none;
   height: 0.25rem;
-  background-color: lightgray;
+  background-color: var(--slider-color-empty);
   border-radius: 0.125rem;
 }
 

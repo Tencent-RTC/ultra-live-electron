@@ -59,11 +59,13 @@ function handleChooseOption() {
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
+  background-color: var(--list-color-default);
+  color: var(--text-color-primary);
   &.active {
-    color: $color-primary;
+    color: var(--text-color-link);
   }
   &:hover {
-    background-color: $color-black;
+    background-color: var(--list-color-hover);
   }
   .option-content {
     font-size: 0.75rem;

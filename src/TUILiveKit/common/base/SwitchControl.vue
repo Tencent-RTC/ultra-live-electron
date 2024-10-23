@@ -30,19 +30,21 @@ watch(
 </script>
 
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .switch {
   position: relative;
   display: inline-block;
   width: 40px;
   height: 20px;
-  background-color: #BDBDBD;
+  background-color: $color-switch-background;
   border-radius: 20px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
 .switch.is-checked {
-  background-color: rgba(28, 102, 229, 1);
+  background-color: $color-switch-is-checked-background;
 }
 
 .switch-input {
@@ -60,9 +62,9 @@ watch(
   top: 2px;
   width: 40%;
   height: 80%;
-  background-color: #fff;
+  background-color: $color-switch-core-background;
   border-radius: 50%;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 5px $color-switch-core-box-shadow;
   transition: transform 0.3s !important;
 }
 

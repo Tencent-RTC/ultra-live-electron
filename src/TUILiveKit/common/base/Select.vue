@@ -148,27 +148,29 @@ function handleClickOutside() {
 </script>
 
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
 
 .select-container {
   position: relative;
   .select-content {
     position: relative;
-    border: 1px solid #383F4D;
+    border: 1px solid var(--stroke-color-primary);
     border-radius: 0.5rem;
     height: 2.625rem;
     padding: 0.625rem 1rem;
     cursor: pointer;
+    color: var(--text-color-primary);
     display: flex;
     &.disabled {
-      background-color: rgba(255, 255, 255, 0.50);
-      color: #8F9AB2;
+      background-color: $color-select-container-content-disabled-background;
+      color: var(--text-color-disabled);
       cursor: not-allowed;
     }
     .select-text {
       width: 0;
-      font-size: 0.75rem;
-      font-style: normal;
-      font-weight: 500;
+      font-size: $font-select-text-size;
+      font-style: $font-select-text-style;
+      font-weight: $font-select-text-weight;
       line-height: 1.375rem;
       flex: 1;
       white-space: nowrap;
@@ -187,16 +189,16 @@ function handleClickOutside() {
   .select-dropdown-container {
     min-width: 100%;
     max-height: 15.875rem;
-    padding: 0.4375rem 0px;
     position: absolute;
-    background-color: #2D323C;
-    border: 1px solid #383F4D;
+    background-color: var(--bg-color-input);
+    border: 1px solid var(--stroke-color-primary);
     border-radius: 0.5rem;
     overflow: auto;
     &.down {
       top: calc(100% + 0.375rem);
       left: 0;
       transform-origin: 50% 0;
+      background-color: var(--bg-color-input);
     }
     &.up {
       bottom: calc(100% + 0.375rem);

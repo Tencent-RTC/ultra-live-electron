@@ -33,14 +33,16 @@ const { remoteUserList }  = storeToRefs(roomStore);
 
 .tui-live-member {
   height: 100%;
+  background-color: var(--bg-color-operate);
 }
 
 .tui-title {
-  font-size: 0.75rem;
+  font-size: $font-live-message-title-size;
 }
 
 .tui-member-list{
   height: calc(100% - 2.5rem);
+  padding: 0.5rem;
   overflow: auto;
 }
 .tui-user-avatar{
@@ -51,16 +53,16 @@ const { remoteUserList }  = storeToRefs(roomStore);
 }
 .tui-user-name{
   padding-right: 0.25rem;
-  color: var(--G7, #D5E0F2);
-  font-size: 0.75rem;
-  font-style: normal;
-  font-weight: 400;
+  color: var(--text-color-primary);
+  font-size: $font-live-member-user-name-size;
+  font-style: $font-live-member-user-name-style;
+  font-weight: $font-live-member-user-name-weight;
   line-height: 1.375rem;
 }
 .tui-user-level {
   padding: 0 0.5rem;
   border-radius: 0.5rem;
-  background-color: $color-primary;
+  background-color: $color-live-member-user-level-background;
 }
 .tui-member-item {
   display: flex;

@@ -82,42 +82,46 @@ const handleChooseEmoji = (emojiName: string) => {
 </script>
   
 <style lang="scss" scoped>
+@import "../../assets/variable.scss";
+
 .chat-editor {
-	height:4.25rem;
-	border:1px solid rgba(213,224,242,0.20);
-	border-radius:0.375rem;
-    background: rgba(15, 16, 20, 1);
-	display:flex;
-    position: relative;
-    .chat-emoji {
-      width: 1.25rem;
-      height: 1.25rem;
-      display: flex;
-      margin:0.625rem 0 0 1rem;
+  width: 90%;
+  margin:0 0 0 5%;
+	height: 4.25rem;
+	border: 1px solid var(--stroke-color-primary);
+	border-radius: 0.375rem;
+  background: var(--bg-color-operate);
+	display: flex;
+  position: relative;
+  .chat-emoji {
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    margin: 0.625rem 0 0 1rem;
+  }
+  .content-bottom-input {
+    background-color: var(--bg-color-transparency);
+    border: none;
+    outline: none;
+    resize: none; 
+    box-shadow: none; 
+    width: 100%;
+    color: var(--text-color-primary);
+    line-height: 1.375rem;
+    margin: 0.4375rem 0 0 0.375rem;
+    &:focus-visible {
+      outline: none;
     }
-    .content-bottom-input {
-      background-color: transparent; /* 设置背景色为透明 */
-      border: none; /* 移除边框 */
-      outline: none; /* 移除轮廓 */
-      resize: none; /* 禁止调整大小 */
-      box-shadow: none; /* 移除阴影 */
-      width: 100%;
-      color: #fff;
+    &::placeholder {
+      color: var(--text-color-tertiary);
+      font-size: $font-chat-editor-content-input-placeholder-size;
+      font-weight: $font-chat-editor-content-input-placeholder-weight;
       line-height: 1.375rem;
-      margin:0.4375rem 0 0 0.375rem;
-      &:focus-visible {
-        outline: none;
-      }
-      &::placeholder {
-        color: rgba(143, 154, 178, 0.7);
-        font-size:0.875rem;
-        font-weight:400;
-        line-height:1.375rem;
-      }
-      &::-webkit-scrollbar {
-        display: none;
-      }
     }
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 }
   </style>
   

@@ -116,7 +116,7 @@ async function handleKickOut() {
 	top: 2.5rem;
   z-index: 1;
 	flex-shrink: 0;
-	background-color: #2D323C;
+	background-color: $color-live-member-control-background;
 	
   &-container{
     display: flex;
@@ -126,7 +126,7 @@ async function handleKickOut() {
     cursor: pointer;
 
     &:hover {
-      background-color: $color-black;
+      background-color: $color-live-member-control-container-hover-background;
     }
   }
   &-options{

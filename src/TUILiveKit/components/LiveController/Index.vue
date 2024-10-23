@@ -39,7 +39,7 @@
           <svg-icon :icon="mixingVideoEncodeParam.resMode === TUIResolutionMode.kResolutionMode_Landscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
         </span>
         <tui-button @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled">
-          <svg-icon :icon="liveStatusIcon" ></svg-icon>
+          <svg-icon :icon="liveStatusIcon" class="live-status"></svg-icon>
           <span :class="[isLiving ? 'text-living': ' text-living-start']">
             {{liveStatus}}
           </span>
@@ -241,6 +241,8 @@ watch(
 .tui-live-controller {
   height: 4rem;
   padding: 0 0.5rem;
+  background-color: var(--bg-color-operate);
+
   .tui-layout-toolbar {
     height: 100%;
     border-bottom: 1px solid $color-divider-line;
@@ -262,7 +264,7 @@ watch(
         border-radius: 0.375rem;
         fill: $color-white;
         opacity: 0.5;
-        background: #8F9AB2;
+        background: $color-live-controller-is-choose-background;
       }
       &-isNormal{
         display: flex;
@@ -272,13 +274,13 @@ watch(
         height: 2.5rem;
         border-radius: 0.375rem;
         opacity: 0.5;
-        background: #383F4D;
+        background: $color-live-controller-is-normal-background;
       }
       &-text{
-        color: var(--G7, #D5E0F2);
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 400;
+        color: $font-live-controller-text-color;
+        font-size: $font-live-controller-text-size;
+        font-style: $font-live-controller-text-style;
+        font-weight: $font-live-controller-text-weight;
         line-height: 1.25rem;
       }
     }
@@ -291,7 +293,7 @@ watch(
         justify-content: center;
         width: 4rem;
         height: 2.5rem;
-        background-color: #9B9FA6;
+        background-color: $color-live-controller-right-custom;
         border-radius: 0.375rem;
         margin-right: 0.75rem;
         cursor: pointer;
@@ -303,10 +305,10 @@ watch(
         height: 2.5rem;
       }
       &-text{
-        color: var(--G7, #D5E0F2);
-        font-size: 0.75rem;
-        font-style: normal;
-        font-weight: 400;
+        color: $font-live-controller-text-color;
+        font-size: $font-live-controller-text-size;
+        font-style: $font-live-controller-text-style;
+        font-weight: $font-live-controller-text-weight;
         line-height: 1.25rem;
       }
     }
@@ -348,34 +350,48 @@ watch(
     border-radius: 3rem;
     align-items: center;
     justify-content: center;
-    background-color: #1C66E5;
-    border: none;
-    color: inherit;
+    border: 1px solid var(--button-color-primary-default);
+    background-color: var(--bg-color-transparency);
+    color: var(--button-color-primary-default);
     cursor: pointer;
     margin-left: 0.375rem;
 
-    &.is-living{
-      border: 1px solid #ed414d;
-      background-color: transparent;
+    .live-status{
+      color: var(--button-color-primary-default); 
     }
+
+    span{
+      color: var(--button-color-primary-default); 
+    }
+
+    .text-living{
+      color: var(--text-color-error);
+    }
+
+    &.is-living{
+      border: 1px solid var(--text-color-error);
+      background-color: var(--bg-color-transparency);
+    }
+
 
     &:disabled {
       cursor: not-allowed;
       opacity: 0.3;
     }
   }
+
   .text{
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: 400;
+    font-size: $font-live-controller-text-size;
+    font-style: $font-live-controller-text-style;
+    font-weight: $font-live-controller-text-weight;
     line-height: 1.25rem;
-    background: var(--G2, linear-gradient(180deg, #A4BBDB 0%, rgba(164, 187, 219, 0.80) 100%));
+    background: $color-live-controller-text-background;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     &-living{
       padding: 0.125rem;
-      color: #ed414d;
+      color: var(--bg-color-transparency);
       &-start{
         padding: 0.125rem;
       }

@@ -27,6 +27,9 @@
         <div v-if="showUserControl" class="user-control-container">
           <div class="user-control-item-foot" @click="handleLogOut">{{ t('Log out') }}</div>
         </div>
+        <div class="change-theme"  @click="handleChangeTheme">
+          <svg-icon :icon="SwitchThemeIcon"></svg-icon>
+        </div>
         <div class="window-tool">
           <button class="tui-icon" @click="onMinimize">
             <svg-icon :icon=MinimizeIcon ></svg-icon>
@@ -53,9 +56,14 @@ import MaximizeIcon from '../../common/icons/MaximizeIcon.vue';
 import MinimizeIcon from '../../common/icons/MinimizeIcon.vue';
 import MiniIcon from '../../common/icons/MiniIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
+import SwitchThemeIcon from "@/TUILiveKit/common/icons/SwitchThemeIcon.vue";
 import ArrowStrokeSelectDownIcon from '../../common/icons/ArrowStrokeSelectDownIcon.vue'
 import vClickOutside from '../../utils/vClickOutside';
 import { useBasicStore } from '../../store/basic';
+import { messageChannels } from "../../communication"
+import { changeTheme, ThemeColor } from "../../utils/utils";
+
+const buttonElement = ref();
 
 interface Props {
   user: {
@@ -72,6 +80,7 @@ const { t } = useI18n();
 const emits = defineEmits(["logout"]);
 const { statistics } = storeToRefs(basicStore);
 const isMaximized: Ref<boolean> = ref(false);
+const currentTheme = ref(ThemeColor.DarkTheme);
 
 const frameRate = computed(()=> basicStore.localFrameRate)
 
@@ -119,8 +128,19 @@ const onClose = () => {
   window.ipcRenderer.send("on-close-window", null);
 };
 
+const handleChangeTheme = () => {
+  currentTheme.value = currentTheme.value === ThemeColor.DarkTheme ? ThemeColor.LightTheme : ThemeColor.DarkTheme;
+  messageChannels.childWindowPort?.postMessage({
+    key: 'change-theme',
+    data: currentTheme.value
+  });
+  const mainWindowElement = document.querySelector(".tui-live-kit-main");
+  changeTheme(mainWindowElement,currentTheme.value);
+}
+
 const handleLogOut = () => {
   showUserControl.value = false;
+  console.log("登出")
   emits('logout')
 }
 </script>
@@ -128,15 +148,13 @@ const handleLogOut = () => {
 <style scoped lang="scss">
 @import "../../assets/variable.scss";
 .user-control-container {
-  --filter-color:
-    drop-shadow(0px 8px 40px rgba(23, 25, 31, 0.6))
-    drop-shadow(0px 4px 12px rgba(23, 25, 31, 0.4));
+  --filter-color: $color-live-header-control-container-filter-color;
 }
 .tui-live-header {
   width: 100%;
   height: 2.75rem;
   line-height: 2.75rem;
-  font-size: 0.75rem;
+  font-size: $font-live-header-size;
 
   display: flex;
   flex-direction: row;
@@ -146,17 +164,29 @@ const handleLogOut = () => {
     width: 1.625rem;
     height: 1.5rem;
   }
+  .change-theme{
+    -webkit-app-region: no-drag;
+    display: flex;
+    align-items: center;
+    color: var(--text-color-primary);
+    cursor: pointer;
+    button{
+      color: var(--text-color-primary);
+      cursor: pointer;
+    }
+  }
+ 
   .left {
     display: inline-flex;
     align-items: center;
     .tui-icon {
       margin-left: 0;
       margin-right: 0.25rem;
-      font-size: 1.5rem;
+      font-size: $font-live-header-left-tui-icon-size;
     }
     .title {
-      font-weight: 500;
-      font-size: 1rem;
+      font-weight: $font-live-header-left-title-weight;
+      font-size: $font-live-header-left-title-size;
       padding-left: 0.6rem;
     }
   }
@@ -167,16 +197,14 @@ const handleLogOut = () => {
       padding-right: 0.5rem;
     }
     &-text {
-      color: $color-white;
-      font-style: normal;
-      font-weight: 400;
+      font-style: $font-live-header-statistics-text-style;
+      font-weight: $font-live-header-statistics-text-weight;
       line-height: 1.25rem; /* 166.667% */
     }
     &-value{
       padding: 0 0.375rem;
-      color: $color-white;
-      font-style: normal;
-      font-weight: 400;
+      font-style: $font-live-header-statistics-value-style;
+      font-weight: $font-live-header-statistics-value-weight;
       line-height: 1.25rem; /* 166.667% */
     }
     &-space{
@@ -185,11 +213,12 @@ const handleLogOut = () => {
       display: inline-block;
       height: 0.75rem;
       width: 0.0625rem;
-      background-color: $color-white;
+      background-color: $color-live-header-statistics-space-background;
     }
   }
   .right {
     display: flex;
+    color: var(--text-color-sedondary);
     .user-info-content {
       display: flex;
       align-items: center;
@@ -202,11 +231,11 @@ const handleLogOut = () => {
       .name {
         max-width:6.25rem;
         margin-left:0.625rem;
-        font-size: 0.75rem;
+        font-size: $font-live-header-right-user-info-name-size;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: $color-white;
+        color: var(--text-color-primary);
       }
       .down-icon {
         margin-left:0.25rem;
@@ -220,10 +249,11 @@ const handleLogOut = () => {
   .user-control-container {
     position: absolute;
     top:3rem;
-    right:5.5rem;
+    right:9rem;
     padding:0.625rem;
     min-width:6.25rem;
-    background-color: #2D323C;
+    background-color: var(--toast-color-default);
+    color:var(--text-color-primary);
     border-radius:0.5rem;
     height:2.5rem;
     display: flex;
@@ -235,10 +265,10 @@ const handleLogOut = () => {
       right:1.25rem;
       top:-1.25rem;
       width:0rem;
-      border-top:0.625rem solid transparent;
-      border-right:0.625rem solid transparent;
-      border-bottom:0.625rem solid #2D323C;
-      border-left:0.625rem solid transparent;
+      border-top:0.625rem solid $color-live-header-user-control-container-before-border-other;
+      border-right:0.625rem solid $color-live-header-user-control-container-before-border-other;
+      border-bottom:0.625rem solid var(--toast-color-default);
+      border-left:0.625rem solid $color-live-header-user-control-container-before-border-other;
     }
     &::after {
       content: '';
@@ -247,16 +277,17 @@ const handleLogOut = () => {
       position:absolute;
       left:0rem;
       top:-1.25rem;
-      background-color: transparent;
+      background-color: $color-live-header-user-control-container-after-background;
     }
     &:hover{
-      background-color: $color-black;
+      background-color: var(--dropdown-color-hover);
     }
     .user-control-item-foot{
       text-align: center;
-      color: $color-white;
-      font-size:0.875rem;
+      color: var(--text-color-primary);
+      font-size: $font-live-header-user-control-container-item-foot-size;
       cursor: pointer;
+      z-index:999;
     }
   }
   .window-tool{

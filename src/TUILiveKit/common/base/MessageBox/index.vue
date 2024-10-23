@@ -96,6 +96,8 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
+@import "../../../assets/variable.scss";
+
 .message-box-overlay {
   position: fixed;
   top: 0;
@@ -106,13 +108,13 @@ onMounted(async () => {
   right: 0;
 
   &.overlay {
-    background-color: rgba(15, 16, 20, 0.6);
+    background-color: $color-message-box-mask;
   }
 }
 
 .tui-message-box {
   width: 18rem;
-  background-color: #FFFFFF;
+  background-color: $color-mexxage-box-background;
   position: absolute;
   top: 3rem;
   right: 1rem;
@@ -124,15 +126,15 @@ onMounted(async () => {
     position: relative;
     display: flex;
     padding: 0 1.5rem;
-    color: #000000;
+    color: $color-message-box-header;
     align-items: center;
-    box-shadow:0rem 0.4375rem 0.625rem -0.3125rem rgba(230,236,245,0.8);
+    box-shadow:0rem 0.4375rem 0.625rem -0.3125rem $color-message-box-shadow;
     .tui-dialog-header-title {
       font-size:1rem;
       font-style:normal;
       font-weight:600;
       line-height:1.5rem;
-      color: #0f1014;
+      color: $font-message-box-title-color;
     }
     .close {
       width:2rem;
@@ -144,7 +146,7 @@ onMounted(async () => {
       display:flex;
       justify-content:center;
       align-items:center;
-      color:#4f586b;
+      color:$color-message-box-close;
       cursor:pointer;
     }
   }

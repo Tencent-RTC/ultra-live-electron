@@ -3,7 +3,7 @@
         <div class="tui-screen-title tui-window-header" >
             <span>{{ t('Add Capture') }}</span>
             <button class="tui-icon"  @click="handleCloseWindow">
-              <svg-icon :icon="CloseIcon"></svg-icon>
+              <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
             </button>
         </div>
         <div class="tui-screen-middle">
@@ -159,17 +159,15 @@ watch(props, (val) => {
 });
 </script>
 <style scoped lang="scss">
-@import "../../assets/variable.scss";
 @import "../../assets/global.scss";
-@import './style.scss';
 
 .tui-screen-share-source {
   height: 100%;
-  color: #D5E0F2;
+  color: $font-live-screen-share-source-color;
 }
 
 .tui-screen-title{
-    font-weight: 500;
+    font-weight: $font-live-screen-share-title-weight;
     padding: 0 1.5rem 0 1.375rem;
     display: flex;
     align-items: center;
@@ -181,7 +179,11 @@ watch(props, (val) => {
     min-width: 12.5rem;
     padding: 0.5rem 1.5rem;
     overflow: auto;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-dialog);
+
+    span{
+      color: var(--text-color-secondary);
+    }
 }
 
 .screen-list,
@@ -198,10 +200,11 @@ watch(props, (val) => {
     align-items: center;
     justify-content: flex-end;
     padding: 0 1.5rem;;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-dialog);
+    border-top: 1px solid var(--stroke-color-primary);
 }
 .selected {
-  color: #fff;
-  background-color: #1c66e5;
+  color: $font-live-screen-share-selected-color;
+  background-color: $color-live-screen-share-selected-background;
 }
 </style>./types./type-define./type-define./constant./constant

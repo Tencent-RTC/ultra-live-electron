@@ -1,5 +1,5 @@
 <template>
-  <div class="tui-live-kit-main">
+  <div class="tui-live-kit-main dark-theme">
     <live-header
       :user="{ name: userName, userId: userId, avatarUrl: avatarUrl as string }"
       @logout="onLogout"
@@ -57,6 +57,7 @@ import LiveController from './components/LiveController/Index.vue';
 import LiveMember from './components/LiveMember/Index.vue';
 import LiveMessage from './components/LiveMessage/Index.vue';
 import LiveImageSource from './components/LiveSource/LiveImageSource.vue';
+import TUIMessageBox from './common/base/MessageBox';
 import { initCommunicationChannels, messageChannels } from "./communication";
 import { useBasicStore } from "./store/basic";
 import { useRoomStore } from "./store/room";
@@ -67,12 +68,14 @@ import useMediaMixingManager from './utils/useMediaMixingManager';
 import useVideoEffectManager from './utils/useVideoEffectManager';
 import useRoomEngine from "./utils/useRoomEngine";
 import trtcCloud from './utils/trtcCloud';
+import { useI18n } from './locales/index';
 import useMessageHook from './components/LiveMessage/useMessageHook';
 import useErrorHandler from './hooks/useErrorHandler';
 
 const logger = console;
 const logPrefix = '[LiveKit]';
 
+const { t } = useI18n();
 const roomEngine = useRoomEngine();
 const videoEffectManager = useVideoEffectManager();
 
@@ -189,23 +192,22 @@ async function startLiving () {
   try {
     if (basicStore.userId) {
       const roomId = _generateRoomId().toString();
-      basicStore.setRoomId(roomId);
       await createRoom({
         roomId,
         roomName: basicStore.roomName,
         roomMode: 'SpeakAfterTakingSeat'
       });
+      basicStore.setRoomId(roomId);
       basicStore.setIsLiving(true);
       useMessageHook();
       emit('on-start-living');
-
-      // publish CDM
-      trtcCloud.startPublishing(roomId, TRTCVideoStreamType.TRTCVideoStreamTypeBig);
-      logger.log(`${logPrefix}CDN URL: https://3891.liveplay.myqcloud.com/live/${roomId}.flv`);
     } else {
-      const errMsg = `${logPrefix}startLiving failed due to no valid userId`;
-      logger.error(errMsg);
-      alert(errMsg); // To do: Use TUIMessage
+      logger.error(`${logPrefix}startLiving failed due to no valid userId`);
+      TUIMessageBox({
+        title: t("Note"),
+        message: t("No user ID"),
+        confirmButtonText: t("Sure"),
+      });
     }
   } catch (error) {
     logger.error(`${logPrefix}startLiving error:`, error);
@@ -504,9 +506,10 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   padding: 0 0.5rem 0.5rem 0.5rem;
-  background-color: $color-background-primary;
-  color: $color-font-default;
-  font-size: 0.75rem;
+  background-color: var(--bg-color-topbar);
+  color: var(--text-color-primary);
+  font-size: $font-main-size;
+  border-radius: 0.625rem;
 
   .tui-live-layout {
     width: 100%;
@@ -522,6 +525,7 @@ onBeforeUnmount(() => {
     flex: 0 0 18rem;
     display: flex;
     flex-direction: column;
+    background-color: var(--bg-color-topbar);
   }
 
   .tui-layout-middle {
@@ -532,33 +536,34 @@ onBeforeUnmount(() => {
   }
 
   .tui-live-config-container {
-    height: 70%;
+    height: 65%;
     flex: 1 1 auto;
     border-radius: 0.5rem 0 0 0;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-operate);
   }
 
   .tui-live-config-tool {
     margin-top: 0.5rem;
     border-bottom-left-radius:1rem;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-operate);
   }
 
   .tui-live-preview-container {
     flex: 1 1 auto;
-    background-color: $color-background-secondary;
+    background-color: var(--bg-color-operate);
+    color: var(--text-color-primary);
   }
 
   .tui-live-controller-container {
     flex: 0 0 4rem;
     height: 4rem;
-    background-color: $color-background-secondary;
+    background-color: $color-main-live-controller-container-background;
   }
 
   .tui-live-member-container {
     flex: 1 1 40%;
     height: 40%;
-    background-color: $color-background-secondary;
+    background-color: $color-main-live-member-container-background;
     border-radius: 0 0.5rem 0 0;
   }
 
@@ -566,7 +571,7 @@ onBeforeUnmount(() => {
     flex: 1 1 auto;
     margin-top: 0.5rem;
     height: calc(60% - 0.5rem);
-    background-color: $color-background-secondary;
+    background-color: $color-main-live-message-container-background;
     border-radius: 0 0 0.5rem 0;
   }
 }

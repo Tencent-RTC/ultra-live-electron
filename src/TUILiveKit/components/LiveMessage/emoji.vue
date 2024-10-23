@@ -43,24 +43,25 @@ const handleClickOutsideEmojiToobar = () => {
 </script>
   
 <style lang="scss" scoped>
-  
+@import "../../assets/variable.scss";
+
 .emoji-tool {
     .emoji-icon {
       cursor: pointer;
     }
     .emoji-list{
-      height:6.625rem;
-      width:16rem;
-      position:absolute;
-      bottom:3.4375rem;
-      left:0rem;
-      display:flex;
-      flex-wrap:wrap;
+      height: 6.625rem;
+      width: 16rem;
+      position: absolute;
+      bottom: 3.4375rem;
+      left: 0rem;
+      display: flex;
+      flex-wrap: wrap;
       overflow-y: auto;
-      background-color:rgba(15,16,20,1);
-      padding:0.625rem;
-      border-radius:0.5rem;
-      gap:0.3125rem;
+      background-color: var(--floating-color-operate);
+      padding: 0.625rem;
+      border-radius: 0.5rem;
+      gap: 0.3125rem;
       &::-webkit-scrollbar {
         display: none;
       }
