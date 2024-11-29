@@ -1,6 +1,6 @@
 {
   "name": "ultra-live-electron",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Tencent Cloud Living and Streaming Tool for desktop and laptop",
   "main": "main.js",
   "author": "Tencent Cloud",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@tencentcloud/chat": "latest",
-    "@tencentcloud/tuiroom-engine-electron": "2.4.0-alpha.3",
+    "@tencentcloud/tuiroom-engine-electron": "2.4.0-alpha.4",
     "core-js": "^3.36.1",
     "pinia": "^2.1.7",
     "trtc-electron-plugin-xmagic": "^0.0.16",

@@ -13,8 +13,13 @@ const logPrefix = '[LiveStudioView]';
 const liveKitRef = ref();
 const { t } = useI18n();
 
-const handleLogout = () => {
+function handleLogout() {
   window.localStorage.removeItem('TUILiveKit-userInfo');
+  alert('You should implement your own "Login" logic to work with "logout"');
+  // Solution 1
+  window.ipcRenderer.send('on-close-window');
+  // // Solution 2
+  // router.push('/login');
 }
 
 async function init(userInfo: Record<string, any>) {
