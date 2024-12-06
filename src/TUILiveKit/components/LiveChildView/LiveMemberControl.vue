@@ -8,13 +8,13 @@
           @click="item.fun()"
           
         >
-            <svg-icon :icon="item.icon"></svg-icon>
+            <svg-icon class="tui-member-control-icon" :icon="item.icon"></svg-icon>
             <span class="tui-member-control-options" >{{item.text}}</span>
         </div>
     </div>
 </template>
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue';
+import { shallowRef, defineProps, defineEmits } from 'vue';
 import { useI18n } from '../../locales';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import ViewProfileIcon from '../../common/icons/ViewProfileIcon.vue';
@@ -41,7 +41,7 @@ const emit = defineEmits([
 ]);
 const props = defineProps<Props>();
 const { t } = useI18n();
-const controlList = ref([
+const controlList = shallowRef([
   // {
   //   icon: ViewProfileIcon,
   //   text: t('View Profile'),
@@ -116,28 +116,32 @@ async function handleKickOut() {
 	top: 2.5rem;
   z-index: 1;
 	flex-shrink: 0;
-	background-color: $color-live-member-control-background;
-	
+	background-color: var(--dropdown-color-default);
+	box-shadow: 0px 1px 5px var(--shadow-color),0px 8px 12px var(--shadow-color),0px 12px 26px var(--shadow-color);
+  color: var(--text-color-secondary);
+
   &-container{
     display: flex;
     height: 2rem;
     line-height: 2rem;
     padding-left: 1rem;
     cursor: pointer;
-
     &:hover {
-      background-color: $color-live-member-control-container-hover-background;
+      background-color: var(--dropdown-color-hover);
     }
   }
+  &:icon {
+    color: var(--text-color-secondary);
+  }
   &-options{
-    padding-left:0.625rem;
+    padding-left: 0.625rem;
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
   }
 
   .danger {
-    color: $color-danger;
+    color: var(--text-color-error);
   }
 }
 </style>

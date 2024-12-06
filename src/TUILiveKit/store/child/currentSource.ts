@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import { TRTCScreenCaptureSourceInfo, TUIDeviceInfo, TUIMediaDeviceType } from '@tencentcloud/tuiroom-engine-electron';
-import { UserInfo } from './room';
-import { TRTCXmagicEffectProperty, TRTCXmagicEffectCategory } from '../utils/beauty';
+import { TRTCScreenCaptureSourceInfo, TRTCDeviceInfo, TRTCDeviceType } from 'trtc-electron-sdk';
+import { TUILiveUserInfo } from '../../types';
+import { TRTCXmagicEffectProperty, TRTCXmagicEffectCategory } from '../../utils/beauty';
 
 const logger = console;
 const logPrefix = '[currentSources]';
@@ -10,28 +10,28 @@ const defaultCameraResolution = { width: 640, height: 360 };
 
 type CurrentViewType = 'camera' | 'screen' | 'file' | 'image' | 'voice-chat' | 'setting' | 'add-bgm' | 'reverb-voice' | 'change-voice' | '';
 
-interface TUICurrentMediaSourcesState {
+interface TUICurrentMediaSourceState {
     currentCameraResolution: {width: number; height: number;};
     isCurrentCameraMirrored: boolean;
     currentCameraId: string;
     currentMicrophoneId: string;
     currentSpeakerId: string;
-    cameraList: TUIDeviceInfo[];
-    microphoneList: TUIDeviceInfo[];
-    speakerList: TUIDeviceInfo[];
+    cameraList: TRTCDeviceInfo[];
+    microphoneList: TRTCDeviceInfo[];
+    speakerList: TRTCDeviceInfo[];
     pictureList: Array<Record<string, any>>;
     currentViewName: CurrentViewType;
     screenList: Array<TRTCScreenCaptureSourceInfo>;
     windowList: Array<TRTCScreenCaptureSourceInfo>;
-    applyToAnchorList: Array<UserInfo>;
-    currentAnchorList: Array<UserInfo>;
+    applyToAnchorList: Array<TUILiveUserInfo>;
+    currentAnchorList: Array<TUILiveUserInfo>;
     micVolume: number;
     speakerVolume: number;
     beautyProperties: Array<TRTCXmagicEffectProperty>;
 }
 
-export const useCurrentSourcesStore = defineStore('currentSources', {
-  state: (): TUICurrentMediaSourcesState => ({
+export const useCurrentSourceStore = defineStore('currentSource', {
+  state: (): TUICurrentMediaSourceState => ({
     currentCameraResolution: defaultCameraResolution,
     currentCameraId: '',
     currentMicrophoneId: '',
@@ -58,7 +58,7 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
   actions:{
     setCurrentCameraId(deviceId: string) {
       this.currentCameraId = deviceId;
-      const currentCamera = this.cameraList.find((item: TUIDeviceInfo) => item.deviceId === deviceId);
+      const currentCamera = this.cameraList.find((item: TRTCDeviceInfo) => item.deviceId === deviceId);
       if (currentCamera && currentCamera.deviceProperties?.SupportedResolution?.length) {
         this.currentCameraResolution =  currentCamera.deviceProperties?.SupportedResolution[0] || defaultCameraResolution;
       } else {
@@ -68,7 +68,7 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
       window.mainWindowPort?.postMessage({
         key: "setCurrentDevice",
         data: {
-          deviceType: TUIMediaDeviceType.kMediaDeviceTypeVideoCamera,
+          deviceType: TRTCDeviceType.TRTCDeviceTypeCamera,
           deviceId,
         }
       });
@@ -88,7 +88,7 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
     setCurrentCameraResolution(resolution: {width: number; height: number;}) {
       this.currentCameraResolution = resolution;
     },
-    setCameraList(deviceList: TUIDeviceInfo[]) {
+    setCameraList(deviceList: TRTCDeviceInfo[]) {
       this.cameraList = deviceList;
       if (!this.currentCameraId && deviceList.length > 0 && deviceList[0].deviceProperties?.SupportedResolution?.length) {
         this.setCurrentCameraId(deviceList[0].deviceId);
@@ -98,13 +98,13 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
         this.setCurrentCameraResolution(defaultCameraResolution);
       }
     },
-    setMicrophoneList(deviceList: TUIDeviceInfo[]) {
+    setMicrophoneList(deviceList: TRTCDeviceInfo[]) {
       this.microphoneList = deviceList;
       if (!this.currentMicrophoneId && deviceList.length > 0) {
         this.setCurrentMicrophoneId(deviceList[0].deviceId);
       }
     },
-    setSpeakerList(deviceList: TUIDeviceInfo[]) {
+    setSpeakerList(deviceList: TRTCDeviceInfo[]) {
       this.speakerList = deviceList;
       if (!this.currentSpeakerId && deviceList.length > 0) {
         this.setCurrentSpeakerId(deviceList[0].deviceId);
@@ -191,14 +191,6 @@ export const useCurrentSourcesStore = defineStore('currentSources', {
     setBeautyProperties(properties: TRTCXmagicEffectProperty[]) {
       // this.beautyProperties = properties;
       properties.forEach(item => this.setBeautyProperty(item));
-    },
-    clearFineBeauty() {
-      const fineBeautyProperty = this.beautyProperties.filter(item => item.category === TRTCXmagicEffectCategory.Beauty);
-      fineBeautyProperty.forEach(item => Object.assign(item, { effValue: "0"}));
-      window.mainWindowPort?.postMessage({
-        key: "setCameraTestVideoPluginParameter",
-        data: JSON.parse(JSON.stringify(fineBeautyProperty||[])),
-      });
     },
     reset() {
       this.currentCameraResolution = defaultCameraResolution;

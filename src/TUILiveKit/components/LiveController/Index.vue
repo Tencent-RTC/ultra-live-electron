@@ -36,7 +36,7 @@
       </div>
       <div class="tui-streaming-toolbar-right">
         <span @click="toggleVideoResolutionMode" class="tui-resolution-mode-switch">
-          <svg-icon :icon="mixingVideoEncodeParam.resMode === TUIResolutionMode.kResolutionMode_Landscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
+          <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
         </span>
         <tui-button @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled">
           <svg-icon :icon="liveStatusIcon" class="live-status"></svg-icon>
@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { ref, Ref, computed, defineEmits, nextTick, shallowRef, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TUIResolutionMode } from '@tencentcloud/tuiroom-engine-electron';
+import { TRTCVideoResolutionMode } from 'trtc-electron-sdk';
 import BeautyIcon from '../../common/icons/BeautyIcon.vue';
 import AudioControl from '../../common/AudioControl.vue';
 import SpeakerControl from '../../common/SpeakerControl.vue';
@@ -72,22 +72,21 @@ import AddIcon from '../../common/icons/AddIcon.vue'
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import TuiButton from '../../common/base/Button.vue';
 import { useI18n } from '../../locales';
-import { useBasicStore } from '../../store/basic';
-import { useMediaSourcesStore } from '../../store/mediaSources';
-import { useRoomStore } from '../../store/room';
+import { useBasicStore } from '../../store/main/basic';
+import { useMediaSourcesStore } from '../../store/main/mediaSources';
+import { useRoomStore } from '../../store/main/room';
+import { useAudioEffectStore } from '../../store/audioEffect';
 import { messageChannels } from '../../communication';
 import TuiBadge from '../../common/base/Badge.vue';
-import { useMusicDataStore } from "../../store/musicData"
-const { initChangeVoiceAndAudioEffect } = useMusicDataStore();
 
 interface screenStyle {
   icon: object,
   text: string,
-  value: TUIResolutionMode,
+  value: TRTCVideoResolutionMode,
 }
 interface disposition {
   icon: object,
-  value: string, // 预留字段，用于接口传参
+  value: string, // Preserved field
 }
 const { t } = useI18n();
 
@@ -98,9 +97,10 @@ const emits = defineEmits(["onStartLiving", "onStopLiving"]);
 
 const basicStore = useBasicStore();
 const mediaSourcesStore = useMediaSourcesStore();
+const audioEffectStore = useAudioEffectStore();
 const { mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
 const roomStore = useRoomStore();
-const { roomId, isLiving } = storeToRefs(basicStore);
+const { isLiving } = storeToRefs(basicStore);
 
 const { applyToAnchorList, anchorList } = storeToRefs(roomStore);
 
@@ -127,12 +127,12 @@ const screenStyleList = shallowRef([
   {
     icon: VerticalScreenIcon,
     text: t('Vertical screen'),
-    value: TUIResolutionMode.kResolutionMode_Landscape,
+    value: TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape,
   },
   {
     icon: HorizontalScreenIcon,
     text: t('Horizontal screen'),
-    value: TUIResolutionMode.kResolutionMode_Portrait,
+    value: TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait,
   }
 ]);
 
@@ -199,10 +199,10 @@ function handleSetting() {
 }
 
 function toggleVideoResolutionMode() {
-  if (mixingVideoEncodeParam.value.resMode === TUIResolutionMode.kResolutionMode_Landscape) {
-    mediaSourcesStore.updateResolutionMode(TUIResolutionMode.kResolutionMode_Portrait);
+  if (mixingVideoEncodeParam.value.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape) {
+    mediaSourcesStore.updateResolutionMode(TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait);
   } else {
-    mediaSourcesStore.updateResolutionMode(TUIResolutionMode.kResolutionMode_Landscape);
+    mediaSourcesStore.updateResolutionMode(TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape);
   }
 }
 
@@ -213,7 +213,7 @@ async function handleChangeLivingStatus() {
   isLiveSwitchDisabled.value = true;
   await nextTick();
   if (!isLiving.value) {
-    initChangeVoiceAndAudioEffect();
+    audioEffectStore.initVoiceEffect();
     emits("onStartLiving");
   } else {
     emits("onStopLiving");

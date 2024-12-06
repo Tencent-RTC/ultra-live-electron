@@ -1,6 +1,6 @@
 import { onUnmounted } from 'vue';
-import { useChatStore } from '../../store/chat';
-import { useBasicStore } from '../../store/basic';
+import { useChatStore } from '../../store/main/chat';
+import { useBasicStore } from '../../store/main/basic';
 import TUIRoomEngine, { TencentCloudChat } from '@tencentcloud/tuiroom-engine-electron';
 import useRoomEngine from '../../utils/useRoomEngine';
 

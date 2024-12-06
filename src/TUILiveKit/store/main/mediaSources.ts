@@ -1,73 +1,50 @@
 import { defineStore } from 'pinia';
-import { TUIMediaSourceType, TUIMediaSource, TUIVideoEncParam, TUIResolutionMode, TUICameraCaptureMode, TUIMediaRotation, TUIVideoResolution } from '@tencentcloud/tuiroom-engine-electron';
-import { resolutionMap } from '../utils/trtcCloud';
-import useMediaMixingManager from "../utils/useMediaMixingManager";
-import useVideoEffectManager from "../utils/useVideoEffectManager";
-import { TRTCXmagicEffectProperty } from '../utils/beauty';
-import { useI18n } from '../locales/index';
+import { TRTCMediaSourceType, TRTCMediaSource, TRTCVideoEncParam, TRTCVideoResolutionMode, TRTCCameraCaptureMode, TRTCVideoRotation, TRTCVideoResolution } from 'trtc-electron-sdk';
+import trtcCloud from '../../utils/trtcCloud';
+import { resolutionMap } from '../../constants/tuiConstant';
+import { TUIMediaSourceViewModel } from '../../types';
+import useMediaMixingManager from "../../utils/useMediaMixingManager";
+import useVideoEffectManager from "../../utils/useVideoEffectManager";
+import { useI18n } from '../../locales/index';
 
 const { t } = useI18n();
-
 
 const logger = console;
 const mediaMixingManager = useMediaMixingManager();
 const videoEffectManager = useVideoEffectManager();
 
-export type TUIBeautyConfig = {
-  isEnabled: boolean;
-  beautyProperties: TRTCXmagicEffectProperty[];
-}
-
-export type TUIMediaSourceViewModel = {
-  sourceName: string;
-  aliasName: string;
-  left: number;
-  top: number;
-  muted: boolean;
-  resolution?: {
-    width: number;
-    height: number;
-  };
-  mediaSourceInfo: TUIMediaSource;
-  beautyConfig?: TUIBeautyConfig;
-  screenType?: TUIScreenType;
-}
-
-enum TUIScreenType {
-  Window = 0,
-  Screen = 1
-}
 
 type TUISelectedMediaKey = {
-  sourceType: TUIMediaSourceType | null;
+  sourceType: TRTCMediaSourceType | null;
   sourceId: string;
 }
 
 type TUIMediaSourcesState = {
-  mixingVideoEncodeParam: TUIVideoEncParam;
+  mixingVideoEncodeParam: TRTCVideoEncParam;
   backgroundColor: number;
   mediaList: Array<TUIMediaSourceViewModel>; // 'zOrder' desc order
   selectedMediaKey: TUISelectedMediaKey;
+  isHevcEncodeEnabled: boolean;
 }
 
-function isSameMediaSource(mediaSource1: TUISelectedMediaKey | TUIMediaSource, mediaSource2: TUISelectedMediaKey | TUIMediaSource) {
+function isSameMediaSource(mediaSource1: TUISelectedMediaKey | TRTCMediaSource, mediaSource2: TUISelectedMediaKey | TRTCMediaSource) {
   return mediaSource1.sourceId === mediaSource2.sourceId && mediaSource1.sourceType === mediaSource2.sourceType;
 }
 
 function aliasMediaSource(newMediaSource: TUIMediaSourceViewModel, mediaList: Array<TUIMediaSourceViewModel>) { 
   let newAliasName = '';
   switch (newMediaSource.mediaSourceInfo.sourceType) {
-  case TUIMediaSourceType.kCamera:
+  case TRTCMediaSourceType.kCamera:
     newAliasName = t('Camera');
     break;
-  case TUIMediaSourceType.kScreen:
+  case TRTCMediaSourceType.kScreen:
     if (newMediaSource.screenType === 0) {
       newAliasName = t('Window');
     } else {
       newAliasName = t('Screen');
     }
     break;
-  case TUIMediaSourceType.kImage:
+  case TRTCMediaSourceType.kImage:
     newAliasName = t('Image');
     break;
   default:
@@ -90,11 +67,11 @@ function aliasMediaSource(newMediaSource: TUIMediaSourceViewModel, mediaList: Ar
 export const useMediaSourcesStore = defineStore('mediaSources', {
   state: (): TUIMediaSourcesState => ({
     mixingVideoEncodeParam: {
-      resMode: TUIResolutionMode.kResolutionMode_Landscape,
-      videoResolution: TUIVideoResolution.kVideoResolution_1920_1080,
+      resMode: TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape,
+      videoResolution: TRTCVideoResolution.TRTCVideoResolution_1920_1080,
       videoFps: 30,
-      videoBitrate: 3000,
-      minVideoBitrate: 3000,
+      videoBitrate: 5000,
+      minVideoBitrate: 5000,
       enableAdjustRes: false,
     },
     backgroundColor: 0x191919,
@@ -102,7 +79,8 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
     selectedMediaKey: {
       sourceType: null,
       sourceId: '',
-    }
+    },
+    isHevcEncodeEnabled: false
   }),
   getters:{
     isHasSources(state) {
@@ -110,18 +88,42 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
     },
   },
   actions:{
-    setMixingVideoEncodeParams(params: TUIVideoEncParam) {
-      this.mixingVideoEncodeParam = params;
+    updateMediaMixingParams(params?: TRTCVideoEncParam) {
+      if (params) {
+        this.mixingVideoEncodeParam = Object.assign({}, this.mixingVideoEncodeParam, params);
+      }
+      mediaMixingManager.updatePublishParams({
+        videoEncoderParams: this.mixingVideoEncodeParam,
+        canvasColor: this.backgroundColor,
+      });
     },
-    updateMixingVideoEncodeParams(params: TUIVideoEncParam) {
-      this.mixingVideoEncodeParam = Object.assign({}, this.mixingVideoEncodeParam, params);
+    updateBackgroundColor(color: number) {
+      this.backgroundColor = color;
+      this.updateMediaMixingParams();
+    },
+    updateResolutionMode(resMode: TRTCVideoResolutionMode) {
+      this.mixingVideoEncodeParam.resMode = resMode;
+      this.updateMediaMixingParams();
+    },
+    updateVideoResolution(value: TRTCVideoResolution) {
+      this.mixingVideoEncodeParam.videoResolution = value;
+      this.updateMediaMixingParams();
+    },
+    updateVideoFps(value: number) {
+      this.mixingVideoEncodeParam.videoFps = value;
+      this.updateMediaMixingParams();
+    },
+    updateVideobitrate(value: number) {
+      this.mixingVideoEncodeParam.videoBitrate = value;
+      this.mixingVideoEncodeParam.minVideoBitrate = value;
+      this.updateMediaMixingParams();
     },
     async addMediaSource(mediaSource: TUIMediaSourceViewModel): Promise<void>{
       this.checkMediaExisting(mediaSource);
 
       mediaSource.mediaSourceInfo.zOrder = this.mediaList.length + 1;
       if (mediaSource.mediaSourceInfo.rect) {
-        // 缩小媒体源显示大小， 保证默认不超出视频分辨率大小
+        // Reduce the display size of the media source to ensure that it does not exceed the video resolution size.
         const { width: resWidth, height: resHeight } = resolutionMap[this.mixingVideoEncodeParam.videoResolution];
         const width = mediaSource.mediaSourceInfo.rect.right - mediaSource.mediaSourceInfo.rect.left;
         const height = mediaSource.mediaSourceInfo.rect.bottom - mediaSource.mediaSourceInfo.rect.top;
@@ -133,16 +135,16 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         this.mediaList.unshift(mediaSource);
         aliasMediaSource(mediaSource, this.mediaList);
         await mediaMixingManager.addMediaSource(mediaSource.mediaSourceInfo);
-        if (mediaSource.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
+        if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera) {
           if (mediaSource.resolution) {
             await mediaMixingManager.setCameraCaptureParam(mediaSource.mediaSourceInfo.sourceId, {
-              mode: TUICameraCaptureMode.kCameraCaptureManual,
+              mode: TRTCCameraCaptureMode.TRTCCameraCaptureManual,
               width: mediaSource.resolution?.width,
               height: mediaSource.resolution?.height
             });
           }
           
-          if (mediaSource.beautyConfig) {
+          if (mediaSource.beautyConfig?.beautyProperties.length) {
             videoEffectManager.startEffect(mediaSource.mediaSourceInfo.sourceId, mediaSource.beautyConfig);
           }
         }
@@ -158,7 +160,7 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         const item = this.mediaList[i];
         if (indexToRemove === -1 && isSameMediaSource(item.mediaSourceInfo, mediaSource.mediaSourceInfo)) {
           indexToRemove = i;
-          if (mediaSource.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
+          if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera && mediaSource.beautyConfig?.beautyProperties.length) {
             videoEffectManager.stopEffect(mediaSource.mediaSourceInfo.sourceId);
           }
           if (isSameMediaSource(this.mediaList[indexToRemove].mediaSourceInfo, this.selectedMediaKey)) {
@@ -199,20 +201,20 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
           await mediaMixingManager.addMediaSource(mediaSource.mediaSourceInfo);
         }
 
-        if (mediaSource.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
+        if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera) {
           if (mediaSource.resolution 
             && (target.resolution?.width !== mediaSource.resolution?.width 
             || target.resolution?.height !== mediaSource.resolution?.height)
           ) {
             await mediaMixingManager.setCameraCaptureParam(mediaSource.mediaSourceInfo.sourceId, {
-              mode: TUICameraCaptureMode.kCameraCaptureManual,
+              mode: TRTCCameraCaptureMode.TRTCCameraCaptureManual,
               width: mediaSource.resolution?.width,
               height: mediaSource.resolution?.height
             });
           }
 
-          if (mediaSource.beautyConfig) {
-            if(!target.muted){
+          if (mediaSource.beautyConfig?.beautyProperties.length) {
+            if(!target.muted && target.beautyConfig?.beautyProperties.length){
               videoEffectManager.updateEffect(mediaSource.mediaSourceInfo.sourceId, mediaSource.beautyConfig);
             } else {
               videoEffectManager.startEffect(mediaSource.mediaSourceInfo.sourceId, mediaSource.beautyConfig);
@@ -253,7 +255,7 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
       }
       if (targetIndex >= 0) {
         let target = this.mediaList[targetIndex];
-        if (target.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
+        if (target.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera && target.beautyConfig?.beautyProperties.length) {
           videoEffectManager.stopEffect(target.mediaSourceInfo.sourceId);
         }
         if (!target.muted) {
@@ -266,15 +268,17 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         await mediaMixingManager.addMediaSource(target.mediaSourceInfo);
         this.mediaList[targetIndex] = target;
         
-        if (target.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
-          videoEffectManager.stopEffect(srcMediaSource.mediaSourceInfo.sourceId);
-          if (destMediaSource.beautyConfig) {
+        if (target.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera) {
+          if (srcMediaSource.beautyConfig?.beautyProperties.length) {
+            videoEffectManager.stopEffect(srcMediaSource.mediaSourceInfo.sourceId);
+          }
+          if (destMediaSource.beautyConfig?.beautyProperties.length) {
             videoEffectManager.startEffect(destMediaSource.mediaSourceInfo.sourceId, destMediaSource.beautyConfig);
           }
 
           if (destMediaSource.resolution) {
             await mediaMixingManager.setCameraCaptureParam(destMediaSource.mediaSourceInfo.sourceId, {
-              mode: TUICameraCaptureMode.kCameraCaptureManual,
+              mode: TRTCCameraCaptureMode.TRTCCameraCaptureManual,
               width: destMediaSource.resolution?.width,
               height: destMediaSource.resolution?.height
             });
@@ -311,29 +315,13 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         };
       } else {
         this.selectedMediaKey = {
-          sourceType: TUIMediaSourceType.kCamera,
+          sourceType: TRTCMediaSourceType.kCamera,
           sourceId: '',
         };
       }
     },
     selectMediaSource(mediaSource: TUIMediaSourceViewModel) {
       this.setSelectedMediaKey(mediaSource.mediaSourceInfo);
-    },
-    updateBackgroundColor(color: number) {
-      this.backgroundColor = color;
-      mediaMixingManager.updatePublishParams({
-        inputSourceList: this.mediaList.map(item => item.mediaSourceInfo),
-        videoEncoderParams: this.mixingVideoEncodeParam,
-        canvasColor: this.backgroundColor,
-      });
-    },
-    updateResolutionMode(resMode: TUIResolutionMode) {
-      this.mixingVideoEncodeParam.resMode = resMode;
-      mediaMixingManager.updatePublishParams({
-        inputSourceList: this.mediaList.map(item => item.mediaSourceInfo),
-        videoEncoderParams: this.mixingVideoEncodeParam,
-        canvasColor: this.backgroundColor,
-      });
     },
     changeMediaOrder(mediaSource: TUIMediaSourceViewModel, changeValue: number) {
       let targetIndex = -1;
@@ -437,7 +425,7 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         }
       }
       if (targetIndex >= 0) {
-        const currentRotation = mediaSource.mediaSourceInfo.rotation || TUIMediaRotation.kMediaRotation0;
+        const currentRotation = mediaSource.mediaSourceInfo.rotation || TRTCVideoRotation.TRTCVideoRotation0;
         const newRotation = (4 + (currentRotation as number) + degree/90) % 4;
         mediaSource.mediaSourceInfo.rotation = newRotation;
         const changed = Math.abs(newRotation - currentRotation);
@@ -467,17 +455,15 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
       if (targetIndex >= 0) {
         const target = this.mediaList[targetIndex];
         if(muted){
-          if (target.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
-            if (target.beautyConfig) {
-              videoEffectManager.stopEffect(target.mediaSourceInfo.sourceId);
-            }
+          if (target.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera && target.beautyConfig?.beautyProperties.length) {
+            videoEffectManager.stopEffect(target.mediaSourceInfo.sourceId);
           }
 
           await mediaMixingManager.removeMediaSource(target.mediaSourceInfo);
           target.muted = true;
           if (target.mediaSourceInfo.isSelected) {
             this.selectedMediaKey = {
-              sourceType: TUIMediaSourceType.kCamera,
+              sourceType: TRTCMediaSourceType.kCamera,
               sourceId: '',
             }
           }
@@ -500,16 +486,16 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
             sourceId: target.mediaSourceInfo.sourceId,
           }
 
-          if (target.mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera) {
+          if (target.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera) {
             if (target.resolution) {
               await mediaMixingManager.setCameraCaptureParam(mediaSource.mediaSourceInfo.sourceId, {
-                mode: TUICameraCaptureMode.kCameraCaptureManual,
+                mode: TRTCCameraCaptureMode.TRTCCameraCaptureManual,
                 width: target.resolution?.width,
                 height: target.resolution?.height
               });
             }
             
-            if (target.beautyConfig) {
+            if (target.beautyConfig?.beautyProperties.length) {
               videoEffectManager.startEffect(target.mediaSourceInfo.sourceId, target.beautyConfig);
             }
           }
@@ -527,17 +513,17 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         logger.warn(`[MediaSource]addMediaSource Media source to be added already existing.:`, mediaSource);
         let deviceType = '';
         switch (mediaSource.mediaSourceInfo.sourceType) {
-        case TUIMediaSourceType.kCamera:
+        case TRTCMediaSourceType.kCamera:
           deviceType = t('Camera');
           break;
-        case TUIMediaSourceType.kScreen:
+        case TRTCMediaSourceType.kScreen:
           if (mediaSource.screenType === 0) {
             deviceType = t('Window');
           } else {
             deviceType = t('Screen');
           }
           break;
-        case TUIMediaSourceType.kImage:
+        case TRTCMediaSourceType.kImage:
           deviceType = t('Image');
           break;
         default:
@@ -546,6 +532,16 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         }
         throw new Error(t('Media source to be added already existing.', { deviceType: deviceType.toLocaleLowerCase() }));
       }
+    },
+    updateHevcEncodeState(enable: boolean) {
+      logger.log(`updateHevcEncodeState ${enable}`);
+      this.isHevcEncodeEnabled = !!enable;
+      trtcCloud.callExperimentalAPI(JSON.stringify({
+        "api":"enableHevcEncode",
+        "params":{
+          "enable": this.isHevcEncodeEnabled ? 1 : 0
+        }
+      }));
     },
     reset() {
       this.mediaList = [];     

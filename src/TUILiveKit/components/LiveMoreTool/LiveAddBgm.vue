@@ -26,7 +26,7 @@
               </div>
               <div class="tui-audio-item-desc">{{t("Add music")}}</div>
             </div>
-            <div v-for="item in musicData.musicDataList" :key="item.id" class="tui-audio-item-music" :class="{ 'tui-audio-item-active': playingMusicId === item.id }">
+            <div v-for="item in audioEffect.musicDataList" :key="item.id" class="tui-audio-item-music" :class="{ 'tui-audio-item-active': playingMusicId === item.id }">
               <div class="tui-audio-item-icon">
                 <svg-icon class="musicListIcon" :icon="MusicListIcon" @click="onPlayMusic(item.id)" ></svg-icon>
               </div>
@@ -50,7 +50,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { TUIMediaDeviceType } from "@tencentcloud/tuiroom-engine-electron";
+import { TRTCDeviceType } from "@tencentcloud/tuiroom-engine-electron";
+import { TUIMusicPlayMode } from '../../types';
 import SvgIcon from "../../common/base/SvgIcon.vue";
 import CloseIcon from "../../common/icons/CloseIcon.vue";
 import SpeakerOffIcon from "../../common/icons/SpeakerOffIcon.vue";
@@ -63,21 +64,21 @@ import StartPlayIcon from "../../common/icons/StartPlayIcon.vue";
 import SequentialPlayIcon from "../../common/icons/SequentialPlayIcon.vue";
 import SingleLoopPlayIcon from "../../common/icons/SingleLoopPlayIcon.vue";
 import TuiSlider from "../../common/base/Slider.vue";
-import { useMusicDataStore, PlayModeType} from "../../store/musicData";
+import { useAudioEffectStore} from "../../store/audioEffect";
 import TUIMessageBox from "../../common/base/MessageBox/index";
 import { useI18n } from "../../locales";
 
 const { t } = useI18n();
-const musicDataStore = useMusicDataStore();
-const { musicData,musicName,playingMusicId } = storeToRefs(musicDataStore);
+const audioEffectStore = useAudioEffectStore();
+const { audioEffect, musicName, playingMusicId } = storeToRefs(audioEffectStore);
 const bgmVolume = ref(0);
-bgmVolume.value = musicData.value.musicVolume ? musicData.value.musicVolume / 100 : 0;
+bgmVolume.value = audioEffect.value.musicVolume ? audioEffect.value.musicVolume / 100 : 0;
 const selectMusicEle = ref();
 const currentPlayModeIndex = ref(1);
 let lastbgmVolume = 0;
 let pausePlayingMusicId = -1;
 const playModeIconList = [SequentialPlayIcon, SingleLoopPlayIcon];
-const playModeList = [PlayModeType.SequentialPlay, PlayModeType.SingleLoopPlay];
+const playModeList = [TUIMusicPlayMode.SequentialPlay, TUIMusicPlayMode.SingleLoopPlay];
 enum PostMessageKey {
   startPlayMusic = "startPlayMusic",
   stopPlayMusic ="stopPlayMusic",
@@ -96,7 +97,7 @@ enum PostMessageKey {
 onMounted(() => {
   selectMusicEle.value?.addEventListener("change", handleAddBgm);
   onTogglePlayMode();
-  onUpdateBgmVolume(musicData.value.musicVolume);
+  onUpdateBgmVolume(audioEffect.value.musicVolume);
 });
 
 onUnmounted(() => {
@@ -106,10 +107,10 @@ onUnmounted(() => {
 watch(playingMusicId,(newValue) => {
   postMessage(PostMessageKey.updatePlayingMusicId, newValue);
   switch (playModeList[currentPlayModeIndex.value]) {
-  case PlayModeType.SingleLoopPlay:
+  case TUIMusicPlayMode.SingleLoopPlay:
     handleSingleLoopPlay(playingMusicId.value);
     break;
-  case PlayModeType.SequentialPlay:
+  case TUIMusicPlayMode.SequentialPlay:
     handleSequentialPlay(playingMusicId.value);
     break;
   default:
@@ -119,7 +120,7 @@ watch(playingMusicId,(newValue) => {
 
 function handleAddBgm(data:any){
   const musicFile = data.target.files[0];
-  const isRepetition = musicDataStore.isRepetition(musicFile);
+  const isRepetition = audioEffectStore.isRepetition(musicFile);
   if (isRepetition) {
     TUIMessageBox({
       title: t("Note"),
@@ -127,7 +128,7 @@ function handleAddBgm(data:any){
       confirmButtonText: t("Sure"),
     });
   } else {
-    musicDataStore.addMusic(musicFile);
+    audioEffectStore.addMusic(musicFile);
     selectMusicEle.value = "";
   }
 }
@@ -139,10 +140,10 @@ function openAddedMusice(){
 function onChangeBGMVolume(){
   bgmVolume.value ? (bgmVolume.value = 0) : (bgmVolume.value = lastbgmVolume);
   const volume = bgmVolume.value * 100;
-  musicDataStore.setMusicVolume(volume);
+  audioEffectStore.setMusicVolume(volume);
   postMessage(PostMessageKey.setAllMusicVolume, volume);
   postMessage(PostMessageKey.setCurrentDeviceVolume, {
-    type: TUIMediaDeviceType.kMediaDeviceTypeAudioInput,
+    type: TRTCDeviceType.TRTCDeviceTypeMic,
     volume,
   });
   postMessage(PostMessageKey.setMusicPublishVolume, {
@@ -155,10 +156,10 @@ function onPlayMusic(id: number){
   if (playingMusicId.value !== -1 && playingMusicId.value === id) {
     postMessage(PostMessageKey.pausePlayMusic, playingMusicId.value);
     pausePlayingMusicId = id;
-    musicDataStore.setPlayingMusicId(-1);
+    audioEffectStore.setPlayingMusicId(-1);
   } else if (playingMusicId.value !== -1 && playingMusicId.value !== id) {
     postMessage(PostMessageKey.stopPlayMusic, playingMusicId.value);
-    musicDataStore.setPlayingMusicId(id);
+    audioEffectStore.setPlayingMusicId(id);
     pausePlayingMusicId = -1;
   } else if (playingMusicId.value === -1) {
     if (pausePlayingMusicId === id) {
@@ -166,13 +167,13 @@ function onPlayMusic(id: number){
     } else {
       postMessage(PostMessageKey.stopPlayMusic, pausePlayingMusicId);
     }
-    musicDataStore.setPlayingMusicId(id);
+    audioEffectStore.setPlayingMusicId(id);
   }
 }
 
 function onDeleteMusic (id: number){
   postMessage(PostMessageKey.stopPlayMusic, id);
-  musicDataStore.deleteMusic(id);
+  audioEffectStore.deleteMusic(id);
 }
 
 function handleCloseSetting(){
@@ -185,7 +186,7 @@ function handleSingleLoopPlay(id: number){
 
 function handleSequentialPlay(id: number){
   if (id === -1) return;
-  const playingMusicIndex = musicDataStore.getMusicIndex(id);
+  const playingMusicIndex = audioEffectStore.getMusicIndex(id);
   if(playingMusicIndex === -1) return;
   postMessage(PostMessageKey.sequentialPlay, playingMusicIndex);
 }
@@ -193,14 +194,14 @@ function handleSequentialPlay(id: number){
 function onTogglePlayMode(){
   currentPlayModeIndex.value = (currentPlayModeIndex.value + 1) % playModeList.length;
   switch (playModeList[currentPlayModeIndex.value]) {
-  case PlayModeType.SequentialPlay: {
+  case TUIMusicPlayMode.SequentialPlay: {
     handleSequentialPlay(playingMusicId.value);
-    musicDataStore.setCurrentPlayMode(PlayModeType.SequentialPlay);
+    audioEffectStore.setCurrentPlayMode(TUIMusicPlayMode.SequentialPlay);
     break;
   }
-  case PlayModeType.SingleLoopPlay: {
+  case TUIMusicPlayMode.SingleLoopPlay: {
     handleSingleLoopPlay(playingMusicId.value);
-    musicDataStore.setCurrentPlayMode(PlayModeType.SingleLoopPlay);
+    audioEffectStore.setCurrentPlayMode(TUIMusicPlayMode.SingleLoopPlay);
     break;
   }
   default:
@@ -212,10 +213,10 @@ function onUpdateBgmVolume(volume: number){
   if(volume === undefined)volume=0;
   bgmVolume.value = volume / 100;
   lastbgmVolume = bgmVolume.value;
-  musicDataStore.setMusicVolume(volume);
+  audioEffectStore.setMusicVolume(volume);
   postMessage(PostMessageKey.setAllMusicVolume, volume);
   postMessage(PostMessageKey.setCurrentDeviceVolume, {
-    type: TUIMediaDeviceType.kMediaDeviceTypeAudioInput,
+    type: TRTCDeviceType.TRTCDeviceTypeMic,
     volume,
   });
 }

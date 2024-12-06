@@ -23,6 +23,5 @@ body,
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-  border-radius: 0.625rem;
 }
 </style>

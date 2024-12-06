@@ -61,10 +61,9 @@
 import { storeToRefs } from 'pinia';
 import { ref, computed, defineProps } from 'vue';
 import DeviceSelect from './DeviceSelect.vue';
-import { useCurrentSourcesStore } from '../store/currentSources';
+import { useCurrentSourceStore } from '../store/child/currentSource';
 import { SettingMode } from '../constants/render';
 import { useI18n } from '../locales';
-import { useBasicStore } from '../store/basic';
 
 interface Props {
   mode?: SettingMode,
@@ -75,11 +74,9 @@ const settingMode = props.mode || SettingMode.Simple;
 const isSampleMode = computed(() => settingMode === SettingMode.Simple);
 const isDetailMode = computed(() => settingMode === SettingMode.Detail);
 
-const basicStore = useBasicStore();
-const { userId } = storeToRefs(basicStore);
-const sourcesStore = useCurrentSourcesStore();
+const currentSourceStore = useCurrentSourceStore();
 const { t } = useI18n();
-const { speakerList, micVolume, speakerVolume } = storeToRefs(sourcesStore);
+const { speakerList, micVolume, speakerVolume } = storeToRefs(currentSourceStore);
 
 const volumeTotalNum = computed(() => (isDetailMode.value ? 36 : 28));
 
@@ -101,9 +98,7 @@ const isTestingMicrophone = ref(false);
 const isTestingSpeaker = ref(false);
 /**
  * Click on the microphone [Test] button
- *
- * 点击麦克风【测试】按钮
-**/
+*/
 function handleMicrophoneTest() {
   isTestingMicrophone.value = !isTestingMicrophone.value;
   const isStartMicrophoneTest = isTestingMicrophone.value;
@@ -124,9 +119,7 @@ function handleMicrophoneTest() {
 
 /**
  * Click on the speaker [Test] button
- *
- * 点击扬声器【测试】按钮
-**/
+ */
 async function handleSpeakerTest() {
   const SPEAKER_TEST_URL = 'https://web.sdk.qcloud.com/trtc/electron/download/resources/media/TestSpeaker.mp3';
   isTestingSpeaker.value = !isTestingSpeaker.value;

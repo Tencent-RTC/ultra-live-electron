@@ -6,10 +6,6 @@
               <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
             </button>
         </div>
-        <!-- <div class="tui-voice-chat-control">
-            <span class="tui-voice-chat-control-text">{{ t('Allow audience to apply for chat') }}</span>
-            <SwitchControl v-model="isAllowed"></SwitchControl>
-        </div> -->
         <div class="tui-voice-chat-list-container" >
             <div class="tui-voice-chat-list" >
                 <div class="tui-voice-chat-list-title">
@@ -57,19 +53,18 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from '../../locales';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
-import SwitchControl from '../../common/base/SwitchControl.vue';
 import MicMoreIcon from '../../common/icons/MicMoreIcon.vue';
 import SeatIcon from '../../common/icons/SeatIcon.vue';
 import vClickOutside from '../../utils/vClickOutside';
 import LiveMemberControl from './LiveMemberControl.vue';
-import { useCurrentSourcesStore } from '../../store/currentSources';
-import { UserInfo } from '../../store/room';
+import { useCurrentSourceStore } from '../../store/child/currentSource';
+import { TUILiveUserInfo } from '../../types';
 
 const logger = console;
 const logPrefix = '[LiveVoiceChat]';
 
-const sourcesStore = useCurrentSourcesStore();
-const { applyToAnchorList, currentAnchorList } = storeToRefs(sourcesStore);
+const currentSourceStore = useCurrentSourceStore();
+const { applyToAnchorList, currentAnchorList } = storeToRefs(currentSourceStore);
 const { t } = useI18n();
 const controlUserId = ref('');
 const isAllowed = ref(true);
@@ -84,42 +79,42 @@ const anchorList = ref([
   {
     seat: t('Position 1'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 2'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 3'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 4'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 5'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 6'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 7'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
   {
     seat: t('Position 8'),
     icon: SeatIcon,
-    userInfo: {} as UserInfo,
+    userInfo: {} as TUILiveUserInfo,
   },
 ])
 
@@ -133,7 +128,7 @@ watch(currentAnchorList, (newVal,val) => {
       if (i < newVal.length) {
         anchorList.value[i].userInfo = newVal[i];
       } else {
-        anchorList.value[i].userInfo = {} as UserInfo;
+        anchorList.value[i].userInfo = {} as TUILiveUserInfo;
       }
     }
     currentNumber.value = newVal.length <= 8 ? newVal.length : 8;
@@ -163,9 +158,9 @@ const handleCloseWindow = async () => {
   resetCurrentView();
 }
 const resetCurrentView = () => {
-  sourcesStore.setCurrentViewName('');
+  currentSourceStore.setCurrentViewName('');
 }
-// 处理用户请求
+
 async function handleUserApply(user:any, agree: boolean) {
   window.mainWindowPort?.postMessage({
     key: "handleUserApply",
@@ -178,7 +173,7 @@ async function handleUserApply(user:any, agree: boolean) {
 
 onBeforeUnmount(() => {
   anchorList.value.forEach(item => {
-    item.userInfo = {} as UserInfo;
+    item.userInfo = {} as TUILiveUserInfo;
   });
 });
 </script>
@@ -239,7 +234,7 @@ onBeforeUnmount(() => {
         color: $font-live-voice-chat-member-color;
     }
     &-status{
-        color: $font-live-voice-chat-status-color;
+        color: var(--text-color-primary);
         font-size: $font-live-voice-chat-status-size;
         font-style: $font-live-voice-chat-status-style;
         font-weight: $font-live-voice-chat-status-weight;
@@ -270,9 +265,10 @@ onBeforeUnmount(() => {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        color: var(--text-color-primary);
     }
     &-accept{
-        color: $font-live-voice-chat-accept-color;
+        color: var(--text-color-link);
         font-size: $font-live-voice-chat-accept-size;
         font-style: $font-live-voice-chat-accept-style;
         font-weight: $font-live-voice-chat-accept-weight;
@@ -281,7 +277,7 @@ onBeforeUnmount(() => {
     }
     &-reject{
         padding-left: 0.625rem;
-        color: $font-live-voice-chat-reject-color;
+        color: var(--text-color-secondary);
         font-size: $font-live-voice-chat-reject-size;
         font-style: $font-live-voice-chat-reject-style;
         font-weight: $font-live-voice-chat-reject-weight;
@@ -298,6 +294,7 @@ onBeforeUnmount(() => {
         color: var(--text-color-secondary);
     }
     &-seatIndex{
+        color: var(--text-color-secondary);
         font-size: $font-live-voice-chat-seatIndex-size;
         font-style: $font-live-voice-chat-seatIndex-style;
         font-weight: $font-live-voice-chat-seatIndex-weight;

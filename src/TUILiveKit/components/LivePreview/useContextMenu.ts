@@ -1,5 +1,6 @@
 import { ref, Ref, watchEffect, onMounted, onUnmounted, nextTick } from 'vue';
-import { useMediaSourcesStore, TUIMediaSourceViewModel } from '../../store/mediaSources';
+import { TUIMediaSourceViewModel } from '../../types';
+import { useMediaSourcesStore } from '../../store/main/mediaSources';
 
 const logger = console;
 const logPrefix = '[useContextMenu]';

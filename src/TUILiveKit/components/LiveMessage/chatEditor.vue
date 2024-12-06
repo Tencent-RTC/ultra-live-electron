@@ -18,8 +18,8 @@ import { TencentCloudChat } from '@tencentcloud/tuiroom-engine-electron';
 import Emoji from './emoji.vue';
 import { useI18n } from '../../locales'
 import useRoomEngine from "../../utils/useRoomEngine";
-import { useBasicStore } from '../../store/basic';
-import { useChatStore } from '../../store/chat';
+import { useBasicStore } from '../../store/main/basic';
+import { useChatStore } from '../../store/main/chat';
 import { decodeSendTextMsg } from './util';
 
 const logger = console;
@@ -67,9 +67,7 @@ const sendMessage = async () => {
   } catch (e) {
     /**
      * Message delivery failure
-     *
-     * 消息发送失败
-    **/
+     */
     // TUIMessage({ type: 'error', message: t('Failed to send the message') }); // To do: to implelement
     logger.warn(`${logPrefix}sendMessage failed to send the message:`, e);
   }

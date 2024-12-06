@@ -7,8 +7,8 @@ const {
   Menu,
   shell,
 } = require("electron");
-const path = require("node:path");
-const EventEmitter = require("node:events");
+const path = require("path");
+const EventEmitter = require("events");
 
 const logPrefix = "[TUILiveKit.main]";
 
@@ -143,8 +143,8 @@ async function createWindow(width = 1366, height = 668) {
     windowMap.main?.loadFile("dist/index.html");
     windowMap.child?.loadFile("dist/index.html");
   } else {
-    windowMap.child?.loadURL("http://localhost:8080");
     windowMap.main?.loadURL("http://localhost:8080");
+    windowMap.child?.loadURL("http://localhost:8080");
   }
 }
 

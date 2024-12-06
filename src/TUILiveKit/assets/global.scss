@@ -10,7 +10,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: $color-gray-14;
+    background-color: $color-black;
   }
 }
 
@@ -36,6 +36,10 @@ a:visited,
 a:hover,
 a:active {
   color: #006eff;
+}
+
+button {
+  outline: none;
 }
 
 .tui-title {
@@ -77,6 +81,7 @@ a:active {
     font-size: 1rem;
     cursor: pointer;
     color: $color-white;
+    outline: none;
   }
 }
 
@@ -88,6 +93,7 @@ a:active {
   font-style: $font-style-scss-button-confirm-style;
   font-weight: $font-style-scss-button-confirm-weight;
   margin-right: 1.25rem;
+  border: none;
 }
 
 .tui-button-cancel{

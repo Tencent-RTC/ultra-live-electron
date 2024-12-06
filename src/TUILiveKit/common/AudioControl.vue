@@ -8,7 +8,6 @@
   
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { TUIMediaDeviceType } from '@tencentcloud/tuiroom-engine-electron';
 import SvgIcon from './base/SvgIcon.vue';
 import MicOffIcon from './icons/MicOffIcon.vue';
 import ArrowSetUpIcon from './icons/ArrowSetUpIcon.vue';
@@ -26,23 +25,23 @@ const micIcon = computed(()=> voiceRate.value ? MicOnIcon : MicOffIcon);
 const onUpdateVoiceValue = (volume: number) => {
   const value = Math.round(volume);
   voiceRate.value = value/100;
-  deviceManager.setCurrentDeviceVolume(TUIMediaDeviceType.kMediaDeviceTypeAudioInput, value);
+  deviceManager.setCurrentMicDeviceVolume(value);
 }
 
 const toggleMuteMic = () => {
   if (voiceRate.value) {
     currentVoiceRate = voiceRate.value; 
-    deviceManager.setCurrentDeviceMute(TUIMediaDeviceType.kMediaDeviceTypeAudioInput, true);
+    deviceManager.setCurrentMicDeviceMute(true);
     voiceRate.value = 0;
   } else {
-    deviceManager.setCurrentDeviceMute(TUIMediaDeviceType.kMediaDeviceTypeAudioInput, false);
+    deviceManager.setCurrentMicDeviceMute(false);
     voiceRate.value = currentVoiceRate;
   }
 }
 
 onMounted(async () => {
   try {
-    const micVolume = await deviceManager.getCurrentDeviceVolume(TUIMediaDeviceType.kMediaDeviceTypeAudioInput);
+    const micVolume = await deviceManager.getCurrentMicDeviceVolume();
     voiceRate.value = micVolume/100;
   } catch (error) {
     console.error('Get current device volume failed:', error);

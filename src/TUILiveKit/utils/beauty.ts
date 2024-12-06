@@ -181,7 +181,7 @@ const virtualBackgroundImageList = [
   {
     label: "黑板",
     label_en: "Blackboard",
-    icon: "./assets/virtual_bg/黑板.jpg",
+    icon: "./assets/virtual_bg/Blackboard.jpg",
   },
 ]
 // Virtual background

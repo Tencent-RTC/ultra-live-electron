@@ -1,12 +1,5 @@
 const logger = console;
 
-/**
- * 从 window.location.href 中获取指定key的value
- * @param {*} key 要获取的 key
- * @returns window.location.href 中指定key对应的value
- * @example
- * const value = getUrlParam(key);
- */
 export function getUrlParam(key: string) {
   const url = window?.location.href.replace(/^[^?]*\?/, '');
   const regexp = new RegExp(`(^|&)${key}=([^&#]*)(&|$|)`, 'i');

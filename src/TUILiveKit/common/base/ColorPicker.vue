@@ -6,17 +6,18 @@
    </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, defineProps } from 'vue';
-import { useMediaSourcesStore } from '../../store/mediaSources';
-const mediaSourcesStore = useMediaSourcesStore();
+import { ref, Ref, defineProps, defineEmits } from 'vue';
 interface Props {
     currentColor: number
 }
+
+const emits = defineEmits(['change']);
+
 const props = defineProps<Props>();
 const colorValue: Ref<string> = ref(`#${props.currentColor.toString(16)}`);
 
 function onInputColor() {
-  mediaSourcesStore.updateBackgroundColor(parseInt(colorValue.value.substring(1), 16));
+  emits('change', parseInt(colorValue.value.substring(1), 16));
 }
 </script>
 
@@ -28,19 +29,23 @@ function onInputColor() {
     align-items: center;
     background-color: $color-picker-input-container-background;
     border-radius: 0.375rem;
-    width: 14.625rem;
 }
+
 .input{
+    width: 10rem;
+    padding: 0;
+    cursor: pointer;
+    background: $color-picker-input-background;
     border: none;
     outline: none;
-    background: $color-picker-input-background;
 }
+
 .text{
-    color: $font-picker-text-color;
+    padding-left: 0.125rem;
     font-size: $font-picker-text-size;
     font-style: normal;
     font-weight: $font-picker-text-weight;
     line-height: 1.25rem;
-    padding-left: 0.125rem;
+    color: $font-picker-text-color;
 }
 </style>

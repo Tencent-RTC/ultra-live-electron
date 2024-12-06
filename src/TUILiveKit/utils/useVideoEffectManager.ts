@@ -1,9 +1,103 @@
-import TUIRoomEngine, { TUIVideoEffectPluginManager, TUIVideoEffectPlugin, TUIVideoPixelFormat } from '@tencentcloud/tuiroom-engine-electron';
+import TRTCCloud, { TRTCVideoPixelFormat, TRTCPluginType, TRTCPluginInfo, TRTCVideoProcessPluginOptions, } from 'trtc-electron-sdk';
+import trtcCloud from './trtcCloud';
 import { TRTCXmagicFactory, XmagicLicense, TRTCXmagicEffectProperty } from "./beauty";
 
 const logger = console;
 
-const videoEffectPluginManager: TUIVideoEffectPluginManager = TUIRoomEngine.getVideoEffectPluginManager();
+export enum TUIVideoEffectEvents {
+  // Error event
+  onError = 'onError',
+
+  // Not support profile segmentation event
+  onNotSupportSegmentation = 'onNotSupportSegmentation',
+}
+
+class TUIVideoEffectPlugin {
+  private _logPrefix = '[TUIVideoEffectPlugin]';
+  private _pluginId: string;
+  private _deviceId: string;
+  private _trtcVideoEffectPlugin: TRTCPluginInfo;
+  constructor(pluginId: string, deviceId: string, trtcVideoEffectPlugin: TRTCPluginInfo) {
+    this._pluginId = pluginId;
+    this._deviceId = deviceId;
+    this._trtcVideoEffectPlugin = trtcVideoEffectPlugin;
+  }
+
+  get deviceId(): string {
+    return this._deviceId;
+  }
+
+  get id(): string {
+    return this._pluginId;
+  }
+
+  enable(flag: boolean): void {
+    logger.debug(`${this._logPrefix}enable:${flag} ${this._pluginId}`);
+    if (flag) {
+      this._trtcVideoEffectPlugin.enable();
+    } else {
+      this._trtcVideoEffectPlugin.disable();
+    }
+  }
+
+  setParameter(param: string): void {
+    logger.debug(`${this._logPrefix}setParameter:${this._pluginId}`);
+    this._trtcVideoEffectPlugin.setParameter(param);
+  }
+}
+
+class TUIVideoEffectPluginManager {
+  private static sharedInstance: TUIVideoEffectPluginManager | null;
+  private static logPrefix = '[TUIVideoEffectPluginManager]';
+  private trtcPluginManager: TRTCCloud = trtcCloud;
+
+  constructor() {
+    if (!TUIVideoEffectPluginManager.sharedInstance) {
+      this.trtcPluginManager = trtcCloud;
+      TUIVideoEffectPluginManager.sharedInstance = this;
+    }
+    return TUIVideoEffectPluginManager.sharedInstance;
+  }
+
+  static getInstance(): TUIVideoEffectPluginManager {
+    if (!TUIVideoEffectPluginManager.sharedInstance) {
+      TUIVideoEffectPluginManager.sharedInstance = new TUIVideoEffectPluginManager();
+    }
+    return TUIVideoEffectPluginManager.sharedInstance;
+  }
+
+  setPluginParams(type: TRTCPluginType, options: TRTCVideoProcessPluginOptions ) {
+    logger.debug(`${TUIVideoEffectPluginManager.logPrefix}setPluginParams:`, type, options);
+    this.trtcPluginManager.setPluginParams(type, options);
+  }
+
+  addVideoPlugin(options: {id: string, deviceId: string, path: string}): TUIVideoEffectPlugin | null {
+    logger.debug(`${TUIVideoEffectPluginManager.logPrefix}addVideoPlugin pluginId:${options.id} deviceId:${options.deviceId} path:${options.path}`);
+    const trtcVideoEffectPlugin = this.trtcPluginManager?.addPlugin(options);
+    if (trtcVideoEffectPlugin) {
+      return new TUIVideoEffectPlugin(options.id, options.deviceId, trtcVideoEffectPlugin);
+    }
+    return null;
+  }
+
+  /**
+   * Remove video effect plugin
+   *
+   * @param pluginId {string} - Plugin ID
+   * @param deviceId {string} - Camera Device ID
+   * @returns {void}
+   */
+  removeVideoPlugin(pluginId: string, deviceId: string):void {
+    logger.debug(`${TUIVideoEffectPluginManager.logPrefix}removeVideoPlugin pluginId:${pluginId} deviceId:${deviceId}`);
+    this.trtcPluginManager?.removePlugin(deviceId, pluginId);
+  }
+
+  setCallback(callback: (pluginId: string, errorCode: number, errorMessage: string) => void) : void {
+    this.trtcPluginManager.setPluginCallback(callback);
+  }
+}
+
+const videoEffectPluginManager: TUIVideoEffectPluginManager = TUIVideoEffectPluginManager.getInstance();
 
 class TUIVideoEffectManager {
   private logPrefix = '[TUIVideoEffectManager]';
@@ -21,16 +115,16 @@ class TUIVideoEffectManager {
     this.libPath = '';
     this.initParam = {};
     this.beautyPluginMap = new Map();
-
-    // this.init(); // To do: 不能在添加摄像头之前初始化，否则会导致摄像头打不开，可能是底层 C++ 的限制或者 bug
   }
 
   async init() {
     if (!this.inited) {
       if (videoEffectPluginManager) {
-        videoEffectPluginManager.setVideoPluginFormat(TUIVideoPixelFormat.kVideoPixelFormat_I420);
+        videoEffectPluginManager.setPluginParams(TRTCPluginType.TRTCPluginTypeVideoProcess, {
+          pixelFormat: TRTCVideoPixelFormat.TRTCVideoPixelFormat_I420,
+        });
         videoEffectPluginManager.setCallback((pluginId: string, errorCode: number, errorMessage: string) => {
-          logger.log(`plugin event, pluginId : ${pluginId}, errorCode : ${errorCode}, errorMessage : ${errorMessage}`);
+          logger.log(`plugin event - pluginId : ${pluginId}, errorCode : ${errorCode}, errorMessage : ${errorMessage}`);
         });
         this.libPath = await TRTCXmagicFactory.getEffectPluginLibPath();
         this.initParam = await TRTCXmagicFactory.buildEffectInitParam(XmagicLicense);
@@ -115,10 +209,10 @@ class TUIVideoEffectManager {
   }
 
   private addPlugin(cameraId: string): TUIVideoEffectPlugin | null {
-    const pluginId = `${cameraId}-${new Date().getTime()}`; // ID 可以随意设置，只要唯一、不重复就行
+    const pluginId = `${cameraId}-${new Date().getTime()}`;
     if (videoEffectPluginManager) {
       const plugin: TUIVideoEffectPlugin | null = videoEffectPluginManager.addVideoPlugin({
-        pluginId: pluginId,
+        id: pluginId,
         deviceId: cameraId,
         path: this.libPath,
       });

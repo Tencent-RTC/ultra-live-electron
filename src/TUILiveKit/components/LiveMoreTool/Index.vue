@@ -27,9 +27,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import BeautyIcon from "../../common/icons/BeautyIcon.vue";
 import BGMIcon from "../../common/icons/BGMIcon.vue";
-import LinkMicIcon from "../../common/icons/LinkMicIcon.vue";
 import PKIcon from "../../common/icons/PKIcon.vue";
 import AudioEffIcon from "../../common/icons/AudioEffIcon.vue";
 import RecordIcon from "../../common/icons/RecordIcon.vue";
@@ -66,35 +64,27 @@ const handlerAlterVoice = () => {
 
 const liveToolButtonList = [
   {
-    icon: BeautyIcon,
-    text: "Beauty",
+    icon: AudioEffIcon,
+    text: "Reverb Voice",
+    func: handlerAudioEffect,
   },
   {
-    icon: LinkMicIcon,
-    text: "Link Mic",
+    icon: BGMIcon,
+    text: "BGM",
+    func: handlerAddBgm,
   },
   {
     icon: PKIcon,
     text: "PK",
   },
   {
-    icon: AudioEffIcon,
-    text: "Reverb Voice",
-    func: handlerAudioEffect,
+    icon: RecordIcon,
+    text: "Record",
   },
   {
     icon: ChangeVoiceIcon,
     text: "Change Voice",
     func:handlerAlterVoice,
-  },
-  {
-    icon: RecordIcon,
-    text: "Record",
-  },
-  {
-    icon: BGMIcon,
-    text: "BGM",
-    func: handlerAddBgm,
   },
 ];
 </script>

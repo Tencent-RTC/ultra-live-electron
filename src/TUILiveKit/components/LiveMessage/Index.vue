@@ -46,8 +46,8 @@ import { storeToRefs } from 'pinia';
 import { useI18n } from '../../locales';
 // import useMessageHook from './useMessageHook';
 import ChatEditor from './chatEditor.vue';
-import { useBasicStore } from '../../store/basic';
-import { useChatStore } from '../../store/chat';
+import { useBasicStore } from '../../store/main/basic';
+import { useChatStore } from '../../store/main/chat';
 import MessageText from './MessageText.vue';
 
 const { t } = useI18n();
@@ -56,7 +56,7 @@ const basicStore = useBasicStore();
 const { isLiving } = storeToRefs(basicStore);
 
 const chatStore = useChatStore();
-// useMessageHook(); // To do: 这里调用会出现无法接收消息的问题，原因未知，暂时先改为在 LiveKit/index.vue 中调用
+// useMessageHook(); // To do: Invoke useMessageHook() is best for closure, but it is too early before Chat/IM SDK is ready to receive message. So currently invoked in LiveKit/index.vue.
 const messageBottomEl = ref<HTMLInputElement | null>(null);
 const giftBottomEl = ref<HTMLInputElement | null>(null);
 
@@ -70,10 +70,8 @@ const handleMessageListScroll = (e: Event) => {
   const bottom = messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight;
   if (bottom > 80) {
     /**
-     * 30 is the threshold for determining whether to scroll up through the messages
-     *
-     * 30 为判断是否向上滚动浏览消息的阈值
-    **/
+     * 80 is the threshold for determining whether to scroll up through the messages
+     */
     isScrollNotAtBottom = true;
   } else {
     isScrollNotAtBottom = false;
@@ -94,9 +92,7 @@ watch(messageList, async (newMessageList, oldMessageList) => {
       if ((lastMessage as any).flow === 'out'  && lastMessage.ID !== oldLastMessage.ID) {
         /**
          * The latest one was sent by myself
-         *
-         * 最新一条是自己发送的
-        **/
+         */
         messageBottomEl.value && messageBottomEl.value.scrollIntoView();
       }
     }
@@ -104,9 +100,7 @@ watch(messageList, async (newMessageList, oldMessageList) => {
   }
   /**
    * If you don't scroll all the way to the bottom, show the latest news directly
-   *
-   * 如果没进行滚动一直在底部, 直接展示最新消息
-  **/
+   */
   messageBottomEl.value && messageBottomEl.value.scrollIntoView();
 });
 

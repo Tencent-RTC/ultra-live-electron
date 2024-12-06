@@ -1,9 +1,10 @@
-import TUIRoomEngine, { TUIDeviceManager } from '@tencentcloud/tuiroom-engine-electron';
+import trtcCloud from "./trtcCloud";
 
-export { TUIMediaDeviceType, TUIMediaDeviceState, TUIMediaDeviceEventType, TUIDeviceInfo } from '@tencentcloud/tuiroom-engine-electron';
-
-const deviceManager:TUIDeviceManager = TUIRoomEngine.getDeviceManager();
+const deviceManager = trtcCloud;
 
 export default function useDeviceManager() {
+  if (!deviceManager) {
+    throw new Error("create device manager failed");
+  }
   return deviceManager;
 }

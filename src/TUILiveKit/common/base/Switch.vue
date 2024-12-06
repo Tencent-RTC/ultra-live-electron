@@ -1,14 +1,15 @@
 <template>
-  <label class="switch" :class="{ 'is-checked': isChecked }">
-    <input v-model="isChecked" type="checkbox" class="switch-input" @change="toggleSwitch" />
+  <span class="switch" :class="{ 'is-checked': isChecked }" @click="toggleSwitch">
+    <span class="switch-label">{{ props.label }}</span>
     <span class="switch-core"></span>
-  </label>
+  </span>
 </template>
 
 <script lang="ts" setup>
 import { ref, watch, defineProps, defineEmits } from 'vue';
 interface Props {
   modelValue: boolean;
+  label?: string;
 }
 
 const props = defineProps<Props>();
@@ -18,7 +19,7 @@ const isChecked = ref(props.modelValue);
 const emit = defineEmits(['update:modelValue']);
 
 function toggleSwitch() {
-  emit('update:modelValue', isChecked.value);
+  emit('update:modelValue', !isChecked.value);
 }
 
 watch(
@@ -33,42 +34,32 @@ watch(
 @import "../../assets/variable.scss";
 
 .switch {
-  position: relative;
-  display: inline-block;
-  width: 40px;
-  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.25rem;
+  width: fit-content;
+  height: 1.25rem;
   background-color: $color-switch-background;
-  border-radius: 20px;
+  border-radius: 1.25rem;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s;  
 }
 
 .switch.is-checked {
+  flex-direction: row-reverse;
   background-color: $color-switch-is-checked-background;
 }
 
-.switch-input {
-  position: absolute;
-  left: 0;
-  top: 0;
-  opacity: 0;
-  width: 0;
-  height: 0;
+.switch-label {
+  margin: 0 0.25rem;
 }
 
 .switch-core {
-  position: absolute;
-  left: 2px;
-  top: 2px;
-  width: 40%;
-  height: 80%;
-  background-color: $color-switch-core-background;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
   box-shadow: 0 1px 5px $color-switch-core-box-shadow;
+  background-color: $color-switch-core-background;
   transition: transform 0.3s !important;
-}
-
-.switch.is-checked .switch-core {
-  transform: translateX(20px);
 }
 </style>

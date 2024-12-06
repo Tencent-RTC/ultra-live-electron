@@ -7,7 +7,7 @@
             </button>
         </div>
         <div class="tui-camera-middle" >
-            <video-setting-tab v-if="isPreviewing" :with-beauty="true"></video-setting-tab>
+            <video-setting-tab v-if="isPreviewing" :with-beauty="true" :data="props.data"></video-setting-tab>
         </div>
         <div class="tui-camera-footer" >
             <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" @click="handleAddCamera">{{ t('Add Camera') }}</button>
@@ -17,16 +17,15 @@
     </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, defineProps, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, Ref, defineProps, computed, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TUIDeviceInfo, TUIMediaSourceType, TUIMediaMirrorType } from '@tencentcloud/tuiroom-engine-electron';
+import { TRTCDeviceInfo, TRTCMediaSourceType, TRTCVideoMirrorType } from 'trtc-electron-sdk';
 import { useI18n } from '../../locales';
-import { useCurrentSourcesStore } from '../../store/currentSources';
+import { useCurrentSourceStore } from '../../store/child/currentSource';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
 import VideoSettingTab from '../../common/VideoSettingTab.vue';
 import { TUIMediaSourceEditMode } from './constant';
-import { TUIMediaSourceViewModel } from '../../store/mediaSources';
 
 interface TUIMediaSourceEditProps {
   data?: Record<string, any>;
@@ -39,7 +38,7 @@ const props = defineProps<TUIMediaSourceEditProps>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
 
 const { t } = useI18n();
-const sourcesStore = useCurrentSourcesStore();
+const currentSourceStore = useCurrentSourceStore();
 
 const isPreviewing: Ref<boolean> = ref(true);
 
@@ -49,7 +48,7 @@ const {
   currentCameraResolution,
   isCurrentCameraMirrored,
   beautyProperties,
-} = storeToRefs(sourcesStore);
+} = storeToRefs(currentSourceStore);
 
 const handleCloseSetting = () => {
   window.ipcRenderer.send("close-child");
@@ -58,15 +57,15 @@ const handleCloseSetting = () => {
 
 const handleAddCamera = () => {
   logger.debug(`${logPrefix}handleAddCamera`);
-  const currentCamera = cameraList.value.find((item: TUIDeviceInfo) => item.deviceId === currentCameraId.value);
+  const currentCamera = cameraList.value.find((item: TRTCDeviceInfo) => item.deviceId === currentCameraId.value);
   if (currentCamera) {
     const cameraSource = {
-      type: TUIMediaSourceType.kCamera,
+      type: TRTCMediaSourceType.kCamera,
       id: currentCameraId.value,
       name: currentCamera.deviceName,
       width: currentCameraResolution.value.width,
       height: currentCameraResolution.value.height,
-      mirrorType: isCurrentCameraMirrored.value ? TUIMediaMirrorType.kMediaMirrorType_Enable : TUIMediaMirrorType.kMediaMirrorType_Disable,
+      mirrorType: isCurrentCameraMirrored.value ? TRTCVideoMirrorType.TRTCVideoMirrorType_Enable : TRTCVideoMirrorType.TRTCVideoMirrorType_Disable,
       beautyConfig: {
         isEnabled: true,
         beautyProperties: JSON.parse(JSON.stringify(beautyProperties.value))
@@ -87,15 +86,15 @@ const handleAddCamera = () => {
 
 const handleEditCamera = () => {
   logger.debug(`${logPrefix}handleEditCamera`);
-  const currentCamera = cameraList.value.find((item: TUIDeviceInfo) => item.deviceId === currentCameraId.value);
+  const currentCamera = cameraList.value.find((item: TRTCDeviceInfo) => item.deviceId === currentCameraId.value);
   if (currentCamera) {
     const newData = {
-      type: TUIMediaSourceType.kCamera,
+      type: TRTCMediaSourceType.kCamera,
       id: currentCameraId.value,
       name: currentCamera.deviceName,
       width: currentCameraResolution.value.width,
       height: currentCameraResolution.value.height,
-      mirrorType: isCurrentCameraMirrored.value ? TUIMediaMirrorType.kMediaMirrorType_Enable : TUIMediaMirrorType.kMediaMirrorType_Disable,
+      mirrorType: isCurrentCameraMirrored.value ? TRTCVideoMirrorType.TRTCVideoMirrorType_Disable : TRTCVideoMirrorType.TRTCVideoMirrorType_Disable,
       beautyConfig: {
         isEnabled: true,
         beautyProperties: JSON.parse(JSON.stringify(beautyProperties.value))
@@ -117,8 +116,8 @@ const handleEditCamera = () => {
 
 const resetCurrentView = () => {
   isPreviewing.value = false;
-  sourcesStore.setCurrentViewName('');
-  sourcesStore.reset();
+  currentSourceStore.setCurrentViewName('');
+  currentSourceStore.reset();
 }
 
 const onShow = () => {
@@ -136,34 +135,6 @@ onBeforeUnmount(() => {
   logger.log(`${logPrefix}onBeforeUnmount`);
   isPreviewing.value = false;
   window.ipcRenderer.off('show', onShow);
-});
-
-watch(props, async (val) => {
-  logger.log(`${logPrefix}watch props.data`, val);
-  if (val.data?.mediaSourceInfo) {
-    const { mediaSourceInfo, beautyConfig, resolution } = val.data as TUIMediaSourceViewModel;
-    if (mediaSourceInfo.sourceType === TUIMediaSourceType.kCamera && resolution && beautyConfig) {
-      const { sourceId, mirrorType } = mediaSourceInfo;
-      const { width, height } = resolution;
-      const beautyProperties = JSON.parse(JSON.stringify(beautyConfig.beautyProperties));
-      sourcesStore.setCurrentCameraId(sourceId);
-      sourcesStore.setCurrentCameraResolution({ width, height });
-      sourcesStore.setIsCurrentCameraMirrored(mirrorType === TUIMediaMirrorType.kMediaMirrorType_Enable);
-      sourcesStore.setBeautyProperties(beautyProperties);
-
-      await nextTick(); // 等待父组件渲染完，触发打开摄像头操作
-      setTimeout(() => {
-        window.mainWindowPort?.postMessage({
-          key: "setCameraTestVideoPluginParameter",
-          data: beautyProperties
-        });
-      }, 500); // 父组件摄像头打开有延迟，这里设置美颜参数也需要延迟下，必须晚于打开摄像头操作再设置，美颜才能生效
-    } else {
-      logger.warn(`${logPrefix}watch props.data error. Invalid data:`, val);
-    }
-  }
-}, {
-  immediate: true
 });
 </script>
 <style scoped lang="scss">

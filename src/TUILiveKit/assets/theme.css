@@ -94,7 +94,7 @@
 
   /* Slider */
   --slider-color-filled: #2B6AD6;
-  --slider-color-empty: #4B494F;
+  --slider-color-empty: #48494F;
   --slider-color-button: #FFFFFF;
 
   /* Tab */
@@ -108,14 +108,14 @@
   --text-color-primary: rgba(0, 0, 0, 0.90);
   --text-color-secondary: rgba(0, 0, 0, 0.55);
   --text-color-tertiary: rgba(0, 0, 0, 0.40);
-  --text-color-disabled: rgba(0, 0, 0, 0.28);
+  --text-color-disabled: rgba(0, 0, 0, 0.25);
   --text-color-button: rgba(255, 255,255, 1);
   --text-color-button-disabled: rgba(255, 255,255, 1);
   --text-color-link: #1C66E5;
   --text-color-link-hover: #4588F5;
   --text-color-link-disabled: #CCE2FF;
-  --text-color-anti-primary: rgba(0, 0,0, 0.90);
-  --text-color-anti-secondary: rgba(0, 0,0, 0.55);
+  --text-color-anti-primary: rgba(0, 0, 0, 0.90);
+  --text-color-anti-secondary: rgba(0, 0, 0, 0.55);
   --text-color-warning: #FF7200;
   --text-color-success: #0ABF77;
   --text-color-error: #E54545;
@@ -198,12 +198,12 @@
   --switch-color-button: #FFFFFF;
 
   /* Slider */
-  --slider-color-filled: #4588F5;
+  --slider-color-filled: #1C66E5;
   --slider-color-empty: #E6E9F0;
   --slider-color-button: #FFFFFF;
 
   /* Tab */
-  --tab-color-selected: #2F81EE;
+  --tab-color-selected: #CCE2FF;
   --tab-color-unselected: #F0F2F7;
 
 }

@@ -59,7 +59,7 @@ import CloseIcon from '../../common/icons/CloseIcon.vue';
 import SwitchThemeIcon from "@/TUILiveKit/common/icons/SwitchThemeIcon.vue";
 import ArrowStrokeSelectDownIcon from '../../common/icons/ArrowStrokeSelectDownIcon.vue'
 import vClickOutside from '../../utils/vClickOutside';
-import { useBasicStore } from '../../store/basic';
+import { useBasicStore } from '../../store/main/basic';
 import { messageChannels } from "../../communication"
 import { changeTheme, ThemeColor } from "../../utils/utils";
 
@@ -140,7 +140,6 @@ const handleChangeTheme = () => {
 
 const handleLogOut = () => {
   showUserControl.value = false;
-  console.log("登出")
   emits('logout')
 }
 </script>
@@ -155,7 +154,8 @@ const handleLogOut = () => {
   height: 2.75rem;
   line-height: 2.75rem;
   font-size: $font-live-header-size;
-
+  background-color: var(--bg-color-topbar);
+  border-bottom:none;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -248,52 +248,59 @@ const handleLogOut = () => {
   }
   .user-control-container {
     position: absolute;
-    top:3rem;
-    right:9rem;
-    padding:0.625rem;
-    min-width:6.25rem;
-    background-color: var(--toast-color-default);
-    color:var(--text-color-primary);
-    border-radius:0.5rem;
-    height:2.5rem;
+    top: 3rem;
+    right: 7rem;
+    padding: 0.35rem;
+    min-width: 6.25rem;
+    background-color: var(--dropdown-color-default);
+    box-shadow: 0px 1px 5px var(--shadow-color),0px 8px 12px var(--shadow-color),0px 12px 26px var(--shadow-color);
+    color: var(--text-color-primary);
+    border-radius: 0.5rem;
+    height: 2.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     &::before {
       content: '';
       position: absolute;
-      right:1.25rem;
-      top:-1.25rem;
-      width:0rem;
-      border-top:0.625rem solid $color-live-header-user-control-container-before-border-other;
-      border-right:0.625rem solid $color-live-header-user-control-container-before-border-other;
-      border-bottom:0.625rem solid var(--toast-color-default);
-      border-left:0.625rem solid $color-live-header-user-control-container-before-border-other;
+      right: 1.25rem;
+      top: -1.25rem;
+      width: 0rem;
+      border-top: 0.625rem solid $color-live-header-user-control-container-before-border-other;
+      border-right: 0.625rem solid $color-live-header-user-control-container-before-border-other;
+      border-bottom: 0.625rem solid var(--dropdown-color-default);
+      border-left: 0.625rem solid $color-live-header-user-control-container-before-border-other;
     }
     &::after {
       content: '';
       width: 100%;
-      height:1.25rem;
-      position:absolute;
-      left:0rem;
-      top:-1.25rem;
+      height: 1.25rem;
+      position: absolute;
+      left: 0rem;
+      top: 1.25rem;
       background-color: $color-live-header-user-control-container-after-background;
     }
-    &:hover{
-      background-color: var(--dropdown-color-hover);
-    }
+
     .user-control-item-foot{
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      border-radius: 0.25rem;
       color: var(--text-color-primary);
       font-size: $font-live-header-user-control-container-item-foot-size;
       cursor: pointer;
-      z-index:999;
+      z-index: 999;
+      &:hover {
+        background-color: var(--dropdown-color-hover);
+      }
     }
   }
   .window-tool{
     display: flex;
     align-items: center;
-    align-self: end;
+    align-self: flex-end;
     height: 3rem; 
   }
 }

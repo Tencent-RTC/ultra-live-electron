@@ -2,39 +2,14 @@ $color-white: #FFFFFF;
 $color-black: #000000;
 
 $color-primary: #1890FF;
-$color-danger: #FF4949;
-
-$color-background-primary: #0F1014;
-$color-background-secondary: #22262E;
 
 $color-divider-line:#383F4D;
-$color-reverb-voice-active:#1C66E5;
 $color-icon-default:#ADB6CC;
 $font-size-tips: 0.75rem;
-$font-default-color: #FFFFFF;
-$font-primary-color: #1890FF;
-$font-gray-color:#8F9AB2;
-
-$color-gray-1: #FFFFFF;
-$color-gray-2: #FAFAFA;
-$color-gray-3: #F5F5F5;
-$color-gray-4: #F0F0F0;
-$color-gray-5: #D9D9D9;
-$color-gray-6: #BFBFBF;
-$color-gray-7: #8C8C8C;
 $color-gray-8: #595959;
-$color-gray-9: #434343;
-$color-gray-10: #262626;
-$color-gray-11: #1F1F1F;
-$color-gray-12: #191919;
-$color-gray-13: #141414;
-$color-gray-14: #000000;
 
 $color-anchor-hover: #096DD9;
 $color-anchor-active: #0050B3;
-$color-background: #17181A;
-$color-background-1: rgba(250, 249, 241, 0.05);
-$color-background-hover: rgba(250, 249, 241, 0.1);
 
 // MessageBox
 $color-message-box-mask: rgba(15, 16, 20, 0.6);
@@ -80,18 +55,13 @@ $font-picker-text-size: 0.75rem;
 $font-picker-text-weight: 500;
 
 // Select
-$color-select-container-content-border: #383F4D;
 $color-select-container-content-disabled-background: rgba(255, 255, 255, 0.50);
-$color-select-dropdown-container-background: #2D323C;
-$color-select-dropdown-container-border: #383F4D;
-$font-select-container-content-disabled-color: #8F9AB2;
 $font-select-text-size: 0.75rem;
 $font-select-text-style: normal;
 $font-select-text-weight: 500;
 
 // Slider
 $color-tui-slider-backgriund: rgba(0,0,0,0);
-$color-tui-slider-line-background: rgb(211,211,211);
 
 // SwitchControl
 $color-switch-background: #BDBDBD;
@@ -100,7 +70,6 @@ $color-switch-core-background: #FFFFFF;
 $color-switch-core-box-shadow: rgba(0, 0, 0, 0.2);
 
 // AudioControl
-$color-audio-container-background: #383F4D;
 
 // AudioSettingTab
 $color-audio-setting-tab-mic-bar-background: #D5E0F2;
@@ -155,10 +124,9 @@ $color-live-config-item-icon-background: rgba(0, 0, 0, 0);
 $color-live-config-media-source-hover-background: #000000;
 $color-live-config-media-source-select-background: #2D323E;
 
-// LiveConfigTool
+// LiveMoreTool
 $font-live-config-tool-switch-color: #919AB0;
 $font-live-config-tool-switch-size: 0.8rem;
-$font-live-config-tool-container-color: $font-gray-color;
 $font-live-config-tool-disable-button-hover-color: #666666;
 
 // LiveAddBgm
@@ -375,22 +343,16 @@ $font-live-voice-chat-seatIndex-style: normal;
 $font-live-voice-chat-seatIndex-weight: 400;
 
 // Child
-$color-child-background: #0F1014;
 $font-child-color: #FFFFFF;
 
 // Main
-$color-main-background: #0F1014;
-$color-main-live-config-container-background: #22262E;
-$color-main-live-config-tool-background: #22262E;
-$color-main-live-preview-container-background: #22262E;
 $color-main-live-controller-container-background: #22262E;
 $color-main-live-member-container-background: #22262E;
 $color-main-live-message-container-background: #22262E;
-$font-main-color: #FFFFFF;
 $font-main-size: 0.75rem;
 
 // App
-$color-app-background: rgba(0, 0, 0, 0);
+// $color-app-background: rgba(0, 0, 0, 0);
 $font-app-color: #FFFFFF;
 $font-app-family: Avenir, Helvetica, Arial, sans-serif;
 

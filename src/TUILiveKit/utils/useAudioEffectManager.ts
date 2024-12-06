@@ -1,8 +1,7 @@
-import TUIRoomEngine, { TUIAudioEffectManager } from '@tencentcloud/tuiroom-engine-electron';
+import trtcCloud from "./trtcCloud";
 
-export { TUIVoiceReverbType, TUIVoiceChangerType, TUIAudioMusicParam, TUIMusicPlayObserver } from '@tencentcloud/tuiroom-engine-electron';
+const audioEffectManager = trtcCloud;
 
-const audioEffectManager: TUIAudioEffectManager = TUIRoomEngine.getAudioEffectManager();
 export default function useAudioEffectManager() {
   return audioEffectManager;
 }

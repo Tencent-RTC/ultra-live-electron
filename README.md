@@ -7,7 +7,7 @@ This project is a desktop/laptop live streaming tool, based on [Tencent Real-Tim
 ## Prerequirement
 
 - OS supported: Windows 10+.
-- Device need: camera, microphone and speaker.
+- Devices: camera, microphone and speaker.
 
 ## Getting started
 

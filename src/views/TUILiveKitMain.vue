@@ -18,7 +18,7 @@ function handleLogout() {
   alert('You should implement your own "Login" logic to work with "logout"');
   // Solution 1
   window.ipcRenderer.send('on-close-window');
-  // // Solution 2
+  // Solution 2
   // router.push('/login');
 }
 

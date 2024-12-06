@@ -35,15 +35,15 @@
 <script setup lang="ts">
 import { ref, Ref, defineEmits, onMounted, onBeforeUnmount, onUnmounted, computed, watch} from 'vue';
 import { storeToRefs } from 'pinia';
-import { Rect, TUIResolutionMode, TUIMediaSource } from '@tencentcloud/tuiroom-engine-electron';
+import { Rect, TRTCVideoResolutionMode, TRTCMediaSource } from 'trtc-electron-sdk';
+import { Movable, Resizable } from 'movable-resizable-js';
 import SelectMediaSource from './SelectMediaSource.vue';
-import Movable from "../../common/base/Movable";
-import Resizable from "../../common/base/Resizable";
 import useMediaMixingManager from "../../utils/useMediaMixingManager";
-import { useBasicStore } from "../../store/basic";
-import { useRoomStore } from "../../store/room";
-import { useMediaSourcesStore, TUIMediaSourceViewModel } from '../../store/mediaSources';
-import trtcCloud, { resolutionMap } from '../../utils/trtcCloud';
+import { useBasicStore } from "../../store/main/basic";
+import { useRoomStore } from "../../store/main/room";
+import { useMediaSourcesStore, TUIMediaSourceViewModel } from '../../store/main/mediaSources';
+import trtcCloud from '../../utils/trtcCloud';
+import { resolutionMap } from '../../constants/tuiConstant';
 import useContextMenu from './useContextMenu';
 import { useI18n } from "../../locales/index";
 
@@ -63,7 +63,7 @@ watch(
   ([newResMode, newResolution], oldVal?) => {
     console.log("[LivePreview]watch mixingVideoEncodeParam:", newResMode, newResolution, oldVal);
     const { width, height } = resolutionMap[newResolution];
-    if (newResMode === TUIResolutionMode.kResolutionMode_Landscape) {
+    if (newResMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape) {
       mixingVideoWidth.value = width;
       mixingVideoHeight.value = height;
     } else {
@@ -139,7 +139,7 @@ watch(
     );
     let selectedSource: TUIMediaSourceViewModel | null = null;
     for (let i = 0; i < mediaList.value.length; i++) {
-      const source: TUIMediaSource = mediaList.value[i].mediaSourceInfo;
+      const source: TRTCMediaSource = mediaList.value[i].mediaSourceInfo;
       if (
         source.sourceType === newSelected.value.sourceType &&
         source.sourceId === newSelected.value.sourceId
@@ -277,39 +277,41 @@ const onResize = (left: number, top: number, width: number, height: number) => {
   }
 };
 
-const createNativeWindow = () => {
+const createNativeWindow = (clientRect: DOMRect) => {
+  console.log(`createNativeWindow:`, clientRect);
+  mediaMixingManager.setDisplayParams(window.nativeWindowHandle, {
+    left: clientRect.left * window.devicePixelRatio,
+    right: clientRect.right * window.devicePixelRatio,
+    top: clientRect.top * window.devicePixelRatio,
+    bottom: clientRect.bottom * window.devicePixelRatio,
+  });
+
+  const bodyRect = document.body.getBoundingClientRect();
+  trtcCloud?.log(`-----createNativeWindow
+      body area left:${bodyRect.left} right:${bodyRect.right} top:${bodyRect.top} bottom: ${bodyRect.bottom}
+      view area left:${clientRect.left} right:${clientRect.right} top:${clientRect.top} bottom: ${clientRect.bottom}
+      devicePixelRatio: ${window.devicePixelRatio}`);
+};
+
+const createNativeWindowAndPreview = () => {
   if (!isNativeWindowCreated.value) {
     if (!!window.nativeWindowHandle && nativeWindowsRef.value) {
-      // 创建 native 窗口
       const clientRect = nativeWindowsRef.value.getBoundingClientRect();
-      mediaMixingManager.setDisplayParams(window.nativeWindowHandle, {
-        left: clientRect.left * window.devicePixelRatio,
-        right: clientRect.right * window.devicePixelRatio,
-        top: clientRect.top * window.devicePixelRatio,
-        bottom: clientRect.bottom * window.devicePixelRatio,
-      });
+      createNativeWindow(clientRect);
       isNativeWindowCreated.value = true;
-
-      const bodyRect = document.body.getBoundingClientRect();
-      trtcCloud?.log(`-----createNativeWindow
-          body area left:${bodyRect.left} right:${bodyRect.right} top:${bodyRect.top} bottom: ${bodyRect.bottom}
-          view area left:${clientRect.left} right:${clientRect.right} top:${clientRect.top} bottom: ${clientRect.bottom}
-          devicePixelRatio: ${window.devicePixelRatio}`);
-
       startLocalMediaMixing();
     } else {
       setTimeout(()=>{
-        createNativeWindow();
+        createNativeWindowAndPreview();
       }, 100);
     }
   }
 }
 
 const startLocalMediaMixing = async () => {
-  const { mixingVideoEncodeParam, backgroundColor } = mediaSourcesStore
+  const { mixingVideoEncodeParam, backgroundColor } = mediaSourcesStore;
   await mediaMixingManager.startPublish();
   await mediaMixingManager.updatePublishParams({
-    inputSourceList: mediaList.value.map(item => item.mediaSourceInfo),
     videoEncoderParams: mixingVideoEncodeParam,
     canvasColor: backgroundColor,
   });
@@ -330,26 +332,28 @@ const onPreviewAreaResize = (entries: ResizeObserverEntry[]) => {
 
     if (isNativeWindowCreated.value) {
       const clientRect = entry.target.getBoundingClientRect();
-      mediaMixingManager.setDisplayParams(window.nativeWindowHandle, {
-        left: clientRect.left * window.devicePixelRatio,
-        right: clientRect.right * window.devicePixelRatio,
-        top: clientRect.top * window.devicePixelRatio,
-        bottom: clientRect.bottom * window.devicePixelRatio,
-      });
-
-      const bodyRect = document.body.getBoundingClientRect();
-      trtcCloud?.log(`-----onPreviewAreaResize
-          body area left:${bodyRect.left} right:${bodyRect.right} top:${bodyRect.top} bottom: ${bodyRect.bottom}
-          view area left:${clientRect.left} right:${clientRect.right} top:${clientRect.top} bottom: ${clientRect.bottom}
-          devicePixelRatio: ${window.devicePixelRatio}`);
-
+      createNativeWindow(clientRect);
     }
   }
 };
 
 const resizeObserver = new ResizeObserver(onPreviewAreaResize);
 
-// 创建 Movable 和 Resizable
+const onVisibilityChange = () => {
+  console.log(`onVisibilityChange document.hidden:${document.hidden}`);
+  if (document.hidden) {
+    mediaMixingManager.setDisplayParams(new Uint8Array(8) ,{ left: 0, right: 0, top: 0, bottom: 0 });
+  } else {
+    if (!!window.nativeWindowHandle && nativeWindowsRef.value) {
+      const clientRect = nativeWindowsRef.value.getBoundingClientRect();
+      createNativeWindow(clientRect);
+    } else {
+      console.error(`onVisibilityChange error, no native window handle or DOM container.`);
+    }
+  }
+};
+
+// Enable Movable and Resizable
 onMounted(() => {
   console.log("[LivePreview]onMounted init basic data");
   if (moveAndResizeContainerRef.value && overlayRef.value) {
@@ -378,8 +382,8 @@ onMounted(() => {
       overlayRef.value,
       moveAndResizeContainerRef.value,
       {
-        keepRatio: true, // 按比例缩放，不支持任意修改宽高
-        stopPropagation: true, // 如果不支持 stopPropagation，和 Movable 一起使用时，也会触发 Movable 的点击事件,
+        keepRatio: true,
+        stopPropagation: true, // If used with `Movable` together, `stopPropagation` must be `true` to disable moving event when resizing.
         canExceedContainer: true,
       }
     );
@@ -393,12 +397,12 @@ onMounted(() => {
   }
 });
 
-// 创建 native 窗口
+// Create native window to display video
 onMounted(() => {
   console.log("[LivePreview]onMounted create display window");
   if (moveAndResizeContainerRef.value && nativeWindowsRef.value) {
     setTimeout(() => {
-      createNativeWindow(); // 调用 native 窗口创建
+      createNativeWindowAndPreview();
     }, 100);
 
     resizeObserver.observe(moveAndResizeContainerRef.value)
@@ -407,12 +411,18 @@ onMounted(() => {
   }
 });
 
+// Obaserve document visiblity change event
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange);
+});
+
 onBeforeUnmount(()=> {
   console.log('onBeforeUnmount')
   if (nativeWindowsRef.value && resizeObserver) {
     resizeObserver.unobserve(nativeWindowsRef.value);
   }
   mediaMixingManager.stopPublish();
+  document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
 onUnmounted(()=> {
@@ -425,7 +435,6 @@ onUnmounted(()=> {
 </script>
 
 <style scoped lang="scss">
-@import "../../common/base/resizable.css";
 @import "../../assets/variable.scss";
 
 .tui-live-preview {
@@ -451,6 +460,7 @@ onUnmounted(()=> {
       &:first-child {
         padding-left: 0;
       }
+
       &:last-child {
         padding-right: 0;
         border-right: none;
@@ -459,8 +469,8 @@ onUnmounted(()=> {
   }
 
   .tui-live-designer {
-    height: calc(100% - 2.5rem);
     position: relative;
+    height: calc(100% - 2.5rem);
     overflow: hidden;
   }
 
@@ -471,20 +481,23 @@ onUnmounted(()=> {
 
   .media-overlay-in-design {
     position: absolute;
-    left: 0;
     top: 0;
+    left: 0;
     min-width: 1px;
     min-height: 1px;
     background-color: $color-live-preview-media-overlay-background;
     border: 0.125rem solid $color-live-preview-media-overlay-border;
-    cursor: move;
   }
 }
 </style>
 <style lang="scss">
+@import "movable-resizable-js/resizable.css";
 @import "../../assets/variable.scss";
+
 .tui-live-preview  {
-  .resize-anchor {
+  .resizable-resize-anchor {
+    background-color: transparent;
+    border: 1px solid transparent;
     border-color: $color-live-preview-resize-anchor-border;
   }
 }

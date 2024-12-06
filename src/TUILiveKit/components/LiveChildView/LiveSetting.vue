@@ -23,39 +23,31 @@
               v-if="activeSettingTab === 'audio'"
               :mode="SettingMode.Detail"
             ></audio-setting-tab>
-            <!-- <video-setting-tab
-              v-else-if="activeSettingTab === 'video'"
-            ></video-setting-tab> -->
           </div>
         </div>
     </div>
 </template>
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 import { computed } from 'vue';
 import { useI18n } from '../../locales';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
-import { useCurrentSourcesStore } from '../../store/currentSources';
-import VideoSettingTab from '../../common/VideoSettingTab.vue';
+import { useCurrentSourceStore } from '../../store/child/currentSource';
 import AudioSettingTab from '../../common/AudioSettingTab.vue';
 import { SettingMode } from '../../constants/render';
-import { useBasicStore } from '../../store/basic';
 
 const { t } = useI18n();
 
-const sourcesStore = useCurrentSourcesStore();
-const basicStore = useBasicStore();
+const currentSourceStore = useCurrentSourceStore();
 const settingTabsTitleList = computed(() => [
   { label: t('Audio settings'), value: 'audio' },
-  // { label: t('Camera settings'), value: 'video' },
 ]);
 
-const { activeSettingTab } = storeToRefs(basicStore);
-
+const activeSettingTab = ref('audio');
 
 function handleUpdateActiveTab(tabTitle: string) {
-  basicStore.setActiveSettingTab(tabTitle);
+  activeSettingTab.value = tabTitle;
 }
 
 const handleCloseSetting = () => {
@@ -63,7 +55,7 @@ const handleCloseSetting = () => {
   resetCurrentView();
 }
 const resetCurrentView = () => {
-  sourcesStore.setCurrentViewName('');
+  currentSourceStore.setCurrentViewName('');
 }
 </script>
 <style lang="scss" scoped>
@@ -99,11 +91,14 @@ const resetCurrentView = () => {
         font-weight: $font-live-setting-body-tab-title-weight;
         font-size: $font-live-setting-body-tab-title-size;
         color: var(--text-color-primary);
+        background-color: var(--tab-color-unselected);
+        border-radius: 0.25rem;
+        margin-left: 0.25rem;
         line-height:2.25rem;
         position: relative;
         cursor: pointer;
         &.active {
-          background-color: var(--list-color-focused);
+          background-color: var(--tab-color-selected);
           color: var(--text-color-link);
           font-weight: $font-live-setting-body-tab-title-active-weight;
         }

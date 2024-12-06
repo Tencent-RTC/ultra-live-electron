@@ -14,19 +14,13 @@
 </template>
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { ref } from "vue";
 import { useI18n } from '../../locales';
-import { useRoomStore } from '../../store/room';
+import { useRoomStore } from '../../store/main/room';
 const { t } = useI18n();
 
 const roomStore = useRoomStore()
 
 const { remoteUserList }  = storeToRefs(roomStore);
-
-// TODO 调用获取成员列表接口，初始化成员列表。
-
-// TODO 监听成员进入或退出直播间事件，来动态维护成员列表。
-
 </script>
 <style scoped lang="scss">
 @import "../../assets/variable.scss";

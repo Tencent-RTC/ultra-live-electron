@@ -8,9 +8,9 @@
 </template>
 <script setup lang="ts">
 import { ref, Ref, defineEmits, defineProps, withDefaults, watch, onMounted, onBeforeUnmount } from "vue";
+import { Movable } from 'movable-resizable-js';
 import PointIcon from '../icons/PointIcon.vue';
 import SvgIcon from './SvgIcon.vue';
-import Movable from './Movable';
 
 const logger = console;
 const logPrefix ='[TUISlider]';
@@ -49,14 +49,22 @@ function onMove(left: number, top: number) {
     leftPercent = leftPercent >= 0 ? leftPercent : 0;
     leftPercent = leftPercent <= 100 ? leftPercent : 100;
     pointPosition.value = leftPercent;
+    setSliderProgress(pointPosition.value);
     emit('update:value', pointPosition.value);
   } else {
     logger.error(`${logPrefix}onMove(${left}, ${top}) no container error`);
   }
 }
 
+function setSliderProgress(progress: number){
+  if(liveRef.value){
+    liveRef.value.style.setProperty("--slider-filled-width",`${progress}%`)
+  }
+}
+
 watch(props, (newVal: Props) => {
   pointPosition.value = newVal.value * 100;
+  setSliderProgress(pointPosition.value);
 }, {
   immediate: true,
 });
@@ -64,6 +72,8 @@ watch(props, (newVal: Props) => {
 onMounted(() => {
   if (thumbRef.value && sliderRef.value) {
     movableThumb = new Movable(thumbRef.value, document.body, {calcPositionOnly: true});
+    const thumbLeft = Number(thumbRef.value.style.left.slice(0,thumbRef.value.style.left.length-1))
+    setSliderProgress(thumbLeft);
     movableThumb.on('move', onMove);
   } else {
     logger.error(`${logPrefix}onMounted error`);
@@ -96,8 +106,19 @@ onBeforeUnmount(() => {
   transform: translateY(-50%);
   left: 0;
   right: 0;
-  background-color: $color-tui-slider-line-background;
+  background-color: var(--slider-color-empty);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: var(--slider-filled-width);
+    height: 0.125rem;
+    background-color: var(--slider-color-filled);
+  }
 }
+
+
 
 .tui-slider-thumb {
   position: absolute;
@@ -108,5 +129,9 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   align-items: center;
+  color: var(--slider-color-button);
+  border: 1.5px solid var(--text-color-link);
+  border-radius: 50%;
+  cursor: pointer !important;
 }
 </style>

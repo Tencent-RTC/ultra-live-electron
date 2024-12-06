@@ -24,7 +24,6 @@
         </button>
       </div>
       <div class="tui-beauty-tabs-panels">
-        <!-- 美颜 -->
         <div v-show="activeName === beautyEffectConstants.beauty.label" class="tui-tab-panel">
           <ul class="tui-beauty-property-list">
             <li
@@ -40,7 +39,6 @@
             </li>
           </ul>
         </div>
-        <!-- 画质 -->
         <div v-show="activeName === beautyEffectConstants.imageQuality.label" class="tui-tab-panel">
           <ul class="tui-beauty-property-list">
             <li 
@@ -56,7 +54,6 @@
             </li>
           </ul>
         </div>
-        <!-- 高级美型 -->
         <div v-show="activeName === beautyEffectConstants.advancedBeauty.label" class="tui-tab-panel">
           <ul class="tui-beauty-property-list">
             <li
@@ -72,7 +69,6 @@
             </li>
           </ul>
         </div>
-        <!-- 美体 -->
         <div v-show="activeName === beautyEffectConstants.bodyBeauty.label" class="tui-tab-panel">
           <ul class="tui-beauty-property-list">
             <li
@@ -88,7 +84,6 @@
             </li>
           </ul>
         </div>
-        <!-- 美妆 -->
         <div v-show="activeName === beautyEffectConstants.makeup.label" class="tui-tab-panel">
           <div
             v-for="(item) in beautyEffectConstants.makeup.details" 
@@ -111,7 +106,6 @@
             </ul>
           </div>
         </div>
-        <!-- 高级美妆 -->
         <div v-show="activeName === beautyEffectConstants.advancedMakeup.label" class="tui-tab-panel">
           <ul class="tui-beauty-property-list">
             <li
@@ -127,7 +121,6 @@
             </li>
           </ul>
         </div>
-        <!-- 滤镜 -->
         <div v-show="activeName === beautyEffectConstants.lut.label" class="tui-tab-panel">
           <ul class="tui-beauty-property-list">
             <li
@@ -143,7 +136,6 @@
             </li>
           </ul>
         </div>
-        <!-- 动效 -->
         <div v-show="activeName === beautyEffectConstants.motion.label" class="tui-tab-panel tui-no-form">
           <ul class="tui-beauty-property-list">
             <template
@@ -164,7 +156,6 @@
             </template>
           </ul>
         </div>
-        <!-- 虚拟背景 -->
         <div v-show="activeName === beautyEffectConstants.segment.label" class="tui-tab-panel tui-no-form">
           <ul class="tui-beauty-property-list">
             <li
@@ -193,6 +184,7 @@ export default {
       activeName: "",
       beautyEffectConstants: {},
       currentBeautyProperty: {},
+      progressElement: null
     };
   },
   props: {
@@ -210,6 +202,7 @@ export default {
       console.log('onChangeBeautyValue', value);
 
       this.currentBeautyProperty.effValue = Number(value);
+      this.setProgress(this.currentBeautyProperty.effValue);
       let effectProperties = [];
       if (this.currentBeautyProperty.category !== TRTCXmagicEffectCategory.Makeup) {
         effectProperties = TRTCXmagicFactory.buildEffectProperty(this.currentBeautyProperty);
@@ -234,10 +227,18 @@ export default {
         }
       }
     },
+    setProgress(progress){
+      if(!this.progressElement)return;
+      const diffValue = this.currentBeautyProperty.maxValue - this.currentBeautyProperty.minValue;
+      if(diffValue !== 100) {
+        progress = (progress + diffValue - 100)/2;
+      }
+      this.progressElement.style.setProperty("--slider-filled-width", `${progress}%`)
+    },
     handleBasicBeautyPropertyClick(item) {
       console.log('handleBasicBeautyPropertyClick', item);
       this.currentBeautyProperty = item;
-
+      this.setProgress(item.effValue);
       this.beautyEffectConstants.beauty.details.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -249,7 +250,7 @@ export default {
     handleImageQualityClick(item) {
       console.log('handleImageQualityClick', item);
       this.currentBeautyProperty = item;
-
+      this.setProgress(item.effValue);
       this.beautyEffectConstants.imageQuality.details.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -261,7 +262,7 @@ export default {
     handleAdvancedBeautyPropertyClick(item) {
       console.log('handleAdvancedBeautyPropertyClick', item);
       this.currentBeautyProperty = item;
-
+      this.setProgress(item.effValue);
       this.beautyEffectConstants.advancedBeauty.details.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -273,7 +274,7 @@ export default {
     handleBodyBeautyPropertyClick(item) {
       console.log('handleBodyBeautyPropertyClick', item);
       this.currentBeautyProperty = item;
-
+      this.setProgress(item.effValue);
       this.beautyEffectConstants.bodyBeauty.details.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -285,7 +286,7 @@ export default {
     handleMakeupClick(item, parentItem) {
       console.log('handleMakeupClick', item, parentItem);
       this.currentBeautyProperty = item;
-
+      this.setProgress(item.effValue);
       parentItem.options.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -297,7 +298,7 @@ export default {
     handleAdvancedMakeupClick(item) {
       console.log('handleAdvancedMakeupClick', item);
       this.currentBeautyProperty = item;
-      
+      this.setProgress(item.effValue);
       this.beautyEffectConstants.advancedMakeup.details.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -315,7 +316,7 @@ export default {
     handleLutClick(item) {
       console.log('handleLutClick', item);
       this.currentBeautyProperty = item;
-      
+      this.setProgress(item.effValue);
       this.beautyEffectConstants.lut.details.forEach(option => {
         if (option.label !== item.label) {
           option.isSelected = false;
@@ -365,6 +366,9 @@ export default {
         }
       });
     }
+  },
+  mounted(){
+    this.progressElement = document.querySelector(".tui-form-range");
   },
   created() {
     let beautyEffectConstants;
@@ -487,6 +491,10 @@ export default {
   text-align: center;
   color: var(--text-color-primary);
   cursor: pointer;
+
+  img {
+    background-color: #808080;
+  }
 }
 
 .tui-beauty-property-item-backgound {
@@ -531,9 +539,23 @@ export default {
 }
 
 input[type='range'] {
+  position: relative;
   -webkit-appearance: none;
-  background: $color-beauty-config-panel-input-type-range-background;
+  -moz-appearance: none;
+  background: var(--bg-color-dialog);
   cursor: pointer;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 0.125rem;
+    width: calc(var(--slider-filled-width));
+    height: 0.125rem;
+    background-color: var(--slider-color-filled);
+  }
 }
 
 input[type=range]:focus {
@@ -542,17 +564,21 @@ input[type=range]:focus {
 
 input[type='range']::-webkit-slider-runnable-track {
   -webkit-appearance: none;
-  height: 0.25rem;
+  height: 0.125rem;
   background-color: var(--slider-color-empty);
   border-radius: 0.125rem;
 }
 
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
+  position: absolute;
+  left: var(--slider-filled-width);
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
-  background-color: $color-white;
-  transform: translateY(-0.25rem);
+  background: var(--slider-color-button);
+  transform: translate(-0.375rem,-0.3rem);
+  border: 2px solid var(--text-color-link);
+  z-index: 9999;
 }
 </style>

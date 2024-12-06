@@ -10,11 +10,11 @@
 </template>
 <script setup lang="ts">
 import { ref, Ref, defineProps, defineExpose, computed, watch } from 'vue';
-import { TUIMediaSourceType } from '@tencentcloud/tuiroom-engine-electron';
+import { TRTCMediaSourceType } from 'trtc-electron-sdk';
 import { useI18n } from '../../locales';
 import CameraIcon from '../../common/icons/CameraIcon.vue';
 import SvgIcon from '../../common/base/SvgIcon.vue';
-import { useCurrentSourcesStore } from '../../store/currentSources';
+import { useCurrentSourceStore } from '../../store/child/currentSource';
 import imageStorage from './imageStorage';
 import { TUIMediaSourceEditMode } from './constant';
 import { addMediaSource, updateMediaSource } from '../../communication';
@@ -28,7 +28,7 @@ const logger = console;
 const props = defineProps<TUIMediaSourceEditProps>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
 
-const sourcesStore = useCurrentSourcesStore();           
+const currentSourceStore = useCurrentSourceStore();           
 const { t } = useI18n();
 const file: Ref<File|null> = ref(null)
 const url: Ref<string> = ref('');
@@ -85,7 +85,7 @@ const handleSaveFile = async(event: any) => {
   url.value = window.URL.createObjectURL(file.value as File);
   if(mode.value === TUIMediaSourceEditMode.Add && file.value && (file.value as any)?.path){
     const imageInfo = {
-      type: TUIMediaSourceType.kImage,
+      type: TRTCMediaSourceType.kImage,
       name: file.value?.name, 
       id: (file.value as any).path, 
       width: width.value,
@@ -102,7 +102,7 @@ const handleSaveFile = async(event: any) => {
     resetCurrentView();
   }else if(mode.value === TUIMediaSourceEditMode.Edit && !isSameImage.value && file.value && (file.value as any)?.path){
     const newData = {
-      type: TUIMediaSourceType.kImage,
+      type: TRTCMediaSourceType.kImage,
       name: file.value?.name, 
       id: (file.value as any).path, 
       width: width.value,
@@ -131,7 +131,7 @@ const triggerFileSelect = () => {
 }
 
 const resetCurrentView = () => {
-  sourcesStore.setCurrentViewName('');
+  currentSourceStore.setCurrentViewName('');
   file.value = null;
   url.value = '';
 }

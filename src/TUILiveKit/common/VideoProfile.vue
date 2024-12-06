@@ -1,16 +1,3 @@
-<!--
-  * Name: DeviceSelect
-  * @param deviceType String required
-  * @param size String 'large'|'medium'|'small'
-  * Usage:
-  * Use <device-select></device-select> in template
-  *
-  * 名称: DeviceSelect
-  * @param deviceType String required
-  * @param size String 'large'|'medium'|'small'
-  * 使用方式：
-  * 在 template 中使用 <device-select></device-select>
--->
 <template>
   <Select
     :model-value="currentCameraResolutionValue"
@@ -35,12 +22,12 @@ import { storeToRefs } from 'pinia';
 import { TUIDeviceInfo } from '@tencentcloud/tuiroom-engine-electron';
 import Select from './base/Select.vue';
 import Option from './base/Option.vue';
-import { useCurrentSourcesStore } from '../store/currentSources';
+import { useCurrentSourceStore } from '../store/child/currentSource';
 
 const logger = console;
 const logPrefix = '[VideoProfile]';
 
-const currentSourceStore = useCurrentSourcesStore();
+const currentSourceStore = useCurrentSourceStore();
 const { cameraList, currentCameraId, currentCameraResolution } = storeToRefs(currentSourceStore);
 const currentCameraResolutionValue = computed(() => `${currentCameraResolution.value.width}_${currentCameraResolution.value.height}`);
 logger.log(`${logPrefix}`, cameraList.value, currentCameraId.value, currentCameraResolution.value);

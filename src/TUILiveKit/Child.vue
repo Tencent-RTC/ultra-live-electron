@@ -23,29 +23,29 @@
 <script setup lang='ts'>
 import { onMounted, ref, Ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType, TUIMediaDeviceType, TUIMediaDeviceState } from '@tencentcloud/tuiroom-engine-electron';
+import trtcCloud from "./utils/trtcCloud";
+import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType, TRTCDeviceType, TRTCDeviceState } from 'trtc-electron-sdk';
 import LiveCameraSource from './components/LiveSource/LiveCameraSource.vue';
 import LiveScreenShareSource from './components/LiveSource/LiveScreenShareSource.vue';
 import LiveImageSource from './components/LiveSource/LiveImageSource.vue';
-import LiveVoiceChat from './components/LiveToolbar/LiveVoiceChat.vue';
-import LiveSetting from './components/LiveToolbar/LiveSetting.vue';
-import LiveAddBgm from './components/LiveConfigTool/LiveAddBgm.vue';
-import LiveReverbVoice from './components/LiveConfigTool/LiveReverbVoice.vue';
-import LiveChangeVoice from './components/LiveConfigTool/LiveChangeVoice.vue';
+import LiveVoiceChat from './components/LiveChildView/LiveVoiceChat.vue';
+import LiveSetting from './components/LiveChildView/LiveSetting.vue';
+import LiveAddBgm from './components/LiveMoreTool/LiveAddBgm.vue';
+import LiveReverbVoice from './components/LiveMoreTool/LiveReverbVoice.vue';
+import LiveChangeVoice from './components/LiveMoreTool/LiveChangeVoice.vue';
 import TUIMessageBox from './common/base/MessageBox';
-import { useCurrentSourcesStore } from './store/currentSources';
+import { useCurrentSourceStore } from './store/child/currentSource';
 import useDeviceManager from './utils/useDeviceManager';
-import trtcCloud from "./utils/trtcCloud";
 import { useI18n } from './locales/index';
-import { useMusicDataStore } from './store/musicData';
+import { useAudioEffectStore } from './store/audioEffect';
 import { changeTheme } from './utils/utils';
 
 const logger = console;
 const logPrefix = '[ChildWindowView]';
 
-const musicDataStore = useMusicDataStore();
+const audioEffectStore = useAudioEffectStore();
 const { t } = useI18n();
-const currentSourceStore = useCurrentSourcesStore();
+const currentSourceStore = useCurrentSourceStore();
 const { currentViewName } = storeToRefs(currentSourceStore);
 const deviceManager = useDeviceManager();
 
@@ -56,7 +56,7 @@ const dataInEdit: Ref<Record<string, any> | undefined> = ref(undefined);
 onMounted(() => {
   setTimeout(() => {
     initMainWindowMessageListener();
-  }, 3000); // To do: 需要等待一下，主窗口才能把 MessagePort 发送过来。实现不够优先，待优化。
+  }, 3000); // To do: Delay 3 seconds to wait for `MessagePort` sent from main window. Not good implementation, need optimization.
 });
 
 function initMainWindowMessageListener() {
@@ -83,16 +83,15 @@ function initMainWindowMessageListener() {
       case 'on-device-changed':
         onDeviceChanged(data);
         break;
-      case 'update-playing-music-id':{
-        if(data !== musicDataStore.playingMusicId){
-          musicDataStore.updatePlayingMusicId(data);
+      case 'update-playing-music-id':
+        if(data !== audioEffectStore.playingMusicId){
+          audioEffectStore.updatePlayingMusicId(data);
         }else{
           window.mainWindowPort?.postMessage({
             key:'singleLoopPlay',
             data,
           });
         }
-      }
         break;
       case 'change-theme': {
         const childWindowElement = document.querySelector('.tui-live-kit-child');
@@ -117,29 +116,29 @@ function initMainWindowMessageListener() {
   }
 }
 
-function onDeviceChanged(data: { deviceId: string; type: TUIMediaDeviceType; state: TUIMediaDeviceState; }) {
+function onDeviceChanged(data: { deviceId: string; type: TRTCDeviceType; state: TRTCDeviceState; }) {
   logger.log(`${logPrefix}onDeviceChanged:`, data);
   let deviceList = null;
-  if (data.type === TUIMediaDeviceType.kMediaDeviceTypeVideoCamera) {
+  if (data.type === TRTCDeviceType.TRTCDeviceTypeCamera) {
     deviceList = deviceManager.getCameraDevicesList();
     if (deviceList) {
       currentSourceStore.setCameraList(deviceList);
-      if (data.state === TUIMediaDeviceState.kMediaDeviceStateRemove && data.deviceId === currentSourceStore.currentCameraId) {
+      if (data.state === TRTCDeviceState.TRTCDeviceStateRemove && data.deviceId === currentSourceStore.currentCameraId) {
         currentSourceStore.setCurrentCameraId(deviceList[0].deviceId);
       }
     }  
-  } else if (data.type === TUIMediaDeviceType.kMediaDeviceTypeAudioInput) {
-    if (data.state === TUIMediaDeviceState.kMediaDeviceStateRemove || data.state === TUIMediaDeviceState.kMediaDeviceStateAdd) {
+  } else if (data.type === TRTCDeviceType.TRTCDeviceTypeMic) {
+    if (data.state === TRTCDeviceState.TRTCDeviceStateRemove || data.state === TRTCDeviceState.TRTCDeviceStateAdd) {
       deviceList = deviceManager.getMicDevicesList();
       deviceList && currentSourceStore.setMicrophoneList(deviceList);
-    } else if (data.state === TUIMediaDeviceState.kMediaDeviceStateActive) {
+    } else if (data.state === TRTCDeviceState.TRTCDeviceStateActive) {
       currentSourceStore.setCurrentMicrophoneId(data.deviceId)
     }
-  } else if (data.type === TUIMediaDeviceType.kMediaDeviceTypeAudioOutput) {
-    if (data.state === TUIMediaDeviceState.kMediaDeviceStateRemove || data.state === TUIMediaDeviceState.kMediaDeviceStateAdd) {
+  } else if (data.type === TRTCDeviceType.TRTCDeviceTypeSpeaker) {
+    if (data.state === TRTCDeviceState.TRTCDeviceStateRemove || data.state === TRTCDeviceState.TRTCDeviceStateAdd) {
       deviceList = deviceManager.getSpeakerDevicesList();
       deviceList && currentSourceStore.setSpeakerList(deviceList);
-    } else if (data.state === TUIMediaDeviceState.kMediaDeviceStateActive) {
+    } else if (data.state === TRTCDeviceState.TRTCDeviceStateActive) {
       currentSourceStore.setCurrentSpeakerId(data.deviceId)
     }
   } else {
@@ -312,12 +311,10 @@ window.ipcRenderer.on('show', (event: any, args: Record<string, any>) => {
 });
 </script>
 <style lang='scss'>
-@import './assets/variable.scss';
 @import './assets/global.scss';
 
 .tui-live-kit-child {
   height: 100%;
-  background-color: $color-child-background;
   color: $font-child-color;
 }
 </style>

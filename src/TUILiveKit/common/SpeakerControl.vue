@@ -8,7 +8,6 @@
     
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { TUIMediaDeviceType } from '@tencentcloud/tuiroom-engine-electron';
 import SvgIcon from './base/SvgIcon.vue';
 import SpeakerOffIcon from './icons/SpeakerOffIcon.vue';
 import ArrowSetUpIcon from './icons/ArrowSetUpIcon.vue';
@@ -27,23 +26,23 @@ const speakerIcon = computed(()=> speakerRate.value ? SpeakerOnIcon : SpeakerOff
 const onUpdateSpeakerValue = (volume: number) => {
   const value = Math.round(volume);
   speakerRate.value = value/100;
-  deviceManager.setCurrentDeviceVolume(TUIMediaDeviceType.kMediaDeviceTypeAudioOutput, value);
+  deviceManager.setCurrentSpeakerVolume(value);
 }
 
 const toggleMuteSpeaker = () => {
   if (speakerRate.value) {
     currentSpeakerRate = speakerRate.value; 
-    deviceManager.setCurrentDeviceMute(TUIMediaDeviceType.kMediaDeviceTypeAudioOutput, true);
+    deviceManager.setCurrentSpeakerDeviceMute(true);
     speakerRate.value = 0;
   } else {
-    deviceManager.setCurrentDeviceMute(TUIMediaDeviceType.kMediaDeviceTypeAudioOutput, false);
+    deviceManager.setCurrentSpeakerDeviceMute(false);
     speakerRate.value = currentSpeakerRate;
   }
 }
 
 onMounted(async () => {
   try {
-    const speakerVolume = await deviceManager.getCurrentDeviceVolume(TUIMediaDeviceType.kMediaDeviceTypeAudioOutput);
+    const speakerVolume = await deviceManager.getCurrentSpeakerVolume();
     speakerRate.value = speakerVolume/100;
   } catch (error) {
     console.error('Get current device volume failed:', error);

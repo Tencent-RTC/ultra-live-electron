@@ -1,8 +1,11 @@
+<template>
+  <div style="display:none"></div>
+</template>
 <script lang="ts" setup>
 import { defineProps, defineEmits, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TUIMediaSourceType } from '@tencentcloud/tuiroom-engine-electron';
-import { useMediaSourcesStore, TUIMediaSourceViewModel } from '../../store/mediaSources';
+import { TRTCMediaSourceType } from 'trtc-electron-sdk';
+import { TUIMediaSourceViewModel, useMediaSourcesStore } from '../../store/main/mediaSources';
 
 interface Props {
   moveAndResizeContainerRef: HTMLDivElement|null,
@@ -24,7 +27,7 @@ const mediaSourcesStore = useMediaSourcesStore();
 const { mediaList } = storeToRefs(mediaSourcesStore);
 const newSelected = {
   sourceId: '',
-  sourceType: TUIMediaSourceType.kCamera,
+  sourceType: TRTCMediaSourceType.kCamera,
 }
 const clickedMediaSources: Array<TUIMediaSourceViewModel> = [];
 let oldSelectedIndex = -1;
@@ -87,7 +90,7 @@ const onContainerMousedown = (event: MouseEvent) => {
         document.addEventListener("mouseup", onContainerMouseup, false);
       }
     } else {
-      newSelected.sourceType = TUIMediaSourceType.kCamera;
+      newSelected.sourceType = TRTCMediaSourceType.kCamera;
       newSelected.sourceId = '';
       console.log(`${logPrefix}onContainerMousedown find clicked media source:`, newSelected);
       mediaSourcesStore.setSelectedMediaKey(newSelected);
@@ -178,7 +181,7 @@ const onContainerMouseup = (event: MouseEvent) => {
   mousedownTop = null;
   clickedMediaSources.splice(0, clickedMediaSources.length);
   oldSelectedIndex = -1;
-  newSelected.sourceType = TUIMediaSourceType.kCamera;
+  newSelected.sourceType = TRTCMediaSourceType.kCamera;
   newSelected.sourceId = '';
   eventButton = null;
 };

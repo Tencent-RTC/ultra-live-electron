@@ -4,12 +4,6 @@
   * @param size String 'large'|'medium'|'small'
   * Usage:
   * Use <device-select></device-select> in template
-  *
-  * 名称: DeviceSelect
-  * @param deviceType String required
-  * @param size String 'large'|'medium'|'small'
-  * 使用方式：
-  * 在 template 中使用 <device-select></device-select>
 -->
 <template>
   <Select
@@ -35,7 +29,7 @@ import { ref, Ref, defineProps } from 'vue';
 import { TUIDeviceInfo } from '@tencentcloud/tuiroom-engine-electron';
 import Select from './base/Select.vue';
 import Option from './base/Option.vue';
-import { useCurrentSourcesStore } from '../store/currentSources';
+import { useCurrentSourceStore } from '../store/child/currentSource';
 import { storeToRefs } from 'pinia';
 
 const logger = console;
@@ -47,7 +41,7 @@ interface Props {
 }
 // eslint-disable-next-line vue/no-setup-props-destructure
 const { deviceType, onChange, disabled = false } = defineProps<Props>();
-const currentSourceStore = useCurrentSourcesStore();
+const currentSourceStore = useCurrentSourceStore();
 
 const {
   cameraList,

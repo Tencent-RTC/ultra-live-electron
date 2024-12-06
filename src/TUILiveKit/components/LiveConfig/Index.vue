@@ -1,8 +1,8 @@
 <template>
   <div class="tui-live-config">
     <div class="tui-config-title tui-title">
-      <span @click="handleChangeSource" :class="[isShowSources ? 'is-active' : 'tui-config-title-source']">{{ t('Sources')}}</span>
-      <!-- <span @click="handleChangeMaterial" :class="[isShowMaterial ? 'is-active is-active-material' : 'tui-material']">{{ t('Material')}}</span> -->
+      <div @click="handleChangeSource" :class="[isShowSources ? 'is-active' : '', 'tui-config-title-header']">{{ t('Sources')}}</div>
+      <div @click="handleChangeVideoEncode" :class="[isShowVideoEncode ? 'is-active' : '', 'tui-config-title-header']">{{ t('Video Encode')}}</div>
     </div>
     <div v-if="isShowSources && !isHasSources" class="tui-config-list">
       <span class="tui-config-notice">
@@ -18,7 +18,7 @@
         <live-image-source></live-image-source>
       </span>  
     </div>
-    <div v-if="isHasSources && !isShowMaterial" class="tui-media-source">
+    <div v-if="isHasSources && !isShowVideoEncode" class="tui-media-source">
       <div class="tui-add-source-menu" @click="handleOpenAddMedia" v-click-outside="handleClickOutsideAdd" > 
         <svg-icon :icon="AddIcon" class="icon-container tui-menu-item-text"></svg-icon>
         <span class=tui-menu-item-text>{{ t('Add') }}</span>
@@ -64,7 +64,7 @@
           <div v-show="visibleMorePopupId === item.mediaSourceInfo.sourceId" class="tui-edit-source-menu-popup">
             <!-- <span class="item-more-text">{{t('Rename')}}</span> -->
             <span class="edit-menu-item" @click.stop="handleRemoveSource(item)">{{t('Remove source')}}</span>
-            <span v-if="item.mediaSourceInfo.sourceType === TUIMediaSourceType.kImage" class="edit-menu-item">
+            <span v-if="item.mediaSourceInfo.sourceType === TRTCMediaSourceType.kImage" class="edit-menu-item">
               <live-image-source :data="item"></live-image-source>
             </span>
             <span v-else class="edit-menu-item" @click.stop="handleEditSource(item)">
@@ -74,70 +74,83 @@
         </div>
       </div>
     </div>
-    <!-- <div v-if="isShowMaterial" class="tui-material">
+    <div v-if="isShowVideoEncode" class="tui-video-encode">
+      <div class="options-container">
+        <TUISwitch :model-value="isHevcEncodeEnabled" label="H265" @update:modelValue="toggleHevcMode"></TUISwitch>
+      </div>
       <div class="options-container">
         <span class="options-container-title">{{t('Background color')}}</span>
-        <color-picker class="options-container-input" :currentColor="backgroundColor"></color-picker>
-      </div>
-      <div v-for="item in materialOptionsList" :key="item.text" class="options-container">
-        <span class="options-container-title">{{item.title}}</span>
-        <span class="options-container-option" @click="item.fun()">
-          <svg-icon :icon="item.icon"></svg-icon>
-          <span class="options-container-text">{{item.text}}</span>
-        </span>        
+        <TUIColorPicker class="options-container-input" :currentColor="backgroundColor" @change="onChangeBgColor"></TUIColorPicker>
       </div>
       <div class="options-container">
-        <span class="options-container-title">{{t('Background music')}}</span>
-        <div class="options-container-music">
-          <span v-for="item in bgmList" :key="item.text" @click="handleSelectMusic(item)" class="options-container-music-box">
-            <svg-icon :icon="item.icon" :class="[musicSelectedItem === item ? 'options-container-selected' : 'options-container-icon']"></svg-icon>
-            <span class="options-container-music-text">{{item.text}}</span>
-            <svg-icon class="selected-icon" v-show="musicSelectedItem === item" :icon="SelectedIcon"></svg-icon>
-          </span>
-        </div>
-        <span v-if="isHasMusic" class="options-container-draggable">
-          <svg-icon :icon="PlayingIcon"></svg-icon>
-          <draggable-point class="drag-container" :rate="voiceRate" @update-drag-value="onUpdateVoiceValue"></draggable-point>
-          <span>{{currentVoice}}</span>
-        </span>
+        <span class="options-container-title">{{t('Video resolution')}}</span>
+        <TUISelect 
+          :modelValue="mixingVideoEncodeParam.videoResolution"
+          :teleported="false"
+          :popper-append-to-body="false"
+          @change="onChangeVideoResolution">
+          <TUIOption
+            v-for="item in videoResolutionOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </TUISelect>
       </div>
-    </div> -->
+      <div class="options-container">
+        <span class="options-container-title">{{t('Video FPS')}}</span>
+        <TUISelect
+          :modelValue="mixingVideoEncodeParam.videoFps"
+          :teleported="false"
+          :popper-append-to-body="false"
+          @change="onChangeVideoFps">
+          <TUIOption
+            v-for="item in videoFpsOptions"
+            :key="item"
+            :label="item.toString()"
+            :value="item"
+          />
+        </TUISelect>
+      </div>
+      <div class="options-container">
+        <span class="options-container-title">{{t('Video Bitrate')}}</span>
+        <TUISelect 
+          :modelValue="mixingVideoEncodeParam.videoBitrate"
+          :teleported="false"
+          :popper-append-to-body="false"
+          @change="onChangeVideoBitrage">
+          <TUIOption
+            v-for="item in videoBitrateOptions"
+            :key="item"
+            :label="item.toString()"
+            :value="item"
+          />
+        </TUISelect>
+      </div>
+    </div>
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref, Ref, shallowRef, defineEmits } from 'vue';
+import { ref, Ref, shallowRef, defineEmits } from 'vue';
 import { storeToRefs } from 'pinia';
+import { TRTCMediaSourceType, TRTCVideoResolution } from 'trtc-electron-sdk';
 import SvgIcon from '../../common/base/SvgIcon.vue';
+import TUISwitch from '../../common/base/Switch.vue';
 import CameraIcon from '../../common/icons/CameraIcon.vue';
 import AddShareScreenIcon from '../../common/icons/AddShareScreenIcon.vue';
-import TextIcon from '../../common/icons/TextIcon.vue';
-import MovieIcon from '../../common/icons/MovieIcon.vue';
 import AddIcon from '../../common/icons/AddIcon.vue';
-import SwitchSourcesMirror from '../../common/icons/SwitchSourcesMirror.vue';
 import UpIcon from '../../common/icons/UpIcon.vue';
 import DownIcon from '../../common/icons/DownIcon.vue';
 import MoreIcon from '../../common/icons/MoreIcon.vue';
-import VerticalScreenIcon from '../../common/icons/VerticalScreenIcon.vue';
-import HorizontalScreenIcon from '../../common/icons/HorizontalScreenIcon.vue';
 import { useI18n } from '../../locales';
-import SwitchControl from '../../common/base/SwitchControl.vue';
 import vClickOutside from '../../utils/vClickOutside';
-import MusicIcon from '../../common/icons/MusicIcon.vue';
-import PlayingIcon from '../../common/icons/PlayingIcon.vue';
-import DraggablePoint from '../../common/base/DraggablePoint.vue';
-import SelectedIcon from '../../common/icons/SelectedIcon.vue';
-import ColorPicker from '../../common/base/ColorPicker.vue';
+import TUIColorPicker from '../../common/base/ColorPicker.vue';
+import TUISelect from '../../common/base/Select.vue';
+import TUIOption from '../../common/base/Option.vue'
 import MediaSourceMute from '../../common/icons/MediaSourceMute.vue';
 import MediaSourceUnmute from '../../common/icons/MediaSourceUnmute.vue';
-import { TUIMediaSourceViewModel, useMediaSourcesStore } from '../../store/mediaSources';
-import { TUIMediaSourceType } from '@tencentcloud/tuiroom-engine-electron';
+import { TUIMediaSourceViewModel, useMediaSourcesStore } from '../../store/main/mediaSources';
 import LiveImageSource from '../LiveSource/LiveImageSource.vue';
-
-type TUIMusicType = {
-  icon: any;
-  text: string;
-  path: string;
-}
 
 const logger = console;
 const logPrefix = '[LiveConfig]';
@@ -148,15 +161,42 @@ const mediaSourcesStore = useMediaSourcesStore();
 const { backgroundColor, selectedMediaKey, mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
 
 const { t } = useI18n();
-const { isHasSources, mediaList } = storeToRefs(mediaSourcesStore);
+const { isHasSources, mediaList, isHevcEncodeEnabled } = storeToRefs(mediaSourcesStore);
 const isShowSources = ref(true);
-const isShowMaterial = ref(false);
+const isShowVideoEncode = ref(false);
 const isShowAddMedia = ref(false);
 const visibleMorePopupId = ref('');
-const voiceRate = ref(0.3);
-const currentVoice = ref(30); // todo 改为获取到设备播放音量
-const isMuteMediaSources = ref(true);
 const mediaSourceListRef: Ref<HTMLElement|null> = ref(null);
+
+const videoResolutionOptions = shallowRef([
+  {
+    label: '1920 X 1080',
+    value: TRTCVideoResolution.TRTCVideoResolution_1920_1080
+  },
+  {
+    label: '1280 X 720',
+    value: TRTCVideoResolution.TRTCVideoResolution_1280_720
+  }
+]);
+const videoFpsOptions = shallowRef([
+  15,
+  24,
+  30,
+  60
+]);
+const videoBitrateOptions = shallowRef([
+  1000,
+  2000,
+  3000,
+  4000,
+  5000,
+  6000,
+  7000,
+  8000,
+  9000,
+  10000,
+]);
+
 const mediaSourceMenuList = shallowRef([
   {
     icon: CameraIcon,
@@ -168,48 +208,8 @@ const mediaSourceMenuList = shallowRef([
     text: t('Add Capture'),
     fun: handleAddShareScreen
   },
-  // {
-  //   icon: TextIcon,
-  //   text: t('Add PDF/PPT'),
-  //   fun: handleAddText
-  // },
 ]);
 
-const materialOptionsList = ref([
-  {
-    title: t('Blueprint'),
-    icon: AddIcon,
-    text: t('Additional'),
-    fun: handleAddBlueprint,
-  },
-  {
-    title: t('Writing'),
-    icon: AddIcon,
-    text: t('Additional'),
-    fun: handleAddWriting,
-  },
-]);
-
-const selectedMusicList: Ref<Array<TUIMusicType>> = ref([]);
-const isHasMusic = computed(() => selectedMusicList.value.length > 0);
-const musicSelectedItem: Ref<TUIMusicType|null> = ref(null);
-const bgmList = ref([
-  {
-    icon: MusicIcon,
-    text: t('Cheerful'),
-    path: '',
-  },
-  {
-    icon: MusicIcon,
-    text: t('Sullen'),
-    path: '',
-  },
-  {
-    icon: MusicIcon,
-    text: t('Magical world'),
-    path: '',
-  }
-]);
 const handleOpenAddMedia = () => {
   isShowAddMedia.value = !isShowAddMedia.value;
 };
@@ -218,18 +218,14 @@ const handleClickOutsideAdd = () => {
   isShowAddMedia.value = false;
 };
 
-const handleChangeMaterial = () => {
+const handleChangeVideoEncode = () => {
   isShowSources.value = false;
-  isShowMaterial.value = true;
+  isShowVideoEncode.value = true;
 };
 
 const handleChangeSource = () => {
   isShowSources.value = true;
-  isShowMaterial.value = false;
-};
-
-const handleMuteSource = (item: any) => {
-  mediaSourcesStore.muteMediaSource(item, isMuteMediaSources.value)
+  isShowVideoEncode.value = false;
 };
 
 function handleAddCamera() {
@@ -243,13 +239,6 @@ function handleAddShareScreen() {
   isShowAddMedia.value = false;
   window.ipcRenderer.send('open-child', {
     'command': 'screen'
-  });
-}
-
-function handleAddText() {
-  isShowAddMedia.value = false;
-  window.ipcRenderer.send('open-child', {
-    'command': 'file'
   });
 }
 
@@ -347,29 +336,24 @@ const handleStopDrag = (event: MouseEvent) => {
   newIndex.value = null;
 };
 
-function handleAddBlueprint(){
-  logger.log('[addBlueprint]');
+const toggleHevcMode = (value: boolean) => {
+  mediaSourcesStore.updateHevcEncodeState(value);
 }
 
-function handleAddWriting() {
-  logger.log('[addWriting]');
+const onChangeBgColor = (value: number) => {
+  mediaSourcesStore.updateBackgroundColor(value);
 }
 
-const handleSelectMusic = (item: TUIMusicType) => {
-  if (selectedMusicList.value.length === 0 || !selectedMusicList.value.includes(item)) {
-    selectedMusicList.value.push(item);
-    musicSelectedItem.value = item;
-    return
-  }
-  if (selectedMusicList.value.includes(item)) {
-    const indexSelectedMusic = selectedMusicList.value.indexOf(item);
-    selectedMusicList.value.splice(indexSelectedMusic, 1);
-    musicSelectedItem.value = null;
-  } 
+const onChangeVideoResolution = (resolution: TRTCVideoResolution) => {
+  mediaSourcesStore.updateVideoResolution(resolution);
+}
+
+const onChangeVideoFps = (value: number) => {
+  mediaSourcesStore.updateVideoFps(value);
 };
 
-const onUpdateVoiceValue = (event: number) => {
-  currentVoice.value = Math.floor(event);
+const onChangeVideoBitrage = (value: number) => {
+  mediaSourcesStore.updateVideobitrate(value);
 };
 </script>
 
@@ -377,80 +361,57 @@ const onUpdateVoiceValue = (event: number) => {
 @import "../../assets/variable.scss";
 
 .tui-live-config {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  position: relative;
-  width:100%;
+  width: 100%;
   height: 100%;
 }
 
 .tui-config-title {
-  position:absolute;
-  top: 0;
-  left: 0;
-  padding: 0 1rem;
-  height: 2rem;
-  line-height: 2rem;
-}
+  display: inline-flex;
 
-.is-active {
-  position:relative;
-  padding: 0.375rem 0;
-  font-size: $font-live-config-is-active-size;
-  color: var(--text-color-link);
-    &-material {
-      margin-left: 1rem;
+  .tui-config-title-header {
+    padding: 0 0.5rem;
+    cursor: pointer;
+
+    &.is-active {
+      color: var(--text-color-link);
+      border-bottom: 0.125rem solid var(--text-color-link);
     }
-}
-
-.is-active::after {
-    content: "";
-    position: absolute;
-    width: 3rem;
-    bottom: -0.09rem;
-    height: 0.125rem;
-    left: 0;
-    z-index: 9;
-    background-color: var(--text-color-link);
+  }
 }
 
 .icon-container{
   padding-right: 0.25rem;
   color: var(--button-color-primary-default);
+
   &:hover {
     color: var(--button-color-primary-hover);
   }
 }
 
 .tui-menu-item-text{
-  color: var(--text-color-primary);
   font-size: $font-live-config-menu-item-size;
   font-style: $font-live-config-menu-item-style;
   font-weight: $font-live-config-menu-item-weight;
   line-height: 1.375rem;
-}
-
-.tui-config-tab-title{
-  padding-left: 1rem;
-
-  .tui-config-title-source{
-    color: $font-live-config-title-source-color;
-    cursor: pointer;
-  }
+  color: var(--text-color-primary);
 }
 
 .tui-config-list{
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  height: calc(100% - 2rem);
 
   .tui-config-notice{
-    color: var(--text-color-secondary);
     font-style: $font-live-config-notice-style;
     font-weight: $font-live-config-notice-weiht;
     line-height: 1.375rem;
-    padding-top: 6.25rem;
+    color: var(--text-color-secondary);
   }
 
   .btn-add-source{
@@ -459,18 +420,18 @@ const onUpdateVoiceValue = (event: number) => {
     justify-content: center;
     width: 12.5rem;
     height: 2.5rem;
-    border-radius: 6.25rem;
-    background: var(--bg-color-input);
     margin: 1.5rem 0;
     cursor: pointer;
+    background: var(--bg-color-input);
+    border-radius: 6.25rem;
   }
 }
 
 .tui-media-source{
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
   height: calc(100% - 2rem);
   overflow: auto;
   
@@ -480,22 +441,23 @@ const onUpdateVoiceValue = (event: number) => {
     justify-content: center;
     width: 14.75rem;
     height: 2rem;
-    border-radius: 6.25rem;
-    background: var(--bg-color-input);
-    color: var(--text-color-primary);
     margin: 1.5rem auto;
+    color: var(--text-color-primary);
     cursor: pointer;
+    background: var(--bg-color-input);
+    border-radius: 6.25rem;
   }
 
   .tui-add-source-menu-popup{
     position: absolute;
     top: 3.75rem;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    border-radius: 0.25rem;
-    z-index: 1;
     background-color: var(--dropdown-color-default);
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 5px var(--shadow-color),0 8px 12px var(--shadow-color),0 12px 26px var(--shadow-color);
   }
 
   .tui-add-source-menu-item{
@@ -506,6 +468,8 @@ const onUpdateVoiceValue = (event: number) => {
     height: 2.5rem;
     cursor: pointer;
     background-color: var(--dropdown-color-default);
+    border-radius: 0.25rem;
+
     &:hover {
       background-color: var(--dropdown-color-hover);
     }
@@ -514,17 +478,17 @@ const onUpdateVoiceValue = (event: number) => {
 
 .tui-media-source-list {
   flex: 1 1 auto;
-  height: calc(100% - 7rem);
   width: 100%;
-  overflow-y: auto;
+  height: calc(100% - 7rem);
   padding: 0 1rem;
+  overflow-y: auto;
 }
 
 .tui-media-source-item{
-  width: 100%;
   position: relative;
-  border-radius: 0.25rem;
+  width: 100%;
   cursor: move;
+  border-radius: 0.25rem;
 
   &:hover {
     background-color: $color-live-config-media-source-hover-background;
@@ -541,34 +505,38 @@ const onUpdateVoiceValue = (event: number) => {
   font-size: 0.75rem;
   line-height: 2.5rem;
   background-color: var(--bg-color-operate);
+
   .item-name{
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
     width: 8rem;
     padding-left: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .item-tools{
     display: flex;
   }
+
   .item-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 2rem;
-    border: none;
-    background-color: var(--bg-color-operate);
     cursor: pointer;
+    background-color: var(--bg-color-operate);
+    border: none;
+
     &.disabled{
+      color: var(--button-color-primary-disabled);
       cursor: not-allowed;
       opacity: 0.5;
-      color: var(--button-color-primary-disabled);
 
       span {
         cursor: inherit;
       }
     }
+
     &:focus-visible,
     &:focus {
       outline: none;
@@ -578,28 +546,30 @@ const onUpdateVoiceValue = (event: number) => {
 
 .tui-edit-source-menu-popup{
   position: absolute;
-  width: 5.25rem;
+	top: 2.125rem;
+  right: 0;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  right: 0;
-	top: 2.125rem;
-  background-color: var(--dropdown-color-default);
   justify-content: center;
+  width: 5.25rem;
+  background-color: var(--dropdown-color-default);
   border-radius: 0.25rem;
-  z-index: 1;
+  box-shadow: 0 1px 5px var(--shadow-color),0 8px 12px var(--shadow-color),0 12px 26px var(--shadow-color);
   
   .edit-menu-item{
+    width: 100%;
+    height:1.75rem;
+    padding-left: 0.75rem;
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
     line-height: 1.375rem;
-    width: 100%;
-    height:1.75rem;
-    padding-left: 0.75rem;
     cursor: pointer;
 
     &:hover {
       background-color: var(--dropdown-color-hover);
+      border-radius: 0.25rem;
     }
 
     .tui-image-source {
@@ -608,92 +578,25 @@ const onUpdateVoiceValue = (event: number) => {
   }
 }
 
-// .tui-material{
-//   color:#8F9AB2;
-//   padding-left: 1rem;
-//   cursor: pointer;
-//   padding-left: 1rem;
-// }
-// .drag-container{
-//   width: 12rem;
-//   margin-left: 0.25rem;
-// }
-// .options-container{
-//   display: flex;
-//   flex-direction: column;
-//   padding-top: 0.625rem;
-//   &-title{
-//     color: var(--G5, #8F9AB2);
-//     font-size: 0.75rem;
-//     font-style: normal;
-//     font-weight: 400;
-//     line-height: 1.375rem;
-//   }
-//   &-option{
-//     width:4rem;
-//     height:2.5rem;
-//     flex-shrink: 0;
-//     display: flex;
-//     align-items: center;
-//     justify-content: center;
-//     background-color: rgba(56, 63, 77, 0.50);
-//     border-radius: 0.3125rem;
-//     margin-top: 0.375rem;
-//   }
-//   &-input{
-//     margin-top: 0.375rem;
-//   }
-//   &-text{
-//     color: var(--G7, #D5E0F2);
-//     font-size: 0.75rem;
-//     font-style: normal;
-//     font-weight: 400;
-//     padding-left: 0.125rem;
-//   }
-//   &-music{
-//     display: flex;
-//     margin-top: 0.375rem;
-//     &-box{
-//       display: flex;
-//       flex-direction: column;
-//       padding-right: 0.75rem;
-//       position: relative;
-//     }
-//     &-text{
-//       text-align: center;
-//       font-size: 0.75rem;
-//       font-style: normal;
-//       font-weight: 400;
-//       line-height: 1.25rem; /* 166.667% */
-//       color: var(--G5, #8F9AB2);
-//     }
-//   }
-//   &-icon{
-//     width: 2.5rem;
-//     height: 2.5rem;
-//     border-radius: 0.375rem;
-//     background: rgba(28, 102, 229, 0.20);
-//   }
-//   &-selected{
-//     width: 2.5rem;
-//     height: 2.5rem;
-//     border-radius: 0.375rem;
-//     border: 1px solid #1C66E5;
-//     background: rgba(28, 102, 229, 0.20);
-//   }
-//   &-draggable{
-//     display: flex;
-//     align-items: center;
-//   }
-// }
-// .selected-icon{
-//   width: 0.6875rem;
-//   height: 0.6875rem;
-//   flex-shrink: 0;
-//   border-radius: 0px 0.375rem 0px 0.1875rem ;
-//   border: 1px solid rgba(28, 102, 229, 0.20);
-//   background: #1C66E5;
-//   position: absolute;
-//   left: 1.75rem;
-// }
+.tui-video-encode{
+  height: calc(100% - 2rem);
+  padding: 0 1rem;
+
+  .options-container{
+    display: flex;
+    flex-direction: column;
+    padding-top: 0.625rem;
+  }
+
+  .options-container-title{
+    font-size: 0.75rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.375rem;
+  }
+
+  .options-container-input{
+    margin-top: 0.375rem;
+  }
+}
 </style>

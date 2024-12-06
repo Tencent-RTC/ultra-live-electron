@@ -1,16 +1,18 @@
-import { TUIMediaSourceType, TUIMediaRotation } from '@tencentcloud/tuiroom-engine-electron';
-import { TUIMediaSourceViewModel } from '../store/mediaSources';
-import { useMusicDataStore , PlayModeType} from '../store/musicData';
+import { TRTCMediaSourceType, TRTCVideoRotation, TRTCAudioMusicParam, TRTCDeviceType } from 'trtc-electron-sdk';
+import { TUIMediaSourceViewModel, TUIMusicPlayMode } from '../types';
+import { useAudioEffectStore } from '../store/audioEffect';
 import TUIMessageBox from '../common/base/MessageBox';
-import useAudioEffectManager, { TUIAudioMusicParam } from '../utils/useAudioEffectManager';
+import useAudioEffectManager from '../utils/useAudioEffectManager';
 import useDeviceManager from "../utils/useDeviceManager";
+import useMediaMixingManager from '../utils/useMediaMixingManager';
 import trtcCloud from '../utils/trtcCloud';
 import { TRTCXmagicFactory, XmagicLicense, } from "../utils/beauty";
 import {useI18n} from '../locales/index';
 
-const musicDataStore = useMusicDataStore();
+const audioEffectStore = useAudioEffectStore();
 const deviceManager = useDeviceManager();
 const audioEffectManager = useAudioEffectManager();
+const mediaMixingManager = useMediaMixingManager();
 const {t} = useI18n();
 const logger = console;
 const logPrefix = '[MainWindow Message Handler]';
@@ -49,13 +51,13 @@ export async function addMediaSource(data: Record<string, any>) {
       }
     },
   };
-  if (data.type === TUIMediaSourceType.kCamera) {
+  if (data.type === TRTCMediaSourceType.kCamera) {
     mediaSource.resolution = {width: data.width, height: data.height};
     mediaSource.mediaSourceInfo.mirrorType = data.mirrorType;
     if (data.beautyConfig) {
       mediaSource.beautyConfig = data.beautyConfig;
     }
-  } else if (data.type === TUIMediaSourceType.kScreen) {
+  } else if (data.type === TRTCMediaSourceType.kScreen) {
     mediaSource.screenType = data.screenType;
   }
 
@@ -78,11 +80,11 @@ export async function addMediaSource(data: Record<string, any>) {
 function checkRectAndResolution(
   newSize: {width: number, height: number},
   rect: {left: number, top: number, right: number, bottom: number},
-  rotation: TUIMediaRotation) {
+  rotation: TRTCVideoRotation) {
   let width = rect.right - rect.left;
   let height = rect.bottom - rect.top;
-  if (rotation === TUIMediaRotation.kMediaRotation90 ||
-      rotation === TUIMediaRotation.kMediaRotation270) {
+  if (rotation === TRTCVideoRotation.TRTCVideoRotation90 ||
+      rotation === TRTCVideoRotation.TRTCVideoRotation270) {
     const temp = width;
     width = height;
     height = temp;
@@ -91,8 +93,8 @@ function checkRectAndResolution(
     height / newSize.height :
     width / newSize.width;
 
-  if (rotation === TUIMediaRotation.kMediaRotation90 ||
-      rotation === TUIMediaRotation.kMediaRotation270) {
+  if (rotation === TRTCVideoRotation.TRTCVideoRotation90 ||
+      rotation === TRTCVideoRotation.TRTCVideoRotation270) {
     rect.right = rect.left + Math.round(newSize.height * shrinkRate);
     rect.bottom = rect.top + Math.round(newSize.width * shrinkRate);
   } else {
@@ -122,7 +124,7 @@ async function _updateScreenImageMediaSource(data: Record<string, any>) {
       }
     };
 
-    if (data.type === TUIMediaSourceType.kScreen) {
+    if (data.type === TRTCMediaSourceType.kScreen) {
       newMediaSource.screenType = data.screenType;
     }
 
@@ -196,11 +198,11 @@ async function _updateCameraMediaSource(data: Record<string, any>) {
 
 export async function updateMediaSource(data: Record<string, any>) {
   switch (data.type) {
-  case TUIMediaSourceType.kScreen:
-  case TUIMediaSourceType.kImage:
+  case TRTCMediaSourceType.kScreen:
+  case TRTCMediaSourceType.kImage:
     await _updateScreenImageMediaSource(data);
     break;
-  case TUIMediaSourceType.kCamera:
+  case TRTCMediaSourceType.kCamera:
     await _updateCameraMediaSource(data);
     break;
   default:
@@ -235,38 +237,50 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
 
   switch (key) {
   case 'setCurrentDevice':
-    deviceManager.setCurrentDevice(data.deviceType, data.deviceId);
+    switch (data.deviceType) {
+    case TRTCDeviceType.TRTCDeviceTypeCamera:
+      deviceManager.setCurrentCameraDevice(data.deviceId);
+      break;
+    case TRTCDeviceType.TRTCDeviceTypeMic:
+      deviceManager.setCurrentMicDevice(data.deviceId);
+      break;
+    case TRTCDeviceType.TRTCDeviceTypeSpeaker:
+      deviceManager.setCurrentSpeakerDevice(data.deviceId);
+      break;
+    default:
+      break;
+    }
     break;
   case 'startCameraDeviceTest':
-    deviceManager.startCameraDeviceTest(data.windowID, data.rect);
+    mediaMixingManager.startCameraDeviceTest(data.windowID, data.rect);
     if (data.log) {
       trtcCloud?.log(data.log);
     }
     break;
   case 'setCameraTestRenderMirror':
-    deviceManager.setCameraTestRenderMirror(data.mirror);
+    mediaMixingManager.setCameraTestRenderMirror(data.mirror);
     break;
   case 'setCameraTestResolution':
-    deviceManager.setCameraTestResolution(data.width, data.height);
+    mediaMixingManager.setCameraTestResolution(data.width, data.height);
     break;
   case 'setCameraTestDeviceId':
-    deviceManager.setCameraTestDeviceId(data.cameraId);
+    mediaMixingManager.setCameraTestDeviceId(data.cameraId);
     break;
   case 'stopCameraDeviceTest':
-    deviceManager.stopCameraDeviceTest();
+    mediaMixingManager.stopCameraDeviceTest();
     break;
   case 'setCameraTestVideoPluginPath':
     if (data) {
       const beautyLibPath = await TRTCXmagicFactory.getEffectPluginLibPath();
       const beautyInitParam = await TRTCXmagicFactory.buildEffectInitParam(XmagicLicense);
-      deviceManager.setCameraTestVideoPluginPath(beautyLibPath);
-      deviceManager.setCameraTestVideoPluginParameter(JSON.stringify(beautyInitParam));
+      mediaMixingManager.setCameraTestVideoPluginPath(beautyLibPath);
+      mediaMixingManager.setCameraTestVideoPluginParameter(JSON.stringify(beautyInitParam));
     }else{
-      deviceManager.setCameraTestVideoPluginPath('');
+      mediaMixingManager.setCameraTestVideoPluginPath('');
     }
     break;
   case "setCameraTestVideoPluginParameter":
-    deviceManager.setCameraTestVideoPluginParameter(JSON.stringify({
+    mediaMixingManager.setCameraTestVideoPluginParameter(JSON.stringify({
       beautySetting: Array.isArray(data) ? data : [data],
     }));
     break;
@@ -319,7 +333,16 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   case 'setCurrentDeviceVolume': 
     if (data) {
-      deviceManager.setCurrentDeviceVolume(data.type, data.volume);
+      switch(data.type) {
+      case TRTCDeviceType.TRTCDeviceTypeMic:
+        deviceManager.setCurrentMicDeviceVolume(data.volume);
+        break;
+      case TRTCDeviceType.TRTCDeviceTypeSpeaker:
+        deviceManager.setCurrentSpeakerVolume(data.volume);
+        break;
+      default:
+        break;
+      }
     }
     break;
   case 'setMusicPublishVolume': 
@@ -341,12 +364,12 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   case 'updateMusicData':
     if (data) {
-      musicDataStore.updateMusicData(data);
+      audioEffectStore.updateMusicData(data);
     }
     break;
   case 'updatePlayingMusicId':
     if (data) {
-      musicDataStore.updatePlayingMusicId(data);
+      audioEffectStore.updatePlayingMusicId(data);
       childChannelServer.postMessage({
         key:"update-playing-music-id",
         data
@@ -377,14 +400,14 @@ audioEffectManager.setMusicObserver({
     return;
   },
   onComplete: (id: number) => {
-    if (musicDataStore.musicData.currentPlayMode === PlayModeType.SingleLoopPlay) {
+    if (audioEffectStore.audioEffect.currentPlayMode === TUIMusicPlayMode.SingleLoopPlay) {
       childChannelServer.postMessage({key: 'update-playing-music-id', data:id});
-    } else if (musicDataStore.musicData.currentPlayMode === PlayModeType.SequentialPlay) {
-      let nextPlayingIndex = musicDataStore.getMusicIndex(id) + 1;
-      if (nextPlayingIndex === musicDataStore.getMusicDataLength()) {
+    } else if (audioEffectStore.audioEffect.currentPlayMode === TUIMusicPlayMode.SequentialPlay) {
+      let nextPlayingIndex = audioEffectStore.getMusicIndex(id) + 1;
+      if (nextPlayingIndex === audioEffectStore.getMusicDataLength()) {
         nextPlayingIndex = 0;
       }
-      const nextPlayingId = musicDataStore.musicData.musicDataList[nextPlayingIndex].id;
+      const nextPlayingId = audioEffectStore.audioEffect.musicDataList[nextPlayingIndex].id;
       childChannelServer.postMessage({key: 'update-playing-music-id', data:nextPlayingId});
     }
   }
@@ -393,8 +416,8 @@ audioEffectManager.setMusicObserver({
 async function singleLoopPlay(id:number) {
   if(id === -1) return;
   const startTimeMS = await audioEffectManager.getMusicCurrentPosInMS(id);
-  const path = musicDataStore.getMusicPath(id);
-  const playParams: TUIAudioMusicParam = {
+  const path = audioEffectStore.getMusicPath(id);
+  const playParams: TRTCAudioMusicParam = {
     id,
     path,
     publish: true,
@@ -407,10 +430,10 @@ async function singleLoopPlay(id:number) {
 }
 
 async function sequentialPlay(playingMusicIndex: number) {
-  const id = musicDataStore.musicData.musicDataList[playingMusicIndex].id;
-  const path = musicDataStore.musicData.musicDataList[playingMusicIndex].path;
+  const id = audioEffectStore.audioEffect.musicDataList[playingMusicIndex].id;
+  const path = audioEffectStore.audioEffect.musicDataList[playingMusicIndex].path;
   const startTimeMS = await audioEffectManager.getMusicCurrentPosInMS(id);
-  const playParams: TUIAudioMusicParam = {
+  const playParams: TRTCAudioMusicParam = {
     id,
     path,
     publish: true,

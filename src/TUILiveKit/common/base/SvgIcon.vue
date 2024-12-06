@@ -1,13 +1,3 @@
-<!--
-  * 名称：SvgIcon
-  * @param name String required
-  * @param size String | number
-  * Usage:
-  * Use <svg-icon><log-icon></log-icon></svg-icon> in template
-
-  * 使用方式：
-  * 在 template 中使用 <svg-icon><log-icon></log-icon></svg-icon>
--->
 <template>
   <span class="svg-icon" :class="[customClass]" :style="customStyle" @click="handleClick">
     <component :is="icon" v-if="icon"></component>

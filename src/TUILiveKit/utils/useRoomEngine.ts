@@ -7,7 +7,7 @@ export default function useRoomEngine() {
 }
 
 TUIRoomEngine.once('ready', () => {
-  roomEngine.instance = new TUIRoomEngine();
+  roomEngine.instance = TUIRoomEngine.getInstance();
   TUIRoomEngine.callExperimentalAPI(JSON.stringify({
     api: 'setFramework',
     params: {

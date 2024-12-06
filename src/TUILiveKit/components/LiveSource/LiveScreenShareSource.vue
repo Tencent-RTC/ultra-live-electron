@@ -44,11 +44,11 @@
 <script setup lang="ts">
 import { Ref, ref, defineProps, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TUIMediaSourceType } from '@tencentcloud/tuiroom-engine-electron';
+import { TRTCMediaSourceType } from 'trtc-electron-sdk';
 import { useI18n } from '../../locales';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
-import { useCurrentSourcesStore } from '../../store/currentSources';
+import { useCurrentSourceStore } from '../../store/child/currentSource';
 import ScreenWindowPreviewer from './ScreenWindowPreviewer.vue';
 import { TUIMediaSourceEditMode } from './constant';
 
@@ -61,14 +61,14 @@ const logger = console;
 const props = defineProps<TUIMediaSourceEditProps>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
 logger.log(`[LiveScreenShareSource]mode: ${mode.value}`);
-const sourcesStore = useCurrentSourcesStore();
+const currentSourceStore = useCurrentSourceStore();
 const selected: Ref<any> = ref(null);
 const { t } = useI18n();
 
 const {
   windowList,
   screenList,
-} = storeToRefs(sourcesStore);
+} = storeToRefs(currentSourceStore);
 
 const isSameScreen = computed(() => {
   return selected.value?.sourceId.toString() === props.data?.mediaSourceInfo?.sourceId ? true : false;
@@ -82,7 +82,7 @@ const handleCloseWindow = () => {
 const handleAddScreen = () => {
   if (selected.value) {
     const screenWindowInfo = {
-      type: TUIMediaSourceType.kScreen,
+      type: TRTCMediaSourceType.kScreen,
       name: selected.value.sourceName,
       id: selected.value.sourceId.toString(),
       width: selected.value.width,
@@ -105,7 +105,7 @@ const handleAddScreen = () => {
 const handleEditScreen = () => {
   if (selected.value?.sourceId !== props.data?.mediaSourceInfo.sourceId) {
     const newData = {
-      type: TUIMediaSourceType.kScreen,
+      type: TRTCMediaSourceType.kScreen,
       name: selected.value.sourceName,
       id: selected.value.sourceId.toString(),
       width: selected.value.width,
@@ -128,7 +128,7 @@ const handleEditScreen = () => {
 }
 
 const resetCurrentView = () => {
-  sourcesStore.setCurrentViewName('');
+  currentSourceStore.setCurrentViewName('');
 }
 
 const onSelect = (item: any) => {

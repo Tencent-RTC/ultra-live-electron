@@ -9,7 +9,7 @@
     <div class="tui-change-voice-container">
     <div class="tui-change-voice-item" v-for="item in changeVoiceList" :key="item.id">
       <div class="tui-change-voice-icon">
-        <svg-icon @click="onSelectChangeVoice(item.id)" :class="item.id === musicData.changeVoiceInfo.selectId ? 'active-item' : 'normal-item'" :icon="item.icon" ></svg-icon>
+        <svg-icon @click="onSelectChangeVoice(item.id)" :class="item.id === audioEffect.voiceChanger.selectId ? 'active-item' : 'normal-item'" :icon="item.icon" ></svg-icon>
       </div>
       <div class="tui-change-voice-text">{{t(`${item.text}`)}}</div>
     </div>
@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
+import { TRTCVoiceChangerType } from "trtc-electron-sdk";
 import SvgIcon from "../../common/base/SvgIcon.vue";
 import CloseIcon from "../../common/icons/CloseIcon.vue";
 import OriginVoiceIcon from "../../common/icons/ChangeVoiceIcons/OriginVoiceIcon.vue";
@@ -37,89 +38,88 @@ import PlumpIcon from "../../common/icons/ChangeVoiceIcons/PlumpIcon.vue";
 import HeavyCurrentIcon from "../../common/icons/ChangeVoiceIcons/HeavyCurrentIcon.vue";
 import HeavyMachineryIcon from "../../common/icons/ChangeVoiceIcons/HeavyMachineryIcon.vue";
 import IntangibleIcon from "../../common/icons/ChangeVoiceIcons/IntangibleIcon.vue";
-import { TUIVoiceChangerType } from "../../utils/useAudioEffectManager";
-import { useMusicDataStore } from "../../store/musicData";
+import { useAudioEffectStore } from "../../store/audioEffect";
 import { useI18n } from "../../locales";
 
-const musicDataStore = useMusicDataStore();
-const { musicData } = storeToRefs(musicDataStore);
-const {updateAudioEffectOrChangeVoiceInfo} = musicDataStore;
+const audioEffectStore = useAudioEffectStore();
+const { audioEffect } = storeToRefs(audioEffectStore);
+const { updateAudioEffectOrChangeVoiceInfo } = audioEffectStore;
 const { t } = useI18n();
 const changeVoiceList = [
   { 
-    id:TUIVoiceChangerType.kVoiceChangerType_0,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_0,
     icon: OriginVoiceIcon,
     text: "Original Audio",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_1,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_1,
     icon: NaughtyKidIcon,
     text: "Naughty Kid",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_2,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_2,
     icon: LolitaIcon,
     text: "Lolita",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_3,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_3,
     icon: UncleIcon,
     text: "Uncle",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_4,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_4,
     icon: HeavyMetalIcon,
     text: "Heavy Metal",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_5,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_5,
     icon: InfluenzaIcon,
     text: "Influenza",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_6,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_6,
     icon: ForeignLanguagesIcon,
     text: "Foreign Language",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_7,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_7,
     icon: TrappedBeastIcon,
     text: "Trapped Beast",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_8,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_8,
     icon: PlumpIcon,
     text: "Plump",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_9,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_9,
     icon: HeavyCurrentIcon,
     text: "Heavy Current",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_10,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_10,
     icon: HeavyMachineryIcon,
     text: "Heavy Machinery",
   },
   {
-    id:TUIVoiceChangerType.kVoiceChangerType_11,
+    id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_11,
     icon: IntangibleIcon,
     text: "Intangible",
   }
 ];
 
 onUnmounted(() => {
-  musicData.value.changeVoiceInfo.selectId = musicData.value.changeVoiceInfo.activeId;
-  updateAudioEffectOrChangeVoiceInfo("changeVoiceInfo",musicData.value.changeVoiceInfo);
+  audioEffect.value.voiceChanger.selectId = audioEffect.value.voiceChanger.activeId;
+  updateAudioEffectOrChangeVoiceInfo("voiceChanger",audioEffect.value.voiceChanger);
   window.mainWindowPort?.postMessage({
     key:"setVoiceChangerType",
-    data:musicData.value.changeVoiceInfo.selectId,
+    data:audioEffect.value.voiceChanger.selectId,
   });
 })
 
 function onSelectChangeVoice(id:number){
   if(typeof id !== 'number')return;
-  musicData.value.changeVoiceInfo.selectId = id;
+  audioEffect.value.voiceChanger.selectId = id;
   window.mainWindowPort?.postMessage({
     key:"setVoiceChangerType",
     data:id,
@@ -127,18 +127,18 @@ function onSelectChangeVoice(id:number){
 }
 
 function onConfirmSelect(){
-  musicData.value.changeVoiceInfo.activeId = musicData.value.changeVoiceInfo.selectId;
+  audioEffect.value.voiceChanger.activeId = audioEffect.value.voiceChanger.selectId;
   handleCloseSetting();
 }
 
 
 
 function handleCloseSetting(){
-  musicData.value.changeVoiceInfo.selectId = musicData.value.changeVoiceInfo.activeId;
-  updateAudioEffectOrChangeVoiceInfo("changeVoiceInfo",musicData.value.changeVoiceInfo);
+  audioEffect.value.voiceChanger.selectId = audioEffect.value.voiceChanger.activeId;
+  updateAudioEffectOrChangeVoiceInfo("voiceChanger", audioEffect.value.voiceChanger);
   window.mainWindowPort?.postMessage({
     key:"setVoiceChangerType",
-    data:musicData.value.changeVoiceInfo.selectId,
+    data:audioEffect.value.voiceChanger.selectId,
   });
   window.ipcRenderer.send("close-child");
 }
@@ -215,7 +215,7 @@ function handleCloseSetting(){
 
   .tui-change-voice-footer{
     display: flex;
-    justify-content: end;
+    justify-content: flex-end;
     align-items: center;
     width: 100%;
     height: 10%;

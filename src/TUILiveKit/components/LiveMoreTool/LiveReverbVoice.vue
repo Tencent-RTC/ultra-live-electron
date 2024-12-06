@@ -9,7 +9,7 @@
     <div class="tui-reverb-voice-container">
     <div class="tui-reverb-voice-item" v-for="item in reverbVoiceList" :key="item.id">
       <div class="tui-reverb-voice-icon">
-        <svg-icon @click="onSelectAudioEffect(item.id)" :class="item.id === musicData.audioEffectInfo.selectId ? 'tui-active-item' : 'tui-normal-item'" :icon="item.icon" ></svg-icon>
+        <svg-icon @click="onSelectAudioEffect(item.id)" :class="item.id === audioEffect.voiceReverb.selectId ? 'tui-active-item' : 'tui-normal-item'" :icon="item.icon" ></svg-icon>
       </div>
       <div class="tui-reverb-voice-text">{{t(`${item.text}`)}}</div>
     </div>
@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { onUnmounted } from "vue";
 import { storeToRefs } from "pinia"
+import { TRTCVoiceReverbType } from "trtc-electron-sdk";
 import SvgIcon from "../../common/base/SvgIcon.vue";
 import CloseIcon from "../../common/icons/CloseIcon.vue";
 import NoEffectIcon from "../../common/icons/ReverbVoiceIcons/NoEffectIcon.vue";
@@ -36,89 +37,88 @@ import MagneticIcon from "../../common/icons/ReverbVoiceIcons/MagneticIcon.vue";
 import VacantIcon from "../../common/icons/ReverbVoiceIcons/VacantIcon.vue";
 import RecordingRoomIcon from "../../common/icons/ReverbVoiceIcons/RecordingRoomIcon.vue";
 import MelodiousIcon from "../../common/icons/ReverbVoiceIcons/MelodiousIcon.vue";
-import { TUIVoiceReverbType } from "../../utils/useAudioEffectManager";
-import { useMusicDataStore } from "../../store/musicData";
+import { useAudioEffectStore } from "../../store/audioEffect";
 import { useI18n } from "../../locales";
 
-const musicDataStore = useMusicDataStore();
-const {musicData} = storeToRefs(musicDataStore);
-const {updateAudioEffectOrChangeVoiceInfo} = musicDataStore;
+const audioEffectStore = useAudioEffectStore();
+const { audioEffect } = storeToRefs(audioEffectStore);
+const { updateAudioEffectOrChangeVoiceInfo } = audioEffectStore;
 const { t } = useI18n();
 const reverbVoiceList = [
   { 
-    id:TUIVoiceReverbType.kVoiceReverbType_0,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_0,
     icon: NoEffectIcon,
     text: "No Effect",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_1,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_1,
     icon: KTVIcon,
     text: "KTV",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_2,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_2,
     icon: CellIcon,
     text: "Cell",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_3,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_3,
     icon: AuditoriumIcon,
     text: "Auditorium",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_4,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_4,
     icon: DeepAudioIcon,
     text: "Deep Audio",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_5,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_5,
     icon: ResonantIcon,
     text: "Resonant",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_6,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_6,
     icon: MetallicAudioIcon,
     text: "Metallic Audio",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_7,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_7,
     icon: MagneticIcon,
     text: "Magnetic",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_8,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_8,
     icon: VacantIcon,
     text: "Vacant",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_9,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_9,
     icon: RecordingRoomIcon,
     text: "Recording Room 1",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_10,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_10,
     icon: MelodiousIcon,
     text: "Melodious",
   },
   {
-    id:TUIVoiceReverbType.kVoiceReverbType_11,
+    id: TRTCVoiceReverbType.TRTCLiveVoiceReverbType_11,
     icon: RecordingRoomIcon,
     text: "Recording Room 2",
   }
 ];
 
 onUnmounted(() => {
-  musicData.value.audioEffectInfo.selectId = musicData.value.audioEffectInfo.activeId;
-  updateAudioEffectOrChangeVoiceInfo("audioEffectInfo",musicData.value.audioEffectInfo);
+  audioEffect.value.voiceReverb.selectId = audioEffect.value.voiceReverb.activeId;
+  updateAudioEffectOrChangeVoiceInfo("voiceReverb", audioEffect.value.voiceReverb);
   window.mainWindowPort?.postMessage({
     key:"setVoiceReverbType",
-    data:musicData.value.audioEffectInfo.selectId,
+    data:audioEffect.value.voiceReverb.selectId,
   });
 })
 
 function onSelectAudioEffect(id:number){
   if(typeof id !== 'number')return;
-  musicData.value.audioEffectInfo.selectId = id;
+  audioEffect.value.voiceReverb.selectId = id;
   window.mainWindowPort?.postMessage({
     key:"setVoiceReverbType",
     data:id,
@@ -126,20 +126,20 @@ function onSelectAudioEffect(id:number){
 }
 
 function onConfirmSelect(){
-  musicData.value.audioEffectInfo.activeId = musicData.value.audioEffectInfo.selectId;
+  audioEffect.value.voiceReverb.activeId = audioEffect.value.voiceReverb.selectId;
   window.mainWindowPort?.postMessage({
     key:"setVoiceReverbType",
-    data:musicData.value.audioEffectInfo.activeId,
+    data:audioEffect.value.voiceReverb.activeId,
   });
   handleCloseSetting();
 }
 
 function handleCloseSetting(){
-  musicData.value.audioEffectInfo.selectId = musicData.value.audioEffectInfo.activeId;
-  updateAudioEffectOrChangeVoiceInfo("audioEffectInfo",musicData.value.audioEffectInfo);
+  audioEffect.value.voiceReverb.selectId = audioEffect.value.voiceReverb.activeId;
+  updateAudioEffectOrChangeVoiceInfo("voiceReverb", audioEffect.value.voiceReverb);
   window.mainWindowPort?.postMessage({
     key:"setVoiceReverbType",
-    data:musicData.value.audioEffectInfo.selectId,
+    data:audioEffect.value.voiceReverb.selectId,
   });
   window.ipcRenderer.send("close-child");
 }
@@ -216,7 +216,7 @@ function handleCloseSetting(){
 
   .tui-reverb-voice-footer{
     display: flex;
-    justify-content: end;
+    justify-content: flex-end;
     align-items: center;
     width: 100%;
     height: 10%;

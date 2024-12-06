@@ -4,42 +4,25 @@ import {
   TUIRoomInfo,
   TUISeatInfo,
   TUISeatMode,
-  TUIUserInfo,
-  TUIVideoQuality,
-  TUIVideoStreamType,
-  TUIMediaDeviceType,
 } from '@tencentcloud/tuiroom-engine-electron';
+import { TUILiveUserInfo } from '../../types';
 import { useBasicStore } from './basic';
 import { useChatStore } from './chat';
-import { set, del } from '../utils/vue';
-import useRoomEngine from '../utils/useRoomEngine';
-import { messageChannels } from '../communication';
-import { onError } from '../hooks/useErrorHandler';
-import { useI18n } from '../locales';
+import { set, del } from '../../utils/vue';
+import useRoomEngine from '../../utils/useRoomEngine';
+import { messageChannels } from '../../communication';
+import { onError } from '../../hooks/useErrorHandler';
+import { useI18n } from '../../locales';
+
 const logger = console;
 const logPrefix = '[roomStore]';
 const { t } = useI18n();
 
 const roomEngine = useRoomEngine();
 
-export type UserInfo = {
-    userId: string,
-    userName?: string,
-    avatarUrl?: string,
-    userRole?: TUIRole,
-    // Is it on the seat
-    onSeat?: boolean,
-    // Whether the user is applying for seat
-    isUserApplyingToAnchor?: boolean,
-    // The requestId of the user requesting to be on the seat
-    applyToAnchorRequestId?: string,
-    // The time at which a user applies to be on the seat
-    applyToAnchorTimestamp?: number,
-}
-
 interface RoomState {
-    localUser: UserInfo,
-    remoteUserObj: Record<string, UserInfo>,
+    localUser: TUILiveUserInfo,
+    remoteUserObj: Record<string, TUILiveUserInfo>,
     masterUserId: string,
     canControlSelfAudio: boolean;
     canControlSelfVideo: boolean;
@@ -78,7 +61,7 @@ export const useRoomStore = defineStore('room', {
     isMaster(state) {
       return state.localUser.userId === state.masterUserId;
     },
-    remoteUserList(): Array<UserInfo> {
+    remoteUserList(): Array<TUILiveUserInfo> {
       return [...Object.values(this.remoteUserObj)];
     },
     applyToAnchorList: state => [...Object.values(state.remoteUserObj)]
@@ -121,7 +104,7 @@ export const useRoomStore = defineStore('room', {
       };
       return newUserInfo;
     },
-    addRemoteUser(userInfo: UserInfo) {
+    addRemoteUser(userInfo: TUILiveUserInfo) {
       const { userId, userName } = userInfo;
       if (this.remoteUserObj[userId]) {
         Object.assign(this.remoteUserObj[userId], userInfo);
