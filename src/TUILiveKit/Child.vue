@@ -54,12 +54,11 @@ const windowList: Ref<TRTCScreenCaptureSourceInfo[]> = ref([]);
 const dataInEdit: Ref<Record<string, any> | undefined> = ref(undefined);
 
 onMounted(() => {
-  setTimeout(() => {
-    initMainWindowMessageListener();
-  }, 3000); // To do: Delay 3 seconds to wait for `MessagePort` sent from main window. Not good implementation, need optimization.
+  initMainWindowMessageListener();
 });
 
 function initMainWindowMessageListener() {
+  logger.log(`${logPrefix}initMainWindowMessageListener`);
   if (window.mainWindowPort) {
     window.mainWindowPort.addEventListener('message', (event) => {
       console.log(`${logPrefix}message from main window:`, event.data, event);
@@ -112,7 +111,10 @@ function initMainWindowMessageListener() {
       data: 'child port started',
     });
   } else {
-    logger.error("Cannot add event listener to main window port");
+    logger.warn(`${logPrefix}initMainWindowMessageListener port not ready, will retry in 1s`);
+    setTimeout(()=>{
+      initMainWindowMessageListener();
+    }, 1000);
   }
 }
 
@@ -126,7 +128,7 @@ function onDeviceChanged(data: { deviceId: string; type: TRTCDeviceType; state: 
       if (data.state === TRTCDeviceState.TRTCDeviceStateRemove && data.deviceId === currentSourceStore.currentCameraId) {
         currentSourceStore.setCurrentCameraId(deviceList[0].deviceId);
       }
-    }  
+    }
   } else if (data.type === TRTCDeviceType.TRTCDeviceTypeMic) {
     if (data.state === TRTCDeviceState.TRTCDeviceStateRemove || data.state === TRTCDeviceState.TRTCDeviceStateAdd) {
       deviceList = deviceManager.getMicDevicesList();

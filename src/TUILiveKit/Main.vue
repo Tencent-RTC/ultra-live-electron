@@ -144,33 +144,35 @@ onMounted(() => {
     roomStore
   });
 
-  // videoEffectManager.init(); // To do: Init here before startint a camera will lead to camera starting failure
-
-  window.addEventListener("beforeunload", onBefireUnload);
+  window.addEventListener("beforeunload", onBeforeUnload);
 });
 
 onUnmounted(() => {
   videoEffectManager.clear();
-  window.removeEventListener("beforeunload", onBefireUnload);
+  window.removeEventListener("beforeunload", onBeforeUnload);
 });
 
-
-function onLogout () {
-  mediaMixingManager.setDisplayParams(new Uint8Array(8), {
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0
-  });
+function resetRoomStore() {
   basicStore.reset();
   roomStore.reset();
   chatStore.reset();
+}
+
+function resetMediaStore() {
   mediaSourcesStore.reset();
+}
+
+function onLogout () {
+  logger.log(`${logPrefix}onLogout`);
+  mediaMixingManager.setDisplayParams(0, null);
+  resetRoomStore();
+  resetMediaStore();
   emit('on-logout');
 }
 
-function onBefireUnload () {
-  logger.log(`${logPrefix}onBefireUnload`);
+function onBeforeUnload () {
+  logger.log(`${logPrefix}onBeforeUnload`);
+  resetMediaStore();
   if (basicStore.isLiving) {
     stopLiving();
   }
@@ -204,7 +206,7 @@ async function startLiving () {
       });
     }
   } catch (error) {
-    logger.error(`${logPrefix}startLiving error:`, error);
+    onError(error);
   }
 }
 
@@ -215,9 +217,7 @@ async function stopLiving () {
     await dismissRoom();
     basicStore.setIsLiving(false);
     basicStore.setRoomId("");
-    roomStore.reset();
-    chatStore.reset();
-    basicStore.reset();
+    resetRoomStore();
     messageChannels.childWindowPort?.postMessage({
       key: 'reset',
       data: {}

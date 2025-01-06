@@ -16,10 +16,10 @@
       </span>
       <span class="btn-add-source">
         <live-image-source></live-image-source>
-      </span>  
+      </span>
     </div>
     <div v-if="isHasSources && !isShowVideoEncode" class="tui-media-source">
-      <div class="tui-add-source-menu" @click="handleOpenAddMedia" v-click-outside="handleClickOutsideAdd" > 
+      <div class="tui-add-source-menu" @click="handleOpenAddMedia" v-click-outside="handleClickOutsideAdd" >
         <svg-icon :icon="AddIcon" class="icon-container tui-menu-item-text"></svg-icon>
         <span class=tui-menu-item-text>{{ t('Add') }}</span>
       </div>
@@ -32,16 +32,16 @@
         </span>
         <span class="tui-add-source-menu-item">
           <live-image-source></live-image-source>
-        </span>  
+        </span>
       </div>
       <div class="tui-media-source-list" ref="mediaSourceListRef">
-        <div 
-          v-for="(item, index) in mediaList" 
+        <div
+          v-for="(item, index) in mediaList"
           :key="item.mediaSourceInfo.sourceId"
           @mousedown="handleStartDrag($event, item)"
-          class="tui-media-source-item" 
+          class="tui-media-source-item"
           :class="item.mediaSourceInfo.sourceId === selectedMediaKey.sourceId && item.mediaSourceInfo.sourceType === selectedMediaKey.sourceType ? 'selected' : ''"
-          v-click-outside="handleClickOutside" 
+          v-click-outside="handleClickOutside"
           @click="handleSelectSource(item)">
           <div class="tui-media-source-content">
             <!-- <svg-icon :icon="CameraIcon" class="icon-container"></svg-icon> -->
@@ -70,7 +70,7 @@
             <span v-else class="edit-menu-item" @click.stop="handleEditSource(item)">
               {{t('Edit source')}}
             </span>
-          </div>  
+          </div>
         </div>
       </div>
     </div>
@@ -84,7 +84,7 @@
       </div>
       <div class="options-container">
         <span class="options-container-title">{{t('Video resolution')}}</span>
-        <TUISelect 
+        <TUISelect
           :modelValue="mixingVideoEncodeParam.videoResolution"
           :teleported="false"
           :popper-append-to-body="false"
@@ -114,7 +114,7 @@
       </div>
       <div class="options-container">
         <span class="options-container-title">{{t('Video Bitrate')}}</span>
-        <TUISelect 
+        <TUISelect
           :modelValue="mixingVideoEncodeParam.videoBitrate"
           :teleported="false"
           :popper-append-to-body="false"
@@ -204,7 +204,7 @@ const mediaSourceMenuList = shallowRef([
     fun: handleAddCamera
   },
   {
-    icon: AddShareScreenIcon, 
+    icon: AddShareScreenIcon,
     text: t('Add Capture'),
     fun: handleAddShareScreen
   },
@@ -253,7 +253,7 @@ const handleMore = (item: TUIMediaSourceViewModel) => {
 
 const handleMuteMediaSource = (item: TUIMediaSourceViewModel) => {
   mediaSourcesStore.muteMediaSource(item, !item.muted);
-} 
+}
 
 const handleSelectSource = (item: TUIMediaSourceViewModel) => {
   logger.log(`${logPrefix}handleSelectSource:`, item);
@@ -434,7 +434,7 @@ const onChangeVideoBitrage = (value: number) => {
   align-items: center;
   height: calc(100% - 2rem);
   overflow: auto;
-  
+
   .tui-add-source-menu{
     display: flex;
     align-items: center;
@@ -491,11 +491,17 @@ const onChangeVideoBitrage = (value: number) => {
   border-radius: 0.25rem;
 
   &:hover {
-    background-color: $color-live-config-media-source-hover-background;
+    background-color: var(--list-color-hover);
+    .item-icon {
+      background-color: var(--list-color-hover);
+    }
   }
 
   &.selected {
-    background-color: $color-live-config-media-source-select-background;
+    background-color: var(--list-color-focused);
+    .item-icon {
+      background-color: var(--list-color-focused);
+    }
   }
 }
 
@@ -504,7 +510,6 @@ const onChangeVideoBitrage = (value: number) => {
   justify-content: space-between;
   font-size: 0.75rem;
   line-height: 2.5rem;
-  background-color: var(--bg-color-operate);
 
   .item-name{
     width: 8rem;
@@ -556,7 +561,7 @@ const onChangeVideoBitrage = (value: number) => {
   background-color: var(--dropdown-color-default);
   border-radius: 0.25rem;
   box-shadow: 0 1px 5px var(--shadow-color),0 8px 12px var(--shadow-color),0 12px 26px var(--shadow-color);
-  
+
   .edit-menu-item{
     width: 100%;
     height:1.75rem;

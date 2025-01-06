@@ -21,14 +21,10 @@ let roomStore: any = null;
 
 
 export const messageChannels: {
-  childWindowPort: MessagePort|null; 
-  contextWindowPort: MessagePort | null;
+  childWindowPort: MessagePort|null;
 } = {
   childWindowPort: null,
-  contextWindowPort: null,
 };
-
-(window as any)._messageChannels = messageChannels;
 
 export async function addMediaSource(data: Record<string, any>) {
   const mediaSource: TUIMediaSourceViewModel = {
@@ -45,9 +41,9 @@ export async function addMediaSource(data: Record<string, any>) {
         left: 0,
         top: 0,
         right: data.width ||
-            640,  
+            640,
         bottom: data.height ||
-            320,  
+            320,
       }
     },
   };
@@ -232,7 +228,7 @@ async function handleKickOut(data: Record<string, any>) {
 
 let childChannelServer: MessagePort;
 async function handleChildWindowMessage(event: MessageEvent<any>) {
-  console.log(`${logPrefix}handleChildWindowMessage:`, event.data);
+  logger.log(`${logPrefix}handleChildWindowMessage:`, event.data);
   const {key, data} = event.data;
 
   switch (key) {
@@ -311,27 +307,27 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
   case 'stopTestMic':
     deviceManager.stopMicDeviceTest();
     break;
-  case 'resumePlayMusic': 
+  case 'resumePlayMusic':
     if (data !== -1) {
       audioEffectManager.resumePlayMusic(data);
     }
     break;
-  case 'pausePlayMusic': 
+  case 'pausePlayMusic':
     if (data !== -1) {
       audioEffectManager.pausePlayMusic(data);
     }
     break;
-  case 'stopPlayMusic': 
+  case 'stopPlayMusic':
     if (data !== -1) {
       audioEffectManager.stopPlayMusic(data);
     }
     break;
-  case 'setAllMusicVolume': 
+  case 'setAllMusicVolume':
     if (data >= 0) {
       audioEffectManager.setAllMusicVolume(data);
     }
     break;
-  case 'setCurrentDeviceVolume': 
+  case 'setCurrentDeviceVolume':
     if (data) {
       switch(data.type) {
       case TRTCDeviceType.TRTCDeviceTypeMic:
@@ -345,7 +341,7 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
       }
     }
     break;
-  case 'setMusicPublishVolume': 
+  case 'setMusicPublishVolume':
     if (data) {
       data.id ? audioEffectManager.setMusicPublishVolume(data.id, data.volume) : null;
     }
@@ -387,7 +383,7 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     }
     break;
   default:
-    console.warn(
+    logger.warn(
       `${logPrefix}handleChildWindowMessage: unsupported key: ${key}`);
     break;
   }
@@ -445,42 +441,26 @@ async function sequentialPlay(playingMusicIndex: number) {
   audioEffectManager.startPlayMusic(playParams);
 }
 
-
-
 export function initCommunicationChannels(data: Record<string, any>) {
+  logger.log(`${logPrefix}initCommunicationChannels`);
   mediaSourcesStore = data.mediaSourcesStore;
   roomStore = data.roomStore;
-  const childChannel = new MessageChannel();
 
-  childChannelServer = childChannel.port1;
-  const childChannelClient = childChannel.port2;
-  childChannelServer.onmessage = handleChildWindowMessage;
-  childChannelServer.onmessageerror = (event) => {
-    console.log('onMessageFromChildWindowError', event.data);
-  };
-  childChannelServer.start();
+  if (!messageChannels.childWindowPort) {
+    const childChannel = new MessageChannel();
 
-  window.ipcRenderer.postMessage('port-to-child', null, [childChannelClient]);
+    childChannelServer = childChannel.port1;
+    const childChannelClient = childChannel.port2;
+    childChannelServer.onmessage = handleChildWindowMessage;
+    childChannelServer.onmessageerror = (event) => {
+      logger.log('onMessageFromChildWindowError', event.data);
+    };
+    childChannelServer.start();
 
-  messageChannels.childWindowPort = childChannelServer;
+    window.ipcRenderer.postMessage('port-to-child', null, [childChannelClient]);
 
-
-  const contextChannel = new MessageChannel();
-
-  const contextChannelServer = contextChannel.port1;
-  const contextChannelClient = contextChannel.port2;
-
-  contextChannelServer.onmessage = (event) => {
-    console.log('onMessageFromContextWindow', event.data);
-  };
-  contextChannelServer.onmessageerror = (event) => {
-    console.log('onMessageFromContextWindowError', event.data);
-  };
-  contextChannelServer.start();
-
-  console.log('port-to-context');
-  window.ipcRenderer.postMessage(
-    'port-to-context', null, [contextChannelClient]);
-
-  messageChannels.contextWindowPort = contextChannelServer;
+    messageChannels.childWindowPort = childChannelServer;
+  } else {
+    logger.warn(`${logPrefix}initCommunicationChannels MessageChannel already existed.`);
+  }
 }

@@ -59,7 +59,7 @@ async function checkAndApplyDeviceAccessPrivilege() {
       if (cameraPrivilege !== "granted") {
         await systemPreferences.askForMediaAccess("camera");
       }
-  
+
       const micPrivilege = systemPreferences.getMediaAccessStatus("microphone");
       console.log(
         `checkAndApplyDeviceAccessPrivilege before apply micPrivilege: ${micPrivilege}`
@@ -67,7 +67,7 @@ async function checkAndApplyDeviceAccessPrivilege() {
       if (micPrivilege !== "granted") {
         await systemPreferences.askForMediaAccess("microphone");
       }
-  
+
       const screenPrivilege = systemPreferences.getMediaAccessStatus("screen");
       console.log(
         `checkAndApplyDeviceAccessPrivilege before apply screenPrivilege: ${screenPrivilege}`
@@ -137,7 +137,7 @@ async function createWindow(width = 1366, height = 668) {
 
   bindIPCEvent();
   bindMainWindowEvent();
-  bindChildWindowEvent();  
+  bindChildWindowEvent();
 
   if (app.isPackaged) {
     windowMap.main?.loadFile("dist/index.html");
@@ -162,7 +162,7 @@ function bindIPCEvent() {
       return '';
     }
   });
-  
+
   ipcMain.on("on-minimize-window", () => {
     console.log(`${logPrefix}on-minimize-window event`);
     windowMap.main?.minimize();
@@ -266,9 +266,9 @@ function bindIPCEvent() {
       { label: isZhCN() ? "编辑" : "Edit", click: () => {  event.sender.send('context-menu-command', 'edit'); } },
       { type: 'separator' },
       { label: isZhCN() ? "删除" : "Remove", click: () => {  event.sender.send('context-menu-command', 'remove'); } },
-    ]
-    const menu = Menu.buildFromTemplate(template)
-    menu.popup({ window: BrowserWindow.fromWebContents(event.sender) })
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
   })
 }
 
@@ -318,7 +318,7 @@ function bindMainWindowEvent() {
     windowMap.main?.webContents.send("app-path", app.getAppPath());
     windowMap.main?.webContents.send("crash-file-path",`${crashFilePath}|${crashDumpsDir}`);
     windowMap.main?.webContents.send("native-window-handle", windowMap.main?.getNativeWindowHandle());
-    initMainWindowPage();    
+    initMainWindowPage();
   });
 
   windowMap.main?.on("closed", () => {
@@ -334,7 +334,7 @@ function bindMainWindowEvent() {
     windowMap.main = null;
 
     unbindIPCMainEvent();
-    liveKitEmitter.emit("closed");   
+    liveKitEmitter.emit("closed");
   });
 }
 
@@ -357,13 +357,13 @@ function bindChildWindowEvent() {
     if (windowMap.main) {
       event.preventDefault();
       windowMap.child?.hide();
-    }  
+    }
   });
 
   windowMap.child?.on("closed", () => {
     if (windowMap.child) {
       windowMap.child = null;
-    }  
+    }
   });
 }
 

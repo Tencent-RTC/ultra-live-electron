@@ -94,7 +94,7 @@ const handleEditCamera = () => {
       name: currentCamera.deviceName,
       width: currentCameraResolution.value.width,
       height: currentCameraResolution.value.height,
-      mirrorType: isCurrentCameraMirrored.value ? TRTCVideoMirrorType.TRTCVideoMirrorType_Disable : TRTCVideoMirrorType.TRTCVideoMirrorType_Disable,
+      mirrorType: isCurrentCameraMirrored.value ? TRTCVideoMirrorType.TRTCVideoMirrorType_Enable : TRTCVideoMirrorType.TRTCVideoMirrorType_Disable,
       beautyConfig: {
         isEnabled: true,
         beautyProperties: JSON.parse(JSON.stringify(beautyProperties.value))
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
-    overflow-y: auto;    
+    overflow-y: auto;
     color: var(--text-color-primary);
 }
 .tui-camera-title{

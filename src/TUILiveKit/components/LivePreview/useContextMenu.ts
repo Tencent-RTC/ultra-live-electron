@@ -1,15 +1,17 @@
-import { ref, Ref, watchEffect, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, Ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { TRTCMediaSource, TRTCMediaMixingEvent } from 'trtc-electron-sdk';
 import { TUIMediaSourceViewModel } from '../../types';
+import useMediaMixingManager from '../../utils/useMediaMixingManager';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
 
 const logger = console;
 const logPrefix = '[useContextMenu]';
 
-function useContextMenu(
-  moveAndResizeContainerRef: Ref<HTMLDivElement|null>,
-  selectedMediaSource: Ref<TUIMediaSourceViewModel|null>
-) {
+const mediaMixingManager = useMediaMixingManager();
+
+function useContextMenu() {
   const contextCommand: Ref<string> = ref('');
+  const selectedMediaSource: Ref<TUIMediaSourceViewModel|null> = ref(null);
   const mediaSourcesStore = useMediaSourcesStore();
 
   window.ipcRenderer.on('context-menu-command', async (event: any, command: string) => {
@@ -35,6 +37,7 @@ function useContextMenu(
         mediaSourcesStore.rotateMediaSource(selectedMediaSource.value, -90);
         break;
       case "transform-mirror-horizontal":
+        mediaSourcesStore.toggleHorizontalMirror(selectedMediaSource.value);
         break;
       case "transform-mirror-vertical":
         break;
@@ -56,44 +59,41 @@ function useContextMenu(
     contextCommand.value = '';
   });
 
-  const onContextMenu = (event: MouseEvent) => {
-    console.log(`${logPrefix}onContextMenu current selected media source:`, mediaSourcesStore.selectedMediaKey, selectedMediaSource.value);
-    event.preventDefault();
-    if (selectedMediaSource.value) {
-      window.ipcRenderer.send('show-context-menu');
+  const onContextMenu = (mediaSource: TRTCMediaSource) => {
+    console.log(`${logPrefix}onContextMenu current selected media source:`, mediaSource);
+    if (mediaSource) {
+      const selected = mediaSourcesStore.mediaList.find(item => item.mediaSourceInfo.sourceId === mediaSource.sourceId
+        && item.mediaSourceInfo.sourceType === mediaSource.sourceType
+      );
+      if (selected) {
+        selectedMediaSource.value = selected;
+        window.ipcRenderer.send('show-context-menu');
+      } else {
+        selectedMediaSource.value = null;
+      }
+    } else {
+      selectedMediaSource.value = null;
     }
   };
 
   const addContextMenu = () => {
-    logger.log(`${logPrefix} addContextMenu:`, moveAndResizeContainerRef.value);
-    if (moveAndResizeContainerRef.value) {
-      moveAndResizeContainerRef.value.addEventListener("contextmenu", onContextMenu, false);
-    }
+    logger.log(`${logPrefix} addContextMenu:`);
+    mediaMixingManager.on(TRTCMediaMixingEvent.onRightButtonClicked, onContextMenu);
   };
-  
+
   const removeContextMenu = () => {
-    logger.log(`${logPrefix} removeContextMenu:`, moveAndResizeContainerRef.value);
-    if (moveAndResizeContainerRef.value) {
-      moveAndResizeContainerRef.value.removeEventListener("contextmenu", onContextMenu, false);
-    }
+    logger.log(`${logPrefix} removeContextMenu:`);
+    mediaMixingManager.off(TRTCMediaMixingEvent.onRightButtonClicked, onContextMenu);
   };
 
   onMounted(() => {
-    logger.log(`${logPrefix} onMounted:`, moveAndResizeContainerRef.value);
+    logger.log(`${logPrefix} onMounted:`);
     addContextMenu();
   });
 
   onUnmounted(() => {
-    logger.log(`${logPrefix} onUnmounted:`, moveAndResizeContainerRef.value);
+    logger.log(`${logPrefix} onUnmounted:`);
     removeContextMenu();
-  });
-
-  watchEffect((onCleanup) => {
-    logger.log(`${logPrefix} watchEffect:`, moveAndResizeContainerRef.value);
-    if (moveAndResizeContainerRef.value) {
-      onCleanup(removeContextMenu);
-      addContextMenu();
-    }
   });
 
   return {

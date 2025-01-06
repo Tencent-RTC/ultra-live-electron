@@ -33,9 +33,8 @@ export function onError(error: any) {
       message: error.message.toString(),
       confirmButtonText: t('Sure'),
     });
-  } else {
-    logger.error(`${logPrefix}onError:`, error);
   }
+  logger.error(`${logPrefix}onError:`, error.code, error);
 }
 
 function useErrorHandler() {
