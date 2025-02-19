@@ -3,11 +3,11 @@
     <svg-icon :icon="micIcon" @click="toggleMuteMic"></svg-icon>
     <!-- <svg-icon class="icon-container" :icon=ArrowSetUpIcon></svg-icon> -->
     <tui-slider class="drag-container" :value="voiceRate" @update:value="onUpdateVoiceValue" />
-  </span>  
+  </span>
 </template>
-  
+
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import SvgIcon from './base/SvgIcon.vue';
 import MicOffIcon from './icons/MicOffIcon.vue';
 import ArrowSetUpIcon from './icons/ArrowSetUpIcon.vue';
@@ -17,36 +17,38 @@ import useDeviceManager from '../utils/useDeviceManager';
 
 const deviceManager = useDeviceManager();
 
-const voiceRate = ref(0);
-let currentVoiceRate: number;
+const voiceRate = ref(1);
+let voiceRateBeforeMute = 1;
+deviceManager.setAudioCaptureVolume(100);
 
-const micIcon = computed(()=> voiceRate.value ? MicOnIcon : MicOffIcon);
+const isMuted = ref(false);
+const micIcon = computed(()=> !isMuted.value ? MicOnIcon : MicOffIcon);
+
 
 const onUpdateVoiceValue = (volume: number) => {
   const value = Math.round(volume);
   voiceRate.value = value/100;
-  deviceManager.setCurrentMicDeviceVolume(value);
-}
+  deviceManager.setAudioCaptureVolume(value);
+
+  if (voiceRate.value === 0) {
+    isMuted.value = true;
+    deviceManager.muteLocalAudio(true);
+  } else if (isMuted.value) {
+    isMuted.value = false;
+    deviceManager.muteLocalAudio(false);
+  }
+};
 
 const toggleMuteMic = () => {
-  if (voiceRate.value) {
-    currentVoiceRate = voiceRate.value; 
-    deviceManager.setCurrentMicDeviceMute(true);
+  isMuted.value = !isMuted.value;
+  deviceManager.muteLocalAudio(isMuted.value);
+  if (isMuted.value) {
+    voiceRateBeforeMute = voiceRate.value;
     voiceRate.value = 0;
   } else {
-    deviceManager.setCurrentMicDeviceMute(false);
-    voiceRate.value = currentVoiceRate;
+    voiceRate.value = voiceRateBeforeMute;
   }
-}
-
-onMounted(async () => {
-  try {
-    const micVolume = await deviceManager.getCurrentMicDeviceVolume();
-    voiceRate.value = micVolume/100;
-  } catch (error) {
-    console.error('Get current device volume failed:', error);
-  }
-});
+};
 </script>
 
 <style lang="scss" scoped>
@@ -66,7 +68,7 @@ onMounted(async () => {
     align-items: center;
     color: $color-icon-default;
   }
-  
+
   .icon-container {
     padding-left: 0.25rem;
   }

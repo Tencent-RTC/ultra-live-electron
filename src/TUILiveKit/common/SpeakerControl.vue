@@ -3,53 +3,53 @@
       <svg-icon :icon="speakerIcon" @click="toggleMuteSpeaker"></svg-icon>
       <!-- <svg-icon class="icon-container" :icon=ArrowSetUpIcon></svg-icon> -->
       <tui-slider class="drag-container" :value="speakerRate" @update:value="onUpdateSpeakerValue" />
-    </span>  
+    </span>
   </template>
-    
+
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import SvgIcon from './base/SvgIcon.vue';
 import SpeakerOffIcon from './icons/SpeakerOffIcon.vue';
 import ArrowSetUpIcon from './icons/ArrowSetUpIcon.vue';
 import SpeakerOnIcon from './icons/SpeakerOnIcon.vue';
-import useRoomEngine from '../utils/useRoomEngine';
 import TuiSlider from './base/Slider.vue';
 import useDeviceManager from '../utils/useDeviceManager';
 
-const roomEngine = useRoomEngine();
 const deviceManager = useDeviceManager();
 
-const speakerRate = ref(0);
-let currentSpeakerRate: number;
-const speakerIcon = computed(()=> speakerRate.value ? SpeakerOnIcon : SpeakerOffIcon);
+const speakerRate = ref(1);
+let speakerRateBeforeMute = 1;
+deviceManager.setAudioPlayoutVolume(100);
+
+const isMuted = ref(false);
+const speakerIcon = computed(()=> !isMuted.value ? SpeakerOnIcon : SpeakerOffIcon);
+
 
 const onUpdateSpeakerValue = (volume: number) => {
   const value = Math.round(volume);
   speakerRate.value = value/100;
-  deviceManager.setCurrentSpeakerVolume(value);
-}
+  deviceManager.setAudioPlayoutVolume(value);
+
+  if (speakerRate.value === 0) {
+    isMuted.value = true;
+  } else if (isMuted.value) {
+    isMuted.value = false;
+  }
+};
 
 const toggleMuteSpeaker = () => {
-  if (speakerRate.value) {
-    currentSpeakerRate = speakerRate.value; 
-    deviceManager.setCurrentSpeakerDeviceMute(true);
+  isMuted.value = !isMuted.value;
+  if (isMuted.value) {
+    speakerRateBeforeMute = speakerRate.value;
     speakerRate.value = 0;
+    deviceManager.setAudioPlayoutVolume(0);
   } else {
-    deviceManager.setCurrentSpeakerDeviceMute(false);
-    speakerRate.value = currentSpeakerRate;
+    speakerRate.value = speakerRateBeforeMute;
+    deviceManager.setAudioPlayoutVolume(speakerRate.value * 100);
   }
-}
-
-onMounted(async () => {
-  try {
-    const speakerVolume = await deviceManager.getCurrentSpeakerVolume();
-    speakerRate.value = speakerVolume/100;
-  } catch (error) {
-    console.error('Get current device volume failed:', error);
-  }
-});
+};
 </script>
-  
+
   <style lang="scss" scoped>
   @import "../assets/variable.scss";
    .speaker-container{
@@ -75,4 +75,3 @@ onMounted(async () => {
       left: 2.5rem;
     }
   </style>
- 

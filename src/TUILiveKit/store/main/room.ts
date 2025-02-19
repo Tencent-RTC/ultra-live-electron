@@ -67,7 +67,10 @@ export const useRoomStore = defineStore('room', {
     applyToAnchorList: state => [...Object.values(state.remoteUserObj)]
       .filter(item => item.isUserApplyingToAnchor)
       .sort((item1, item2) => (item1?.applyToAnchorTimestamp || 0) - (item2?.applyToAnchorTimestamp || 0)) || [],
-    anchorList: state => [...Object.values(state.remoteUserObj)].filter(item => item.onSeat),
+    anchorList: state => {
+      const tempList = [...Object.values(state.remoteUserObj)].filter(item => item.onSeat);
+      return tempList.sort((item1, item2) => (item1?.onSeatTimestamp || 0) - (item2?.onSeatTimestamp || 0));
+    },
   },
   actions: {
     setLocalUser(obj: Record<string, any>) {
@@ -173,7 +176,8 @@ export const useRoomStore = defineStore('room', {
           remoteUserInfo.applyToAnchorRequestId = '';
           remoteUserInfo.applyToAnchorTimestamp = 0;
           remoteUserInfo.onSeat = !!agree;
-
+          remoteUserInfo.onSeatTimestamp = Date.now();
+          
           messageChannels.childWindowPort?.postMessage({
             key: "set-apply-list",
             data: JSON.stringify(this.applyToAnchorList),

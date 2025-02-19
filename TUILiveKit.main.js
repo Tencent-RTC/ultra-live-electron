@@ -13,6 +13,7 @@ const EventEmitter = require("events");
 const logPrefix = "[TUILiveKit.main]";
 
 let language = "zh-CN";
+let lastChildWindowName = "";
 
 const basicInfo = {
   userInfo: null,
@@ -185,6 +186,11 @@ function bindIPCEvent() {
 
   ipcMain.on("open-child", (event, args) => {
     console.log(`${logPrefix}on open-child`, args);
+    if(lastChildWindowName === args.command) {
+      windowMap.child?.show();
+      return;
+    }
+    lastChildWindowName = args.command;
     const [width, height] = windowMap.main?.getSize();
     switch (args.command) {
     case 'camera':
@@ -216,6 +222,7 @@ function bindIPCEvent() {
   });
 
   ipcMain.on("close-child", () => {
+    lastChildWindowName = '';
     windowMap.child?.hide();
   });
 
@@ -224,6 +231,15 @@ function bindIPCEvent() {
       windowMap.child?.webContents.send("login", { from: 'main' });
     } else {
       windowMap.main?.webContents.send("login", { from: 'child' });
+    }
+  });
+
+  ipcMain.on("logout", (event) => {
+    if (event.sender === windowMap.main?.webContents) {
+      windowMap.child?.webContents.send("logout", { from: 'main' });
+      windowMap.child?.hide();
+    } else {
+      windowMap.main?.webContents.send("logout", { from: 'child' });
     }
   });
 
@@ -255,7 +271,7 @@ function bindIPCEvent() {
           { "label": isZhCN() ? "顺时针旋转90度" : "Rotate 90 degrees CW", "click": () => { event.sender.send('context-menu-command', 'transform-clockwise-90'); } },
           { "label": isZhCN() ? "逆时针旋转90度" : "Rotate 90 degrees CCW", "click": () => { event.sender.send('context-menu-command', 'transform-anti-clockwise-90'); } },
           { "label": isZhCN() ? "水平旋转" : "Flip horizontal", "click": () => {  event.sender.send('context-menu-command', 'transform-mirror-horizontal'); } },
-          { "label": isZhCN() ? "垂直旋转" : "Flip vertical", "click": () => {  event.sender.send('context-menu-command', 'transform-mirror-vertical'); }},
+          // { "label": isZhCN() ? "垂直旋转" : "Flip vertical", "click": () => {  event.sender.send('context-menu-command', 'transform-mirror-vertical'); }},
           // { type: 'separator' },
           // { "label": "还原", "click": () => {  event.sender.send('context-menu-command', 'transform-reset'); }},
         ]

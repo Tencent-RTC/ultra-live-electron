@@ -64,7 +64,7 @@ export const useCurrentSourceStore = defineStore('currentSource', {
       } else {
         this.currentCameraResolution =  defaultCameraResolution;
       }
-      logger.log('[CurrentSources]setCurrentCameraId', this.currentCameraId, this.currentCameraResolution, this.cameraList);
+      logger.log(`${logPrefix}setCurrentCameraId`, this.currentCameraId, this.currentCameraResolution, this.cameraList);
       window.mainWindowPort?.postMessage({
         key: "setCurrentDevice",
         data: {
@@ -81,9 +81,25 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     },
     setCurrentMicrophoneId(deviceId: string) {
       this.currentMicrophoneId = deviceId;
+      logger.log(`${logPrefix}setCurrentMicrophoneId`, this.currentMicrophoneId, this.microphoneList);
+      window.mainWindowPort?.postMessage({
+        key: "setCurrentDevice",
+        data: {
+          deviceType: TRTCDeviceType.TRTCDeviceTypeMic,
+          deviceId,
+        }
+      });
     },
     setCurrentSpeakerId(deviceId: string) {
       this.currentSpeakerId = deviceId;
+      logger.log(`${logPrefix}setCurrentSpeakerId`, this.currentSpeakerId);
+      window.mainWindowPort?.postMessage({
+        key: "setCurrentDevice",
+        data: {
+          deviceType: TRTCDeviceType.TRTCDeviceTypeSpeaker,
+          deviceId,
+        }
+      });
     },
     setCurrentCameraResolution(resolution: {width: number; height: number;}) {
       this.currentCameraResolution = resolution;

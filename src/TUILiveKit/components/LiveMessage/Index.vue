@@ -26,7 +26,7 @@
         <div class="tui-live-message-list">
           <span v-for="item in messageList" :key="item.ID" class="tui-live-message-item">
             <span class="tui-live-message-item-level">{{ 0 }}</span>
-            <span class="tui-live-message-item-nick">{{item.nick}}</span>
+            <div class="tui-live-message-item-nick-container"><span class="tui-live-message-item-nick">{{item.nick}}</span></div>
             <message-text  v-if="item.type === 'TIMTextElem'" :data="item.payload.text" />
             <message-text  v-else-if="item.type === 'CustomUserEnter'" :data="item.payload.text" />
           </span>
@@ -162,7 +162,15 @@ onUnmounted(() => {
       border-radius: 0.5rem;
       background-color: $color-live-message-item-level-background;
     }
+    &-nick-container{
+      display: inline-flex;
+      max-width: 8rem;
+    }
     &-nick{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
       padding-left: 0.25rem;
       color: var(--text-color-primary);
       font-size: $font-live-message-item-nick-size;

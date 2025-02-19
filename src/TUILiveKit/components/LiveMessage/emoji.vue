@@ -17,19 +17,21 @@
     </div>
   </div>
 </template>
-  
+
 <script setup lang="ts">
 import { ref, defineEmits } from 'vue';
 import { emojiBaseUrl, emojiMap, emojiList } from './util';
+import { useI18n } from '../../locales';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import EmojiIcon from '../../common/icons/EmojiIcon.vue';
 import vClickOutside from '../../utils/vClickOutside';
-  
+
+const { t } = useI18n();
 const emit = defineEmits(['choose-emoji']);
 
 const showEmojiToolbar = ref(false);
 const chooseEmoji = (itemName: string) => {
-  const emojiInfo = itemName;
+  const emojiInfo = t(itemName);
   emit('choose-emoji', emojiInfo);
 };
 const handleEmojiToobar = () => {
@@ -41,7 +43,7 @@ const handleClickOutsideEmojiToobar = () => {
   }
 };
 </script>
-  
+
 <style lang="scss" scoped>
 @import "../../assets/variable.scss";
 
@@ -77,4 +79,3 @@ const handleClickOutsideEmojiToobar = () => {
     }
 }
 </style>
-  

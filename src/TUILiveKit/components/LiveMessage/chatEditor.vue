@@ -4,13 +4,14 @@
       <textarea
         ref="editorInputEle"
         v-model="sendMsg"
+        spellcheck="false"
         class="content-bottom-input"
         :placeholder="t('Type a message')"
         @keyup.enter="sendMessage"
       />
     </div>
   </template>
-  
+
 <script setup lang="ts">
 import { ref } from 'vue';
 import { storeToRefs } from 'pinia';
@@ -78,7 +79,7 @@ const handleChooseEmoji = (emojiName: string) => {
   editorInputEle.value.focus();
 };
 </script>
-  
+
 <style lang="scss" scoped>
 @import "../../assets/variable.scss";
 
@@ -101,8 +102,8 @@ const handleChooseEmoji = (emojiName: string) => {
     background-color: var(--bg-color-transparency);
     border: none;
     outline: none;
-    resize: none; 
-    box-shadow: none; 
+    resize: none;
+    box-shadow: none;
     width: 100%;
     color: var(--text-color-primary);
     line-height: 1.375rem;
@@ -122,4 +123,3 @@ const handleChooseEmoji = (emojiName: string) => {
   }
 }
   </style>
-  

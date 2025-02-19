@@ -162,8 +162,11 @@ function resetMediaStore() {
   mediaSourcesStore.reset();
 }
 
-function onLogout () {
+async function onLogout () {
   logger.log(`${logPrefix}onLogout`);
+  if (basicStore.isLiving) {
+    await stopLiving();
+  }
   mediaMixingManager.setDisplayParams(0, null);
   resetRoomStore();
   resetMediaStore();

@@ -1,6 +1,6 @@
 <template>
     <span class="tui-image-source" @click="triggerFileSelect">
-      <input type="file" class="tui-file-input" @change="handleSaveFile" ref="fileInputRef" accept="image/*">
+      <input type="file" class="tui-file-input" @change="handleSaveFile" ref="fileInputRef" accept=".jpg,.jpeg,.png,.bmp,.gif">
       <span class="tui-image-container" v-if="mode === TUIMediaSourceEditMode.Add">
         <svg-icon :icon="CameraIcon" class="icon-container"></svg-icon>
         <i class="text">{{ t('Add Image') }}</i>
@@ -28,7 +28,7 @@ const logger = console;
 const props = defineProps<TUIMediaSourceEditProps>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
 
-const currentSourceStore = useCurrentSourceStore();           
+const currentSourceStore = useCurrentSourceStore();
 const { t } = useI18n();
 const file: Ref<File|null> = ref(null)
 const url: Ref<string> = ref('');
@@ -47,19 +47,29 @@ const calcImageSize = (imageFile: File): Promise<{
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
     fileReader.onload = (fileOnloadEvent: any) => {
-      const image = new Image();
+      let image = new Image();
       image.onload = (imageOnloadEvent: any) => {
         const img = imageOnloadEvent.target as HTMLImageElement;
         resolve({
           width: img.width,
           height: img.height,
         });
+        image.src = '';
+        image.onerror = null;
+        image.onload = null;
+        image = null;
       };
       image.onerror = (imageOnerrorEvent: any) => {
         console.error(
           "[LiveStudio]calcImageSize image load error:",
           imageOnerrorEvent
         );
+        if (image) {
+          image.src = '';
+          image.onerror = null;
+          image.onload = null;
+          image = null;
+        }
         reject();
       };
       image.src = fileOnloadEvent.target.result as string;
@@ -86,8 +96,8 @@ const handleSaveFile = async(event: any) => {
   if(mode.value === TUIMediaSourceEditMode.Add && file.value && (file.value as any)?.path){
     const imageInfo = {
       type: TRTCMediaSourceType.kImage,
-      name: file.value?.name, 
-      id: (file.value as any).path, 
+      name: file.value?.name,
+      id: (file.value as any).path,
       width: width.value,
       height: height.value,
     }
@@ -103,8 +113,8 @@ const handleSaveFile = async(event: any) => {
   }else if(mode.value === TUIMediaSourceEditMode.Edit && !isSameImage.value && file.value && (file.value as any)?.path){
     const newData = {
       type: TRTCMediaSourceType.kImage,
-      name: file.value?.name, 
-      id: (file.value as any).path, 
+      name: file.value?.name,
+      id: (file.value as any).path,
       width: width.value,
       height: height.value,
       predata: JSON.parse(JSON.stringify(props.data)),
@@ -182,4 +192,4 @@ watch(props, (val) => {
   font-weight: $font-live-image-source-text-weight;
   line-height: 1.375rem;
 }
-</style>./type-define./types./constant
+</style>

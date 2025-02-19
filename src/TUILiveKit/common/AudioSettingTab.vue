@@ -7,7 +7,7 @@
           class="select"
           device-type="microphone"
         ></device-select>
-        <span 
+        <span
           class="test"
           v-if="isDetailMode"
           @click="handleMicrophoneTest"
@@ -34,7 +34,7 @@
           class="select"
           device-type="speaker"
         ></device-select>
-        <span 
+        <span
           class="test"
           v-if="isDetailMode"
           @click="handleSpeakerTest"
@@ -58,8 +58,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, defineProps, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
-import { ref, computed, defineProps } from 'vue';
 import DeviceSelect from './DeviceSelect.vue';
 import { useCurrentSourceStore } from '../store/child/currentSource';
 import { SettingMode } from '../constants/render';
@@ -136,6 +136,21 @@ async function handleSpeakerTest() {
   }
 }
 
+onBeforeUnmount(() => {
+  if (isTestingMicrophone.value) {
+    window.mainWindowPort?.postMessage({
+      key: "stopTestMic",
+    });
+    isTestingMicrophone.value = false;
+  }
+
+  if (isTestingSpeaker.value) {
+    window.mainWindowPort?.postMessage({
+      key: "stopTestSpeaker",
+    });
+    isTestingSpeaker.value = false;
+  }
+});
 </script>
 
 <style lang="scss" scoped>
