@@ -284,22 +284,27 @@ const commandHandlers = new Map([
     },
   ],
   [
-    "reverb-voice",
+    'reverb-voice',
     () => {
-      currentViewName.value = "reverb-voice";
+      currentViewName.value = 'reverb-voice';
     },
   ],
   [
-    "change-voice",
+    'change-voice',
     () => {
-      currentViewName.value = "change-voice";
+      currentViewName.value = 'change-voice';
     },
   ],
 ]);
 
+window.ipcRenderer.on('logout', () => {
+  logger.log(`${logPrefix}on child logout`);
+  currentSourceStore.setCurrentViewName('');
+});
+
 window.ipcRenderer.on('show', (event: any, args: Record<string, any>) => {
   logger.log(`${logPrefix}on child show`, args);
-
+  if(args?.command === currentViewName.value) return;
   const handler = commandHandlers.get(args?.command);
   if (handler) {
     handler();

@@ -11,3 +11,5 @@ export function getLanguage() {
   }
   return language;
 }
+
+export const defaultAvatarURL =  'https://imgcache.qq.com/qcloud/public/static/avatar8_100.20191230.png';

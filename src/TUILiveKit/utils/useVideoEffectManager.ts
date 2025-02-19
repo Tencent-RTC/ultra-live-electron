@@ -151,12 +151,15 @@ class TUIVideoEffectManager {
       }
     }
     setTimeout(()=> {
-      if (plugin) {
-        plugin.setParameter(JSON.stringify({
+      // Get from Map to avoid the plugin has been removed
+      let pluginAdded = this.beautyPluginMap.get(cameraId) || null;
+      if (pluginAdded) {
+        pluginAdded.setParameter(JSON.stringify({
           beautySetting: beautyConfig.beautyProperties
         }));
+        pluginAdded = null;
       }
-    }, 3000);
+    }, 3000); // Wait 3 seconds to make sure C++ plugin created
   }
 
   stopEffect(cameraId: string) {
@@ -219,7 +222,7 @@ class TUIVideoEffectManager {
       if (plugin) {
         this.beautyPluginMap.set(cameraId, plugin);
         plugin.enable(true);
-        plugin.setParameter(JSON.stringify(this.initParam)); 
+        plugin.setParameter(JSON.stringify(this.initParam));
         logger.debug(`${this.logPrefix}addPlugin success for camera: ${cameraId}`);
         return plugin;
       } else {

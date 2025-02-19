@@ -5,7 +5,7 @@
     </div>
     <div class="tui-member-list">
       <div v-for="item in remoteUserList" :key="item.userId" class="tui-member-item">
-        <img class="tui-user-avatar" :src="item.avatarUrl" alt="">
+        <img class="tui-user-avatar" :src="item.avatarUrl || defaultAvatarURL" alt="">
         <span class="tui-user-name">{{item.userName || item.userId}}</span>
         <span class="tui-user-level">{{ 0 }}</span>
       </div>
@@ -16,11 +16,12 @@
 import { storeToRefs } from 'pinia';
 import { useI18n } from '../../locales';
 import { useRoomStore } from '../../store/main/room';
+import { defaultAvatarURL } from '../../utils/common';
+
 const { t } = useI18n();
-
 const roomStore = useRoomStore()
-
 const { remoteUserList }  = storeToRefs(roomStore);
+
 </script>
 <style scoped lang="scss">
 @import "../../assets/variable.scss";
@@ -40,13 +41,18 @@ const { remoteUserList }  = storeToRefs(roomStore);
   overflow: auto;
 }
 .tui-user-avatar{
+  flex-shrink: 0;
   width: 1.5rem;
   height: 1.5rem;
-  border-radius: 1.5rem;
   margin: 0.5rem;
+  border-radius: 1.5rem;
 }
 .tui-user-name{
+  overflow: hidden;
   padding-right: 0.25rem;
+  max-width: 12rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-color-primary);
   font-size: $font-live-member-user-name-size;
   font-style: $font-live-member-user-name-style;

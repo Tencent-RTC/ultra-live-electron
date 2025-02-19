@@ -129,7 +129,7 @@ function handleAddBgm(data:any){
     });
   } else {
     audioEffectStore.addMusic(musicFile);
-    selectMusicEle.value = "";
+    selectMusicEle.value.value = "";
   }
 }
 
@@ -376,7 +376,7 @@ function postMessage(key: string, data: object | number | string | undefined){
             }
           }
         }
-        
+
         .tui-audio-item-active {
           background-color: var(--dropdown-color-active);
         }

@@ -19,6 +19,13 @@ export function onError(error: any) {
         confirmButtonText: t('Sure'),
       });
       break;
+    case TUIErrorCode.ERR_REQUEST_ID_INVALID:
+      TUIMessageBox({
+        title: t('Note'),
+        message: t('not in waiting list'),
+        confirmButtonText: t('Sure'),
+      });
+      break;
     default:
       TUIMessageBox({
         title: t('Note'),

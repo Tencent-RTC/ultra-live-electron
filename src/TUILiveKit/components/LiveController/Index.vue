@@ -38,7 +38,7 @@
         <span @click="toggleVideoResolutionMode" class="tui-resolution-mode-switch">
           <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
         </span>
-        <tui-button @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled">
+        <tui-button @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled || !userId">
           <svg-icon :icon="liveStatusIcon" class="live-status"></svg-icon>
           <span :class="[isLiving ? 'text-living': ' text-living-start']">
             {{liveStatus}}
@@ -100,7 +100,7 @@ const mediaSourcesStore = useMediaSourcesStore();
 const audioEffectStore = useAudioEffectStore();
 const { mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
 const roomStore = useRoomStore();
-const { isLiving } = storeToRefs(basicStore);
+const { isLiving, userId } = storeToRefs(basicStore);
 
 const { applyToAnchorList, anchorList } = storeToRefs(roomStore);
 

@@ -37,6 +37,7 @@ export type TUILiveUserInfo = {
   userRole?: TUIRole,
   // Is it on the seat
   onSeat?: boolean,
+  onSeatTimestamp?: number,
   // Whether the user is applying for seat
   isUserApplyingToAnchor?: boolean,
   // The requestId of the user requesting to be on the seat
