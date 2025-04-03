@@ -45,7 +45,7 @@
       </div>
     </header>
   </template>
-  
+
 <script setup lang="ts">
 import { ref, Ref, defineProps, defineEmits, computed, watch } from "vue";
 import { storeToRefs } from 'pinia';
@@ -116,13 +116,13 @@ const onMinimize = () => {
   console.log("[LiveHeader]onMinimize");
   window.ipcRenderer.send("on-minimize-window", null);
 };
-  
+
 const onToggleMaximize = () => {
   console.log("[LiveHeader]onToggleMaximize");
   isMaximized.value = !isMaximized.value;
   window.ipcRenderer.send("on-maximize-window", isMaximized.value);
 };
-  
+
 const onClose = () => {
   console.log("[LiveHeader]onClose");
   window.ipcRenderer.send("on-close-window", null);
@@ -130,7 +130,7 @@ const onClose = () => {
 
 const handleChangeTheme = () => {
   currentTheme.value = currentTheme.value === ThemeColor.DarkTheme ? ThemeColor.LightTheme : ThemeColor.DarkTheme;
-  messageChannels.childWindowPort?.postMessage({
+  messageChannels.messagePortToChild?.postMessage({
     key: 'change-theme',
     data: currentTheme.value
   });
@@ -143,7 +143,7 @@ const handleLogOut = () => {
   emits('logout')
 }
 </script>
-  
+
 <style scoped lang="scss">
 @import "../../assets/variable.scss";
 .user-control-container {
@@ -175,7 +175,7 @@ const handleLogOut = () => {
       cursor: pointer;
     }
   }
- 
+
   .left {
     display: inline-flex;
     align-items: center;
@@ -301,7 +301,7 @@ const handleLogOut = () => {
     display: flex;
     align-items: center;
     align-self: flex-end;
-    height: 3rem; 
+    height: 3rem;
   }
 }
 </style>

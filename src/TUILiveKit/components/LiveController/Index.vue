@@ -45,7 +45,7 @@
           </span>
         </tui-button>
       </div>
-      
+
     </div>
   </div>
 </template>
@@ -109,18 +109,18 @@ const streamingTooBarList = shallowRef([
   // {
   //   icon: BeautyIcon,
   //   text: t('Beauty'),
-  //   fun: handleBeauty   
+  //   fun: handleBeauty
   // },
   // {
   //   icon: PKIcon,
   //   text: t('PK'),
-  //   fun: handlePK    
+  //   fun: handlePK
   // },
   {
     icon: SetIcon,
     text: t('Setting'),
     fun: handleSetting
-  }  
+  }
 ]);
 
 const screenStyleList = shallowRef([
@@ -160,11 +160,11 @@ const dispositionList = ref([
 ]);
 
 const currentScreenStyle = ref(screenStyleList.value[0]);
-const liveStatus = computed (()=> 
+const liveStatus = computed (()=>
   isLiving.value ? t('End Live'): t('Go Live')
 );
 
-const liveStatusIcon = computed (()=> 
+const liveStatusIcon = computed (()=>
   isLiving.value ? EndLivingIcon: StartLivingIcon
 );
 
@@ -175,11 +175,11 @@ function handleBeauty() {
 }
 
 function handleVoiceChat() {
-  messageChannels.childWindowPort?.postMessage({
+  messageChannels.messagePortToChild?.postMessage({
     key: 'set-apply-list',
     data: JSON.stringify(applyToAnchorList.value)
   });
-  messageChannels.childWindowPort?.postMessage({
+  messageChannels.messagePortToChild?.postMessage({
     key: 'set-anchor-list',
     data: JSON.stringify(anchorList.value)
   });
@@ -225,7 +225,7 @@ function handleChangeScreenStyle(item: screenStyle) {
 }
 
 watch(
-  () => isLiving.value, 
+  () => isLiving.value,
   (newValue, oldValue) => {
     logger.log(`${logPrefix}watch isLiving:`, newValue, oldValue);
     if (newValue !== oldValue) {
@@ -357,11 +357,11 @@ watch(
     margin-left: 0.375rem;
 
     .live-status{
-      color: var(--button-color-primary-default); 
+      color: var(--button-color-primary-default);
     }
 
     span{
-      color: var(--button-color-primary-default); 
+      color: var(--button-color-primary-default);
     }
 
     .text-living{

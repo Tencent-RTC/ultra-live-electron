@@ -125,7 +125,7 @@ export const useRoomStore = defineStore('room', {
           text: t('enter room'),
         },
         nick: userName || userId,
-        from: userId, 
+        from: userId,
         flow: 'in',
         sequence: -1,
       });
@@ -142,7 +142,7 @@ export const useRoomStore = defineStore('room', {
         remoteUserInfo.applyToAnchorTimestamp = timestamp;
         remoteUserInfo.onSeat = false;
       }
-      messageChannels.childWindowPort?.postMessage({
+      messageChannels.messagePortToChild?.postMessage({
         key: "set-apply-list",
         data: JSON.stringify(this.applyToAnchorList),
       });
@@ -155,7 +155,7 @@ export const useRoomStore = defineStore('room', {
         remoteUserInfo.applyToAnchorTimestamp = 0;
         remoteUserInfo.onSeat = false;
 
-        messageChannels.childWindowPort?.postMessage({
+        messageChannels.messagePortToChild?.postMessage({
           key: "set-apply-list",
           data: JSON.stringify(this.applyToAnchorList),
         });
@@ -177,8 +177,8 @@ export const useRoomStore = defineStore('room', {
           remoteUserInfo.applyToAnchorTimestamp = 0;
           remoteUserInfo.onSeat = !!agree;
           remoteUserInfo.onSeatTimestamp = Date.now();
-          
-          messageChannels.childWindowPort?.postMessage({
+
+          messageChannels.messagePortToChild?.postMessage({
             key: "set-apply-list",
             data: JSON.stringify(this.applyToAnchorList),
           });
@@ -231,11 +231,11 @@ export const useRoomStore = defineStore('room', {
         }
       });
 
-      messageChannels.childWindowPort?.postMessage({
+      messageChannels.messagePortToChild?.postMessage({
         key: "set-apply-list",
         data: JSON.stringify(this.applyToAnchorList),
       });
-      messageChannels.childWindowPort?.postMessage({
+      messageChannels.messagePortToChild?.postMessage({
         key: "set-anchor-list",
         data: JSON.stringify(this.anchorList),
       });

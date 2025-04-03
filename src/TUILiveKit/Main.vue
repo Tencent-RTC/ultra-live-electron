@@ -221,7 +221,7 @@ async function stopLiving () {
     basicStore.setIsLiving(false);
     basicStore.setRoomId("");
     resetRoomStore();
-    messageChannels.childWindowPort?.postMessage({
+    messageChannels.messagePortToChild?.postMessage({
       key: 'reset',
       data: {}
     });
@@ -451,7 +451,7 @@ onUnmounted(() => {
 // ***************** Device event listener start *****************
 function onDeviceChange(deviceId: string, type: TRTCDeviceType, state: TRTCDeviceState): void{
   logger.debug(`${logPrefix}onDeviceChange: deviceId:${deviceId}, type:${type}, state:${state}`);
-  messageChannels.childWindowPort?.postMessage({
+  messageChannels.messagePortToChild?.postMessage({
     key: 'on-device-changed',
     data: {
       deviceId,
@@ -462,14 +462,14 @@ function onDeviceChange(deviceId: string, type: TRTCDeviceType, state: TRTCDevic
 }
 
 function onTestMicVolume (volume: number) {
-  messageChannels.childWindowPort?.postMessage({
+  messageChannels.messagePortToChild?.postMessage({
     key: 'update-audio-volume',
     data: volume
   });
 }
 
 function onTestSpeakerVolume (volume: number) {
-  messageChannels.childWindowPort?.postMessage({
+  messageChannels.messagePortToChild?.postMessage({
     key: 'update-speaker-volume',
     data: volume
   });

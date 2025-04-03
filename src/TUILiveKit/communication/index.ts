@@ -21,9 +21,9 @@ let roomStore: any = null;
 
 
 export const messageChannels: {
-  childWindowPort: MessagePort|null;
+  messagePortToChild: MessagePort|null;
 } = {
-  childWindowPort: null,
+  messagePortToChild: null,
 };
 
 export async function addMediaSource(data: Record<string, any>) {
@@ -99,7 +99,6 @@ function checkRectAndResolution(
   }
   return rect;
 }
-
 
 async function _updateScreenImageMediaSource(data: Record<string, any>) {
   logger.log(
@@ -226,7 +225,6 @@ async function handleKickOut(data: Record<string, any>) {
   roomStore.kickUserOutOfRoom(userId);
 }
 
-let childChannelServer: MessagePort;
 async function handleChildWindowMessage(event: MessageEvent<any>) {
   logger.log(`${logPrefix}handleChildWindowMessage:`, event.data);
   const {key, data} = event.data;
@@ -366,10 +364,14 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
   case 'updatePlayingMusicId':
     if (data) {
       audioEffectStore.updatePlayingMusicId(data);
-      childChannelServer.postMessage({
-        key:"update-playing-music-id",
-        data
-      });
+      if (messageChannels.messagePortToChild) {
+        messageChannels.messagePortToChild.postMessage({
+          key:"update-playing-music-id",
+          data
+        });
+      } else {
+        logger.error(`${logPrefix}updatePlayingMusicId failed. No message port.`);
+      }
     }
     break;
   case 'setVoiceReverbType':
@@ -388,6 +390,7 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   }
 }
+
 audioEffectManager.setMusicObserver({
   onStart: () => {
     return;
@@ -396,15 +399,19 @@ audioEffectManager.setMusicObserver({
     return;
   },
   onComplete: (id: number) => {
-    if (audioEffectStore.audioEffect.currentPlayMode === TUIMusicPlayMode.SingleLoopPlay) {
-      childChannelServer.postMessage({key: 'update-playing-music-id', data:id});
-    } else if (audioEffectStore.audioEffect.currentPlayMode === TUIMusicPlayMode.SequentialPlay) {
-      let nextPlayingIndex = audioEffectStore.getMusicIndex(id) + 1;
-      if (nextPlayingIndex === audioEffectStore.getMusicDataLength()) {
-        nextPlayingIndex = 0;
+    if (messageChannels.messagePortToChild) {
+      if (audioEffectStore.audioEffect.currentPlayMode === TUIMusicPlayMode.SingleLoopPlay) {
+        messageChannels.messagePortToChild.postMessage({key: 'update-playing-music-id', data:id});
+      } else if (audioEffectStore.audioEffect.currentPlayMode === TUIMusicPlayMode.SequentialPlay) {
+        let nextPlayingIndex = audioEffectStore.getMusicIndex(id) + 1;
+        if (nextPlayingIndex === audioEffectStore.getMusicDataLength()) {
+          nextPlayingIndex = 0;
+        }
+        const nextPlayingId = audioEffectStore.audioEffect.musicDataList[nextPlayingIndex].id;
+        messageChannels.messagePortToChild.postMessage({key: 'update-playing-music-id', data:nextPlayingId});
       }
-      const nextPlayingId = audioEffectStore.audioEffect.musicDataList[nextPlayingIndex].id;
-      childChannelServer.postMessage({key: 'update-playing-music-id', data:nextPlayingId});
+    } else {
+      logger.error(`${logPrefix}musicObserver.onComplete failed. No message port.`);
     }
   }
 });
@@ -446,20 +453,17 @@ export function initCommunicationChannels(data: Record<string, any>) {
   mediaSourcesStore = data.mediaSourcesStore;
   roomStore = data.roomStore;
 
-  if (!messageChannels.childWindowPort) {
-    const childChannel = new MessageChannel();
+  if (!messageChannels.messagePortToChild) {
+    const messageChannel = new MessageChannel();
 
-    childChannelServer = childChannel.port1;
-    const childChannelClient = childChannel.port2;
-    childChannelServer.onmessage = handleChildWindowMessage;
-    childChannelServer.onmessageerror = (event) => {
-      logger.log('onMessageFromChildWindowError', event.data);
+    messageChannels.messagePortToChild = messageChannel.port1;
+    const messagePortToMain = messageChannel.port2;
+    messageChannels.messagePortToChild.onmessage = handleChildWindowMessage;
+    messageChannels.messagePortToChild.onmessageerror = (event) => {
+      logger.log(`${logPrefix}onmessageerror from child window:`, event.data);
     };
-    childChannelServer.start();
-
-    window.ipcRenderer.postMessage('port-to-child', null, [childChannelClient]);
-
-    messageChannels.childWindowPort = childChannelServer;
+    messageChannels.messagePortToChild.start();
+    window.ipcRenderer.postMessage('port-to-child', null, [messagePortToMain]);
   } else {
     logger.warn(`${logPrefix}initCommunicationChannels MessageChannel already existed.`);
   }
