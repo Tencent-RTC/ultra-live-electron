@@ -7,12 +7,12 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, defineEmits, defineProps, withDefaults, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, Ref, defineEmits, defineProps, withDefaults, watch, onMounted, onBeforeUnmount } from 'vue';
 import { Movable } from 'movable-resizable-js';
 import PointIcon from '../icons/PointIcon.vue';
 import SvgIcon from './SvgIcon.vue';
+import logger from '../../utils/logger';
 
-const logger = console;
 const logPrefix ='[TUISlider]';
 
 interface Props{
@@ -58,7 +58,7 @@ function onMove(left: number, top: number) {
 
 function setSliderProgress(progress: number){
   if(liveRef.value){
-    liveRef.value.style.setProperty("--slider-filled-width",`${progress}%`)
+    liveRef.value.style.setProperty('--slider-filled-width',`${progress}%`)
   }
 }
 

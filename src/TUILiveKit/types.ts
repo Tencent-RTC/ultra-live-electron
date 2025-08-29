@@ -1,6 +1,7 @@
-import { TRTCMediaSource } from 'trtc-electron-sdk';
+import { Rect, TRTCMediaSource, TRTCPhoneMirrorParam, TRTCUserStream, TRTCVideoColorRange, TRTCVideoColorSpace, TRTCVideoFillMode } from 'trtc-electron-sdk';
 import {
   TUIRole,
+  TUISeatRegion,
 } from '@tencentcloud/tuiroom-engine-electron';
 import { TRTCXmagicEffectProperty } from './utils/beauty';
 
@@ -28,6 +29,9 @@ export type TUIMediaSourceViewModel = {
   mediaSourceInfo: TRTCMediaSource;
   beautyConfig?: TUIBeautyConfig;
   screenType?: TUIScreenType;
+  mirrorParams?: TRTCPhoneMirrorParam;
+  colorSpace?: TRTCVideoColorSpace;
+  colorRange?: TRTCVideoColorRange;
 }
 
 export type TUILiveUserInfo = {
@@ -49,4 +53,31 @@ export type TUILiveUserInfo = {
 export enum TUIMusicPlayMode {
   SingleLoopPlay = 'SingleLoopPlay',
   SequentialPlay = 'SequentialPlay'
+}
+
+export enum TUIStreamLayoutMode {
+  Float = 'Float',
+  Grid = 'Grid',
+  None = 'None',
+}
+
+export type TUIMediaMixingError = {
+  code: number;
+  message: string;
+  mediaSource?: TRTCMediaSource;
+}
+
+export type TUIUserSeatStreamRegion = TRTCUserStream & TUISeatRegion & {
+  rect: Rect;
+  zOrder: number;
+  fillMode: TRTCVideoFillMode;
+}
+
+export enum TUISeatLayoutTemplate {
+  LandscapeDynamic_1v3 = 200,
+  PortraitDynamic_Grid9 = 600,
+  PortraitDynamic_1v6 = 601,
+  PortraitFixed_Grid9 = 800,
+  PortraitFixed_1v6 = 801,
+  PortraitFixed_6v6 = 802,
 }

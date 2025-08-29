@@ -6,17 +6,17 @@
       </span>
     </span>
   </template>
-  
+
 <script setup lang="ts">
 import { defineProps } from 'vue';
 import { decodeMessageText } from './util';
-  
+
 const props = defineProps(['data']);
-  
+
 const handleTextMessageShowContext = (text: string) => decodeMessageText(text);
-  
+
 </script>
-  
+
 <style lang="scss" scoped>
 @import "../../assets/variable.scss";
 
@@ -36,8 +36,8 @@ const handleTextMessageShowContext = (text: string) => decodeMessageText(text);
 }
 
 .text-box {
-    color: var(--text-color-primary);
     line-height: 1.25rem;
+    overflow-wrap: break-word;
+    color: var(--text-color-primary);
 }
 </style>
-  

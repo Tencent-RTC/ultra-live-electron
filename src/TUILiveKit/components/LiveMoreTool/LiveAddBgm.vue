@@ -48,25 +48,25 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted } from "vue";
-import { storeToRefs } from "pinia";
-import { TRTCDeviceType } from "@tencentcloud/tuiroom-engine-electron";
+import { ref, onMounted, watch, onUnmounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { TRTCDeviceType } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIMusicPlayMode } from '../../types';
-import SvgIcon from "../../common/base/SvgIcon.vue";
-import CloseIcon from "../../common/icons/CloseIcon.vue";
-import SpeakerOffIcon from "../../common/icons/SpeakerOffIcon.vue";
-import SpeakerOnIcon from "../../common/icons/SpeakerOnIcon.vue";
-import MusicListIcon from "../../common/icons/MusicListIcon.vue";
-import AddMusicIcon from "../../common/icons/AddMusicIcon.vue";
-import DeleteMusicIcon from "../../common/icons/DeleteMusicIcon.vue";
-import PausePlayIcon from "../../common/icons/PausePlayIcon.vue";
-import StartPlayIcon from "../../common/icons/StartPlayIcon.vue";
-import SequentialPlayIcon from "../../common/icons/SequentialPlayIcon.vue";
-import SingleLoopPlayIcon from "../../common/icons/SingleLoopPlayIcon.vue";
-import TuiSlider from "../../common/base/Slider.vue";
-import { useAudioEffectStore} from "../../store/audioEffect";
-import TUIMessageBox from "../../common/base/MessageBox/index";
-import { useI18n } from "../../locales";
+import SvgIcon from '../../common/base/SvgIcon.vue';
+import CloseIcon from '../../common/icons/CloseIcon.vue';
+import SpeakerOffIcon from '../../common/icons/SpeakerOffIcon.vue';
+import SpeakerOnIcon from '../../common/icons/SpeakerOnIcon.vue';
+import MusicListIcon from '../../common/icons/MusicListIcon.vue';
+import AddMusicIcon from '../../common/icons/AddMusicIcon.vue';
+import DeleteMusicIcon from '../../common/icons/DeleteMusicIcon.vue';
+import PausePlayIcon from '../../common/icons/PausePlayIcon.vue';
+import StartPlayIcon from '../../common/icons/StartPlayIcon.vue';
+import SequentialPlayIcon from '../../common/icons/SequentialPlayIcon.vue';
+import SingleLoopPlayIcon from '../../common/icons/SingleLoopPlayIcon.vue';
+import TuiSlider from '../../common/base/Slider.vue';
+import { useAudioEffectStore} from '../../store/child/audioEffect';
+import TUIMessageBox from '../../common/base/MessageBox/index';
+import { useI18n } from '../../locales';
 
 const { t } = useI18n();
 const audioEffectStore = useAudioEffectStore();
@@ -80,31 +80,31 @@ let pausePlayingMusicId = -1;
 const playModeIconList = [SequentialPlayIcon, SingleLoopPlayIcon];
 const playModeList = [TUIMusicPlayMode.SequentialPlay, TUIMusicPlayMode.SingleLoopPlay];
 enum PostMessageKey {
-  startPlayMusic = "startPlayMusic",
-  stopPlayMusic ="stopPlayMusic",
-  pausePlayMusic = "pausePlayMusic",
-  resumePlayMusic = "resumePlayMusic",
-  setAllMusicVolume = "setAllMusicVolume",
-  setCurrentDeviceVolume = "setCurrentDeviceVolume",
-  setMusicPublishVolume = "setMusicPublishVolume",
-  setMusicObserver = "setMusicObserver",
-  singleLoopPlay = "singleLoopPlay",
-  sequentialPlay = "sequentialPlay",
-  updatePlayingMusicId = "updatePlayingMusicId",
-  updateMusicData = "updateMusicData"
+  startPlayMusic = 'startPlayMusic',
+  stopPlayMusic ='stopPlayMusic',
+  pausePlayMusic = 'pausePlayMusic',
+  resumePlayMusic = 'resumePlayMusic',
+  setAllMusicVolume = 'setAllMusicVolume',
+  setCurrentDeviceVolume = 'setCurrentDeviceVolume',
+  setMusicPublishVolume = 'setMusicPublishVolume',
+  setMusicObserver = 'setMusicObserver',
+  singleLoopPlay = 'singleLoopPlay',
+  sequentialPlay = 'sequentialPlay',
+  updatePlayingMusicId = 'updatePlayingMusicId',
+  updateAudioEffectData = 'updateAudioEffectData'
 }
 
 onMounted(() => {
-  selectMusicEle.value?.addEventListener("change", handleAddBgm);
+  selectMusicEle.value?.addEventListener('change', handleAddBgm);
   onTogglePlayMode();
   onUpdateBgmVolume(audioEffect.value.musicVolume);
 });
 
 onUnmounted(() => {
-  selectMusicEle.value?.removeEventListener("change",handleAddBgm);
+  selectMusicEle.value?.removeEventListener('change',handleAddBgm);
 })
 
-watch(playingMusicId,(newValue) => {
+watch(playingMusicId, (newValue) => {
   postMessage(PostMessageKey.updatePlayingMusicId, newValue);
   switch (playModeList[currentPlayModeIndex.value]) {
   case TUIMusicPlayMode.SingleLoopPlay:
@@ -123,13 +123,13 @@ function handleAddBgm(data:any){
   const isRepetition = audioEffectStore.isRepetition(musicFile);
   if (isRepetition) {
     TUIMessageBox({
-      title: t("Note"),
-      message: t("Please do not duplicate!"),
-      confirmButtonText: t("Sure"),
+      title: t('Note'),
+      message: t('Please do not duplicate!'),
+      confirmButtonText: t('Sure'),
     });
   } else {
     audioEffectStore.addMusic(musicFile);
-    selectMusicEle.value.value = "";
+    selectMusicEle.value.value = '';
   }
 }
 
@@ -156,10 +156,10 @@ function onPlayMusic(id: number){
   if (playingMusicId.value !== -1 && playingMusicId.value === id) {
     postMessage(PostMessageKey.pausePlayMusic, playingMusicId.value);
     pausePlayingMusicId = id;
-    audioEffectStore.setPlayingMusicId(-1);
+    audioEffectStore.updatePlayingMusicId(-1);
   } else if (playingMusicId.value !== -1 && playingMusicId.value !== id) {
     postMessage(PostMessageKey.stopPlayMusic, playingMusicId.value);
-    audioEffectStore.setPlayingMusicId(id);
+    audioEffectStore.updatePlayingMusicId(id);
     pausePlayingMusicId = -1;
   } else if (playingMusicId.value === -1) {
     if (pausePlayingMusicId === id) {
@@ -167,7 +167,7 @@ function onPlayMusic(id: number){
     } else {
       postMessage(PostMessageKey.stopPlayMusic, pausePlayingMusicId);
     }
-    audioEffectStore.setPlayingMusicId(id);
+    audioEffectStore.updatePlayingMusicId(id);
   }
 }
 
@@ -177,7 +177,7 @@ function onDeleteMusic (id: number){
 }
 
 function handleCloseSetting(){
-  window.ipcRenderer.send("close-child");
+  window.ipcRenderer.send('close-child');
 }
 
 function handleSingleLoopPlay(id: number){
@@ -222,7 +222,7 @@ function onUpdateBgmVolume(volume: number){
 }
 
 function postMessage(key: string, data: object | number | string | undefined){
-  window.mainWindowPort?.postMessage({
+  window.mainWindowPortInChild?.postMessage({
     key,
     data,
   });

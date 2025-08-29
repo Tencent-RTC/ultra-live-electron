@@ -25,14 +25,20 @@ git clone https://github.com/Tencent-RTC/ultra-live-electron.git
 
 cd ultra-live-electron
 ```
-2. 打开 `src/debug/basic-info-config.js` 文件，输入 `SDKAppID` 和 `SDKSecretKey`。
-
-3. 以开发模式运行
+2. 以开发模式运行
 ```
 npm install
 
 npm run start
 ```
+
+3. 登录体验
+
+我们提供三种登录方式。若需快速体验，您可使用 `SDKAppID` 和 `SDKSecretKey` 进行登录：
+
+- `密钥登录`：快速入门方案，通过 `SDKAppID` 和 `SDKSecretKey` 直接登录。
+- `签名登录`：快速入门方案，通过 `SDKAppID` 和 `userSig` 登录（用户签名可通过[腾讯云控制台生成](https://console.cloud.tencent.com/trtc/usersigtool)）。
+- `密码登录`：功能尚未完全实现，您需要在 `src/views/Login/Index.vue` 中配置登录接口地址方可使用​​（**此为生产环境最佳安全实践，需在服务端使用 `SDKAppID` 和 `SDKSecretKey` 生成 `userSig`**）​​。
 
 ### 第三步：构建安装包
 构建好的安装包在 `release` 目录下，可以按照运行。
@@ -43,4 +49,3 @@ npm run pack:win64
 ## 更多资料
 1. [直通官网](https://cloud.tencent.com/document/product/647/105438)
 2. [在线体验](https://cloud.tencent.com/document/product/647/17021)
-3. [手机端开源库](https://github.com/Tencent-RTC/TUILiveKit)

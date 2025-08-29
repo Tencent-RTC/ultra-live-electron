@@ -3,8 +3,8 @@ import { useChatStore } from '../../store/main/chat';
 import { useBasicStore } from '../../store/main/basic';
 import TUIRoomEngine, { TencentCloudChat } from '@tencentcloud/tuiroom-engine-electron';
 import useRoomEngine from '../../utils/useRoomEngine';
+import logger from '../../utils/logger';
 
-const logger = console;
 const logPrefix = '[useMessageHook]';
 
 export default function useMessageHook() {
@@ -26,7 +26,7 @@ export default function useMessageHook() {
       }
     });
   };
-  
+
   const handleTextMessage = (message: any) => {
     if (message.type !== TencentCloudChat.TYPES.MSG_TEXT) {
       return;

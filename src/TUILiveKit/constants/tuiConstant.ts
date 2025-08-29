@@ -1,9 +1,15 @@
-import { TRTCVideoResolution } from 'trtc-electron-sdk';
+import { TRTCVideoResolution, TRTCVideoColorSpace, TRTCVideoColorRange } from 'trtc-electron-sdk';
+import { useI18n } from '../locales';
 
-type TUIVideoResolutionType = Record<string|number, {
+const { t } = useI18n();
+
+type TUIVideoResolutionType = Record<string | number, {
   width: number;
   height: number;
 }>;
+
+export const defaultCameraCaptureWidth = 640;
+export const defaultCameraCaptureHeight = 360;
 
 const initResolutionMap = (): TUIVideoResolutionType => {
   const map: TUIVideoResolutionType = {};
@@ -21,4 +27,36 @@ const initResolutionMap = (): TUIVideoResolutionType => {
   return map;
 }
 
-export const resolutionMap:TUIVideoResolutionType  = initResolutionMap();
+export const resolutionMap: TUIVideoResolutionType = initResolutionMap();
+
+export const colorSpaceOptions = [
+  {
+    label: t('Auto'),
+    value: TRTCVideoColorSpace.TRTCVideoColorSpace_Auto,
+  },
+  {
+    label: t('Color Space - BT709'),
+    value: TRTCVideoColorSpace.TRTCVideoColorSpace_BT709,
+  },
+  {
+    label: t('Color Space - BT601'),
+    value: TRTCVideoColorSpace.TRTCVideoColorSpace_BT601,
+  }
+];
+
+export const colorRangeOptions = [
+  {
+    label: t('Auto'),
+    value: TRTCVideoColorRange.TRTCVideoColorRange_Auto,
+  },
+  {
+    label: t('Color Range - Full'),
+    value: TRTCVideoColorRange.TRTCVideoColorRange_Full,
+  },
+  {
+    label: t('Color Range - Limited'),
+    value: TRTCVideoColorRange.TRTCVideoColorRange_Limited,
+  }
+];
+
+export const MEDIA_SOURCE_STORAGE_KEY = 'TRTC_LIVE_MEDIA_SOURCES';

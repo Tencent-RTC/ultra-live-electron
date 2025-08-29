@@ -34,8 +34,6 @@ function handleClick(event: Event) {
   align-items: center;
   justify-content: center;
   color: var(--text-color-primary);
-  cursor: pointer;
+  cursor: inherit;
 }
 </style>
-
-  

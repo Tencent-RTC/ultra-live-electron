@@ -1,4 +1,4 @@
-import trtcCloud from "./trtcCloud";
+import trtcCloud from './trtcCloud';
 
 const audioEffectManager = trtcCloud;
 

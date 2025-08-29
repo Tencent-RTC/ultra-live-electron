@@ -26,16 +26,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import BGMIcon from "../../common/icons/BGMIcon.vue";
-import PKIcon from "../../common/icons/PKIcon.vue";
-import AudioEffIcon from "../../common/icons/AudioEffIcon.vue";
-import RecordIcon from "../../common/icons/RecordIcon.vue";
-import ChangeVoiceIcon from "../../common/icons/ChangeVoiceIcon.vue";
-import ArrowDownIcon from "../../common/icons/ArrowDownIcon.vue";
-import ArrowDownRotateIcon from "../../common/icons/ArrowDownRotateIcon.vue";
-import SvgIcon from "../../common/base/SvgIcon.vue";
-import { useI18n } from "../../locales";
+import { ref } from 'vue';
+import BGMIcon from '../../common/icons/BGMIcon.vue';
+import PKIcon from '../../common/icons/PKIcon.vue';
+import AudioEffIcon from '../../common/icons/AudioEffIcon.vue';
+import RecordIcon from '../../common/icons/RecordIcon.vue';
+import ChangeVoiceIcon from '../../common/icons/ChangeVoiceIcon.vue';
+import ArrowDownIcon from '../../common/icons/ArrowDownIcon.vue';
+import ArrowDownRotateIcon from '../../common/icons/ArrowDownRotateIcon.vue';
+import SvgIcon from '../../common/base/SvgIcon.vue';
+import { useI18n } from '../../locales';
 
 const {t} = useI18n();
 const isCollapse  = ref(false);
@@ -45,45 +45,50 @@ const switchLiveTool = () => {
 };
 
 const handlerAddBgm = () => {
-  window.ipcRenderer.send("open-child", {
-    command: "add-bgm",
+  window.ipcRenderer.send('open-child', {
+    command: 'add-bgm',
   });
 };
 
+const handlerPK = () => {
+  window.ipcRenderer.send('open-pk');
+};
+
 const handlerAudioEffect = () => {
-  window.ipcRenderer.send("open-child", {
-    command: "reverb-voice",
+  window.ipcRenderer.send('open-child', {
+    command: 'reverb-voice',
   });
 };
 
 const handlerAlterVoice = () => {
-  window.ipcRenderer.send("open-child", {
-    command: "change-voice",
+  window.ipcRenderer.send('open-child', {
+    command: 'change-voice',
   });
 }
 
 const liveToolButtonList = [
   {
     icon: AudioEffIcon,
-    text: "Reverb Voice",
+    text: 'Reverb Voice',
     func: handlerAudioEffect,
   },
   {
     icon: BGMIcon,
-    text: "BGM",
+    text: 'BGM',
     func: handlerAddBgm,
   },
   {
     icon: PKIcon,
-    text: "PK",
+    text: 'PK',
+    // func: handlerPK, // To do
   },
   {
     icon: RecordIcon,
-    text: "Record",
+    text: 'Record',
   },
   {
     icon: ChangeVoiceIcon,
-    text: "Change Voice",
+    text: 'Change Voice',
     func:handlerAlterVoice,
   },
 ];
@@ -138,7 +143,7 @@ const liveToolButtonList = [
         align-items: center;
         height: 3.5rem;
         width: 100%;
-        
+
         .tui-live-tool-button-icon {
           position: absolute;
           top: 0.5rem;
@@ -153,7 +158,7 @@ const liveToolButtonList = [
         }
       }
     }
-    
+
     .tui-live-tool-disable-button,
     .tui-live-tool-disable-button:hover{
       color: $font-live-config-tool-disable-button-hover-color;

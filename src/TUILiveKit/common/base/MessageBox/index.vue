@@ -19,7 +19,7 @@
           <div>{{ message }}</div>
         </div>
         <div class="tui-message-box-footer">
-          <tui-button size="default" class="button" @click="handleClose">{{ confirmButtonText }}</tui-button>
+          <tui-button class="tui-message-confirm-button" @click="handleClose">{{ confirmButtonText }}</tui-button>
         </div>
       </div>
     </div>
@@ -166,5 +166,9 @@ onMounted(async () => {
   padding: 0.5rem 1rem;
   display: flex;
   justify-content: flex-end;
+
+  .tui-message-confirm-button {
+    width: 5rem;
+  }
 }
 </style>

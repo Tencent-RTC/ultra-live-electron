@@ -4,7 +4,7 @@
       <div @click="handleChangeSource" :class="[isShowSources ? 'is-active' : '', 'tui-config-title-header']">{{ t('Sources')}}</div>
       <div @click="handleChangeVideoEncode" :class="[isShowVideoEncode ? 'is-active' : '', 'tui-config-title-header']">{{ t('Video Encode')}}</div>
     </div>
-    <div v-if="isShowSources && !isHasSources" class="tui-config-list">
+    <div v-if="isShowSources && !isSourceExisted" class="tui-config-list">
       <span class="tui-config-notice">
         {{ t('Support diverse types of media sources')}}
       </span>
@@ -18,18 +18,20 @@
         <live-image-source></live-image-source>
       </span>
     </div>
-    <div v-if="isHasSources && !isShowVideoEncode" class="tui-media-source">
+    <div v-if="isSourceExisted && !isShowVideoEncode" class="tui-media-source">
       <div class="tui-add-source-menu" @click="handleOpenAddMedia" v-click-outside="handleClickOutsideAdd" >
         <svg-icon :icon="AddIcon" class="icon-container tui-menu-item-text"></svg-icon>
         <span class=tui-menu-item-text>{{ t('Add') }}</span>
       </div>
       <div v-if="isShowAddMedia" class="tui-add-source-menu-popup">
-        <span v-for="item in mediaSourceMenuList" :key="item.text" class="tui-add-source-menu-item" @click="item.fun()">
-          <svg-icon :icon="item.icon" class="icon-container"></svg-icon>
-          <i class=tui-menu-item-text>
-            {{item.text}}
-          </i>
-        </span>
+        <template v-for="item in mediaSourceMenuList" :key="item.id">
+          <span v-if="item.id !== 'Add Phone' || !isPhoneSourceExisted" class="tui-add-source-menu-item" @click="item.fun()">
+            <svg-icon :icon="item.icon" class="icon-container"></svg-icon>
+            <i class=tui-menu-item-text>
+              {{item.text}}
+            </i>
+          </span>
+        </template>
         <span class="tui-add-source-menu-item">
           <live-image-source></live-image-source>
         </span>
@@ -41,7 +43,6 @@
           @mousedown="handleStartDrag($event, item)"
           class="tui-media-source-item"
           :class="item.mediaSourceInfo.sourceId === selectedMediaKey.sourceId && item.mediaSourceInfo.sourceType === selectedMediaKey.sourceType ? 'selected' : ''"
-          v-click-outside="handleClickOutside"
           @click="handleSelectSource(item)">
           <div class="tui-media-source-content">
             <!-- <svg-icon :icon="CameraIcon" class="icon-container"></svg-icon> -->
@@ -56,7 +57,7 @@
               <button class="item-icon icon-mute" @click.stop.prevent="handleMuteMediaSource(item)">
                 <svg-icon :icon="!item.muted ? MediaSourceMute : MediaSourceUnmute" :size="1.5" class="icon-container"></svg-icon>
               </button>
-              <button class="item-icon icon-more" @click.stop.prevent="handleMore(item)">
+              <button class="item-icon icon-more" @click.stop.prevent="handleMore(item)" v-click-outside="handleClickOutside">
                 <svg-icon :icon="MoreIcon" :size="1.5" class="icon-container"></svg-icon>
               </button>
             </div>
@@ -75,9 +76,6 @@
       </div>
     </div>
     <div v-if="isShowVideoEncode" class="tui-video-encode">
-      <div class="options-container">
-        <TUISwitch :model-value="isHevcEncodeEnabled" label="H265" @update:modelValue="toggleHevcMode"></TUISwitch>
-      </div>
       <div class="options-container">
         <span class="options-container-title">{{t('Background color')}}</span>
         <TUIColorPicker class="options-container-input" :currentColor="backgroundColor" @change="onChangeBgColor"></TUIColorPicker>
@@ -127,13 +125,66 @@
           />
         </TUISelect>
       </div>
+      <div class="options-container">
+        <span class="options-container-title">{{t('Color Space')}}</span>
+        <TUISelect
+          :modelValue="mixingVideoEncodeParam.colorSpace"
+          :teleported="false"
+          :popper-append-to-body="true"
+          @change="onChangeColorSpace">
+          <TUIOption
+            v-for="item in videoColorSpaceOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </TUISelect>
+      </div>
+      <div class="options-container">
+        <span class="options-container-title">{{t('Color Range')}}</span>
+        <TUISelect
+          :modelValue="mixingVideoEncodeParam.colorRange"
+          :teleported="false"
+          :popper-append-to-body="true"
+          @change="onChangeColorRange">
+          <TUIOption
+            v-for="item in videoColorRangeOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </TUISelect>
+      </div>
+      <div class="options-container">
+        <span class="options-container-title">{{t('Encode Gear')}}</span>
+        <TUISelect
+          :modelValue="mixingVideoEncodeParam.complexity"
+          :teleported="false"
+          :popper-append-to-body="true"
+          @change="onChangeEncodeGear">
+          <TUIOption
+            v-for="item in encodeGearOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </TUISelect>
+      </div>
+      <div class="options-container" style="display: inline-flex;flex-direction:row;">
+        <TUISwitch :model-value="isHevcEncodeEnabled" label="H265" @update:modelValue="toggleHevcMode"></TUISwitch>
+      </div>
+      <div class="options-container">
+        <span class="options-container-title">{{t('Selected border color')}}</span>
+        <TUIColorPicker class="options-container-input" :currentColor="selectedBorderColor" @change="onChangeBorderColor"></TUIColorPicker>
+      </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import { ref, Ref, shallowRef, defineEmits } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TRTCMediaSourceType, TRTCVideoResolution } from 'trtc-electron-sdk';
+import { TRTCMediaSourceType, TRTCVideoResolution, TRTCVideoColorRange, TRTCVideoColorSpace, TRTCVideoEncodeComplexity } from 'trtc-electron-sdk';
+import { TUIMediaMixingError, TUIMediaSourceViewModel } from '../../types';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import TUISwitch from '../../common/base/Switch.vue';
 import CameraIcon from '../../common/icons/CameraIcon.vue';
@@ -149,19 +200,22 @@ import TUISelect from '../../common/base/Select.vue';
 import TUIOption from '../../common/base/Option.vue'
 import MediaSourceMute from '../../common/icons/MediaSourceMute.vue';
 import MediaSourceUnmute from '../../common/icons/MediaSourceUnmute.vue';
-import { TUIMediaSourceViewModel, useMediaSourcesStore } from '../../store/main/mediaSources';
+import { useMediaSourcesStore } from '../../store/main/mediaSources';
 import LiveImageSource from '../LiveSource/LiveImageSource.vue';
+import { generateUniqueId } from '../../utils/utils';
+import onMediaMixingError from '../../hooks/useMediaMixingErrorHandler';
+import { colorSpaceOptions, colorRangeOptions } from '../../constants/tuiConstant';
+import logger from '../../utils/logger';
 
-const logger = console;
 const logPrefix = '[LiveConfig]';
 
-const emits = defineEmits(["edit-media-source"]);
+const emits = defineEmits(['edit-media-source']);
 
 const mediaSourcesStore = useMediaSourcesStore();
-const { backgroundColor, selectedMediaKey, mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
+const { backgroundColor, selectedBorderColor, selectedMediaKey, mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
 
 const { t } = useI18n();
-const { isHasSources, mediaList, isHevcEncodeEnabled } = storeToRefs(mediaSourcesStore);
+const { isSourceExisted, isPhoneSourceExisted, mediaList, isHevcEncodeEnabled } = storeToRefs(mediaSourcesStore);
 const isShowSources = ref(true);
 const isShowVideoEncode = ref(false);
 const isShowAddMedia = ref(false);
@@ -170,13 +224,17 @@ const mediaSourceListRef: Ref<HTMLElement|null> = ref(null);
 
 const videoResolutionOptions = shallowRef([
   {
+    label: '1280 X 720',
+    value: TRTCVideoResolution.TRTCVideoResolution_1280_720
+  },
+  {
     label: '1920 X 1080',
     value: TRTCVideoResolution.TRTCVideoResolution_1920_1080
   },
   {
-    label: '1280 X 720',
-    value: TRTCVideoResolution.TRTCVideoResolution_1280_720
-  }
+    label: '2560 X 1440',
+    value: TRTCVideoResolution.TRTCVideoResolution_2560_1440
+  },
 ]);
 const videoFpsOptions = shallowRef([
   15,
@@ -196,18 +254,41 @@ const videoBitrateOptions = shallowRef([
   9000,
   10000,
 ]);
-
+const videoColorSpaceOptions = shallowRef([...colorSpaceOptions]);
+const videoColorRangeOptions = shallowRef([...colorRangeOptions]);
+const encodeGearOptions = shallowRef([
+  {
+    label: t('Encode Gear - Low'),
+    value: TRTCVideoEncodeComplexity.TRTCVideoEncodeComplexity_Fastest,
+  },
+  {
+    label: t('Encode Gear - Midium'),
+    value: TRTCVideoEncodeComplexity.TRTCVideoEncodeComplexity_Medium,
+  },
+  {
+    label: t('Encode Gear - High'),
+    value: TRTCVideoEncodeComplexity.TRTCVideoEncodeComplexity_Slowest,
+  },
+]);
 const mediaSourceMenuList = shallowRef([
   {
     icon: CameraIcon,
+    id: 'Add Camera',
     text: t('Add Camera'),
     fun: handleAddCamera
   },
   {
     icon: AddShareScreenIcon,
+    id: 'Add Capture',
     text: t('Add Capture'),
     fun: handleAddShareScreen
   },
+  // {
+  //   icon: CameraIcon,
+  //   id: 'Add Phone',
+  //   text: t('Add Phone'),
+  //   fun: handleAddPhoneMirror
+  // }
 ]);
 
 const handleOpenAddMedia = () => {
@@ -242,6 +323,47 @@ function handleAddShareScreen() {
   });
 }
 
+async function handleAddPhoneMirror() {
+  isShowAddMedia.value = false;
+  const mediaSourceModel: TUIMediaSourceViewModel = {
+    sourceName: 'Phone',
+    aliasName: 'Phone',
+    left: 0,
+    top: 0,
+    muted: false,
+    mediaSourceInfo: {
+      sourceId: `Phone${generateUniqueId()}`,
+      sourceType: TRTCMediaSourceType.kPhoneMirror,
+      zOrder: 1,
+      rect: {
+        left: 0,
+        top: 0,
+        right: 1080,
+        bottom: 1920,
+      }
+    },
+    mirrorParams: {
+      connectType: 0,
+      platformType: 0,
+      deviceId: '',
+      deviceName: '',
+      placeholderImagePath: '',
+      frameRate: 60,
+      bitrateKbps: 8000,
+    }
+  }
+  try {
+    await mediaSourcesStore.addMediaSource(mediaSourceModel);
+    await mediaSourcesStore.selectMediaSource(mediaSourceModel);
+    window.ipcRenderer.send('open-child', {
+      'command': 'phone-mirror',
+      data: JSON.parse(JSON.stringify(mediaSourceModel))
+    });
+  } catch (error) {
+    onMediaMixingError(error as TUIMediaMixingError);
+  }
+}
+
 const handleChangeMediaOrder = (item: TUIMediaSourceViewModel, changeValue: number) => {
   mediaSourcesStore.changeMediaOrder(item, changeValue);
 }
@@ -260,14 +382,20 @@ const handleSelectSource = (item: TUIMediaSourceViewModel) => {
   mediaSourcesStore.selectMediaSource(item);
 }
 
-const handleRemoveSource = (item: TUIMediaSourceViewModel) => {
+const handleRemoveSource = async (item: TUIMediaSourceViewModel) => {
   logger.log(`${logPrefix}handleRemoveSource:`, item);
-  mediaSourcesStore.removeMediaSource(item);
+  try {
+    await mediaSourcesStore.removeMediaSource(item);
+  } catch (error) {
+    onMediaMixingError(error as TUIMediaMixingError);
+  }
+  visibleMorePopupId.value = '';
 }
 
 const handleEditSource = (item: TUIMediaSourceViewModel) => {
   logger.log(`${logPrefix}handleEditSource:`, item);
-  emits("edit-media-source", item);
+  emits('edit-media-source', item);
+  visibleMorePopupId.value = '';
 }
 
 const handleClickOutside = () => {
@@ -288,8 +416,8 @@ const handleStartDrag = (event: MouseEvent, item: TUIMediaSourceViewModel) => {
     oldIndex.value = mouseDistanceFromScrollTop / mediaSourceDivHeight.value;
     oldIndex.value = Math.floor(oldIndex.value);
     logger.debug(`${logPrefix}handleStartDrag oldIndex:`, oldIndex.value);
-    mediaSourceListRef.value.addEventListener("mousemove", handleDragging);
-    mediaSourceListRef.value.addEventListener("mouseup", handleStopDrag);
+    mediaSourceListRef.value.addEventListener('mousemove', handleDragging);
+    mediaSourceListRef.value.addEventListener('mouseup', handleStopDrag);
   }
 };
 
@@ -305,7 +433,7 @@ const handleDragging = (event: MouseEvent) => {
     }
 
     if (oldIndex.value !== newIndex.value) {
-      logger.debug(`${logPrefix}handleDragging oldIndex:`, oldIndex.value, `newIndex:`, newIndex.value);
+      logger.debug(`${logPrefix}handleDragging oldIndex:`, oldIndex.value, 'newIndex:', newIndex.value);
       if (oldIndex.value !== null && newIndex.value !== null) {
         mediaSourcesStore.changeMediaOrder(mediaSouceInMoving.value, (oldIndex.value - newIndex.value));
         mediaSourcesStore.selectMediaSource(mediaSouceInMoving.value);
@@ -327,8 +455,8 @@ const handleDragging = (event: MouseEvent) => {
 const handleStopDrag = (event: MouseEvent) => {
   logger.debug(`${logPrefix}handleStopDrag:`, event, event.target, event.currentTarget);
   if (mediaSourceListRef.value) {
-    mediaSourceListRef.value.removeEventListener("mousemove", handleDragging);
-    mediaSourceListRef.value.removeEventListener("mouseup", handleStopDrag);
+    mediaSourceListRef.value.removeEventListener('mousemove', handleDragging);
+    mediaSourceListRef.value.removeEventListener('mouseup', handleStopDrag);
   }
   mediaSouceInMoving.value = null;
   mediaSourceDivHeight.value = null;
@@ -344,6 +472,10 @@ const onChangeBgColor = (value: number) => {
   mediaSourcesStore.updateBackgroundColor(value);
 }
 
+const onChangeBorderColor = (value: number) => {
+  mediaSourcesStore.updateSelectedBorderColor(value);
+}
+
 const onChangeVideoResolution = (resolution: TRTCVideoResolution) => {
   mediaSourcesStore.updateVideoResolution(resolution);
 }
@@ -355,6 +487,18 @@ const onChangeVideoFps = (value: number) => {
 const onChangeVideoBitrage = (value: number) => {
   mediaSourcesStore.updateVideobitrate(value);
 };
+
+const onChangeColorSpace = (value: number) => {
+  mediaSourcesStore.updateMixingColorSpace(value as TRTCVideoColorSpace);
+};
+
+const onChangeColorRange = (value: number) => {
+  mediaSourcesStore.updateMixingColorRange(value as TRTCVideoColorRange);
+};
+
+const onChangeEncodeGear = (value: number) => {
+  mediaSourcesStore.updateMixingEncodeGear(value as TRTCVideoEncodeComplexity);
+}
 </script>
 
 <style scoped lang="scss">
@@ -420,7 +564,7 @@ const onChangeVideoBitrage = (value: number) => {
     justify-content: center;
     width: 12.5rem;
     height: 2.5rem;
-    margin: 1.5rem 0;
+    margin: 1rem 0;
     cursor: pointer;
     background: var(--bg-color-input);
     border-radius: 6.25rem;
@@ -586,6 +730,7 @@ const onChangeVideoBitrage = (value: number) => {
 .tui-video-encode{
   height: calc(100% - 2rem);
   padding: 0 1rem;
+  overflow: auto;
 
   .options-container{
     display: flex;

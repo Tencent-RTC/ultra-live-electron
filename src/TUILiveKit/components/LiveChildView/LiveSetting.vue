@@ -51,7 +51,7 @@ function handleUpdateActiveTab(tabTitle: string) {
 }
 
 const handleCloseSetting = () => {
-  window.ipcRenderer.send("close-child");
+  window.ipcRenderer.send('close-child');
   resetCurrentView();
 }
 const resetCurrentView = () => {

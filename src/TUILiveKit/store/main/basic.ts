@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from 'pinia';
 import { useI18n } from '../../locales/index';
 
 const { t } = useI18n();
@@ -94,9 +94,15 @@ export const useBasicStore = defineStore('basic', {
       this.statistics = statistics;
     },
     reset() {
-      this.roomId = '0';
+      this.sdkAppId = 0;
+      this.userId = '';
+      this.userSig = '';
+      this.userName = '';
+      this.avatarUrl = '';
       this.useStringRoomId = false;
+      this.roomId = '0';
       this.isLiving = false;
+      this.isOpenMic = false;
       this.statistics = {
         appCpu: 0,
         downLoss: 0,

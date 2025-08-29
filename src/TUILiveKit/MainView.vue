@@ -48,7 +48,7 @@ import { storeToRefs } from 'pinia';
 import { TRTCStatistics, TRTCDeviceType, TRTCMediaSourceType, TRTCDeviceState } from 'trtc-electron-sdk';
 import trtcCloud from './utils/trtcCloud';
 import TUIRoomEngine, {
-  TUIRoomEvents, TUIRoomType, TUIRoomInfo, TUIRequest, TUIRequestAction, TUISeatMode, TUISeatInfo, TUIUserInfo
+  TUIRoomEvents, TUIRoomType, TUIRoomInfo, TUIRequest, TUIRequestAction, TUISeatInfo, TUIUserInfo,
 } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIMediaSourceViewModel } from './types';
 import LiveHeader from './components/LiveHeader/Index.vue';
@@ -60,25 +60,30 @@ import LiveMember from './components/LiveMember/Index.vue';
 import LiveMessage from './components/LiveMessage/Index.vue';
 import LiveImageSource from './components/LiveSource/LiveImageSource.vue';
 import TUIMessageBox from './common/base/MessageBox';
-import { initCommunicationChannels, messageChannels } from "./communication";
-import { useBasicStore } from "./store/main/basic";
-import { useRoomStore } from "./store/main/room";
-import { useChatStore } from './store/main/chat'
-import { useMediaSourcesStore } from './store/main/mediaSources';
+import { initCommunicationChannels, messageChannels } from './communication';
+import { useBasicStore } from './store/main/basic';
+import { useRoomStore } from './store/main/room';
+import { useChatStore } from './store/main/chat';
+import { useMediaSourcesStore, TUIMediaSourcesState } from './store/main/mediaSources';
+import { useAudioEffectStore } from './store/main/audioEffect';
 import useDeviceManager from './utils/useDeviceManager';
 import useMediaMixingManager from './utils/useMediaMixingManager';
 import useVideoEffectManager from './utils/useVideoEffectManager';
-import useRoomEngine from "./utils/useRoomEngine";
+import useRoomEngine from './utils/useRoomEngine';
 import { useI18n } from './locales/index';
 import useMessageHook from './components/LiveMessage/useMessageHook';
-import useErrorHandler from './hooks/useErrorHandler';
+import useErrorHandler from './hooks/useRoomErrorHandler';
+import useMediaEventhander from './hooks/useMediaEventHandler';
+import { MEDIA_SOURCE_STORAGE_KEY } from './constants/tuiConstant';
+import logger from './utils/logger';
 
-const logger = console;
-const logPrefix = '[LiveKit]';
+
+const logPrefix = '[MainView]';
 
 const { t } = useI18n();
 const roomEngine = useRoomEngine();
 const videoEffectManager = useVideoEffectManager();
+useMediaEventhander();
 
 defineExpose({
   init
@@ -101,8 +106,10 @@ const basicStore = useBasicStore();
 const roomStore = useRoomStore();
 const chatStore = useChatStore();
 const mediaSourcesStore = useMediaSourcesStore();
+const audioEffectStore = useAudioEffectStore();
 const { userName, userId, avatarUrl } = storeToRefs(basicStore);
 const { onError } = useErrorHandler();
+
 const mediaSourceInEdit: Ref<TUIMediaSourceViewModel | null> = ref(null);
 const imageSourceRef = ref();
 
@@ -122,6 +129,9 @@ const onEditMediaSource = (mediaSource: TUIMediaSourceViewModel) => {
       imageSourceRef.value.triggerFileSelect();
     });
     return;
+  case TRTCMediaSourceType.kPhoneMirror:
+    command = 'phone-mirror';
+    break;
   default:
     logger.error(
       'onEditMediaSource: sourceType not supported',
@@ -131,10 +141,33 @@ const onEditMediaSource = (mediaSource: TUIMediaSourceViewModel) => {
   if (!command) {
     return;
   }
-  window.ipcRenderer.send("open-child", {
+  window.ipcRenderer.send('open-child', {
     command,
     data: JSON.parse(JSON.stringify(mediaSource))
   });
+};
+
+const onLogout = async () => {
+  logger.log(`${logPrefix}onLogout`);
+  if (basicStore.isLiving) {
+    await stopLiving();
+  }
+  mediaMixingManager.bindPreviewArea(0, null);
+  basicStore.reset();
+  roomStore.reset();
+  chatStore.reset();
+  audioEffectStore.reset();
+  mediaSourcesStore.clear();
+  emit('on-logout');
+}
+
+const onBeforeUnload = () => {
+  logger.log(`${logPrefix}onBeforeUnload`);
+  if (basicStore.isLiving) {
+    stopLiving();
+  }
+  audioEffectStore.reset();
+  mediaSourcesStore.clear();
 };
 
 onMounted(() => {
@@ -144,46 +177,17 @@ onMounted(() => {
     roomStore
   });
 
-  window.addEventListener("beforeunload", onBeforeUnload);
+  window.addEventListener('beforeunload', onBeforeUnload);
 });
 
 onUnmounted(() => {
   videoEffectManager.clear();
-  window.removeEventListener("beforeunload", onBeforeUnload);
+  window.removeEventListener('beforeunload', onBeforeUnload);
 });
-
-function resetRoomStore() {
-  basicStore.reset();
-  roomStore.reset();
-  chatStore.reset();
-}
-
-function resetMediaStore() {
-  mediaSourcesStore.reset();
-}
-
-async function onLogout () {
-  logger.log(`${logPrefix}onLogout`);
-  if (basicStore.isLiving) {
-    await stopLiving();
-  }
-  mediaMixingManager.setDisplayParams(0, null);
-  resetRoomStore();
-  resetMediaStore();
-  emit('on-logout');
-}
-
-function onBeforeUnload () {
-  logger.log(`${logPrefix}onBeforeUnload`);
-  resetMediaStore();
-  if (basicStore.isLiving) {
-    stopLiving();
-  }
-}
 
 // ***************** LiveKit interface start *****************
 function _generateRoomId () {
-  return Math.floor(Math.random() * 1000 * 1000);
+  return `live_${Math.floor(Math.random() * 1000 * 1000)}`;
 }
 
 async function startLiving () {
@@ -191,21 +195,64 @@ async function startLiving () {
   try {
     if (basicStore.userId) {
       const roomId = _generateRoomId().toString();
-      await createRoom({
-        roomId,
-        roomName: basicStore.roomName,
-        roomMode: 'SpeakAfterTakingSeat'
-      });
+      TUIRoomEngine.callExperimentalAPI(JSON.stringify({
+        api: 'enableUnlimitedRoom',
+        params: {
+          enable: true,
+        },
+      }));
+
       basicStore.setRoomId(roomId);
+      const liveInfo = (await roomEngine.instance?.getLiveListManager().startLive({
+        roomId: roomId,
+        roomType: TUIRoomType.kLive,
+        name: `${basicStore.roomName}${roomId}`,
+        notice: '',
+        isMessageDisableForAllUser: false,
+        isGiftEnabled: true,
+        isLikeEnabled: true,
+        isPublicVisible: true,
+        isSeatEnabled: true,
+        keepOwnerOnSeat: true,
+        seatLayoutTemplateId: roomStore.seatLayoutTemplateId,
+        maxSeatCount: roomStore.maxSeatCount,
+        seatMode: roomStore.seatMode,
+        coverUrl: '',
+        backgroundUrl: '',
+        categoryList: [],
+        activityStatus: 0,
+      }));
+      logger.log(`${logPrefix}startLiving success:`, liveInfo);
+
       basicStore.setIsLiving(true);
+      if (liveInfo) {
+        roomStore.setRoomInfo({
+          roomId: liveInfo.roomId,
+          roomOwner: liveInfo.roomOwner,
+          isMicrophoneDisableForAllUser: false,
+          isCameraDisableForAllUser: false,
+          isMessageDisableForAllUser: liveInfo.isMessageDisableForAllUser,
+          isSeatEnabled: liveInfo.isSeatEnabled,
+          seatMode: liveInfo.seatMode,
+          maxSeatCount: liveInfo.maxSeatCount,
+          roomName: liveInfo.name
+        } as TUIRoomInfo);
+      }
+
+      const loginUserInfo = await TUIRoomEngine.getSelfInfo();
+      roomStore.setLocalUser(loginUserInfo);
+      roomEngine.instance?.unmuteLocalAudio();
+      roomEngine.instance?.openLocalMicrophone();
+      basicStore.setIsOpenMic(true);
+
       useMessageHook();
       emit('on-start-living');
     } else {
       logger.error(`${logPrefix}startLiving failed due to no valid userId`);
       TUIMessageBox({
-        title: t("Note"),
-        message: t("No user ID"),
-        confirmButtonText: t("Sure"),
+        title: t('Note'),
+        message: t('No user ID'),
+        confirmButtonText: t('Sure'),
       });
     }
   } catch (error) {
@@ -213,169 +260,85 @@ async function startLiving () {
   }
 }
 
-
 async function stopLiving () {
   logger.log(`${logPrefix}stopLiving`);
   try {
-    await dismissRoom();
+    const liveStatistic = await roomEngine.instance?.getLiveListManager().stopLive();
+    if (liveStatistic) {
+      logger.log(`${logPrefix}stopLiving success:`, liveStatistic);
+    }
     basicStore.setIsLiving(false);
-    basicStore.setRoomId("");
-    resetRoomStore();
+    basicStore.setRoomId('');
+    roomStore.reset();
+    chatStore.reset();
+    audioEffectStore.reset();
+    window.ipcRenderer.send('close-child');
     messageChannels.messagePortToChild?.postMessage({
       key: 'reset',
       data: {}
     });
-    emit("on-stop-living");
+    emit('on-stop-living');
   } catch (error) {
     logger.error(`${logPrefix}stopLiving error:`, error);
   }
 }
 
-type DeviceParams = {
-  isOpenCamera: boolean
-  isOpenMicrophone: boolean
-  defaultCameraId: string
-  defaultMicrophoneId: string
-  defaultSpeakerId: string
-}
-
 type RoomInitData = {
-  sdkAppId: number
-  userId: string
-  userSig: string
-  userName: string
-  avatarUrl: string
+  sdkAppId: number;
+  userId: string;
+  userSig: string;
+  userName: string;
+  avatarUrl: string;
 }
 
-async function init (options: RoomInitData) {
+async function init(options: RoomInitData) {
   logger.log(`${logPrefix}init:`, options);
+  await retryInit(options);
+}
+
+const MAX_LOGIN_RETRY_COUNT = 10;
+let loginRetryCount = 0;
+// eslint-disable-next-line no-undef
+let loginRetryTimer: NodeJS.Timeout | null;
+let loginError:any;
+
+async function retryInit(options: RoomInitData) {
+  logger.log(`${logPrefix}retryInit:`, options);
+  if (loginRetryTimer) {
+    loginRetryTimer = null;
+  }
+
+  loginRetryCount++;
+  if (loginRetryCount > MAX_LOGIN_RETRY_COUNT) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: loginError?.message || t('Login failed, please try again.'),
+      confirmButtonText: t('Sure'),
+    });
+    onLogout();
+    loginRetryCount = 0;
+    return;
+  }
+
   basicStore.setBasicInfo(options);
   roomStore.setLocalUser(options);
   const { sdkAppId, userId, userSig, userName, avatarUrl } = options;
-  await TUIRoomEngine.login({ sdkAppId, userId, userSig });
-  await TUIRoomEngine.setSelfInfo({ userName, avatarUrl });
-}
-
-async function doEnterRoom (roomId: string) {
-  trtcCloud.setDefaultStreamRecvMode(true, false);
-  // trtcCloud.enableSmallVideoStream(true, smallParam);// To do
-  trtcCloud.startSystemAudioLoopback();
-  const roomInfo = (await roomEngine.instance?.enterRoom({
-    roomId,
-    roomType: TUIRoomType.kLive
-  })) as TUIRoomInfo;
-  roomEngine.instance?.muteLocalAudio();
-  if (!roomInfo.isSeatEnabled) {
-    roomEngine.instance?.openLocalMicrophone();
-    basicStore.setIsOpenMic(true);
-  }
-  return roomInfo;
-}
-
-
-async function createRoom (options: {
-  roomId: string
-  roomName: string
-  roomMode: 'SpeakAfterTakingSeat'
-  deviceParam?: DeviceParams
-}) {
-  const { roomId, roomName, roomMode, deviceParam } = options;
   try {
-    if (!roomEngine.instance) {
-      return;
-    }
-    basicStore.setRoomId(roomId);
-    logger.debug(`${logPrefix}createRoom:`, roomId, roomMode, deviceParam);
-    const roomParams = {
-      roomId,
-      roomName,
-      roomType: TUIRoomType.kLive,
-      isSeatEnabled: true,
-      seatMode: TUISeatMode.kApplyToTake,
-      maxSeatCount: 9
-    };
-    await roomEngine.instance?.createRoom(roomParams);
-    emit('on-create-room', { code: 0, message: 'create room success' });
-    await enterRoom(options);
+    await TUIRoomEngine.login({ sdkAppId, userId, userSig });
   } catch (error) {
-    logger.error(`${logPrefix}createRoom error:`, error);
-    basicStore.reset();
-    throw error;
+    logger.error(`${logPrefix}retryInit login() error:`, error);
+    loginError = error;
+    loginRetryTimer = setTimeout(() => {
+      retryInit(options);
+    }, 200);
+    return;
   }
-}
 
-async function enterRoom (options: {
-  roomId: string
-  roomParam?: DeviceParams
-}) {
-  const { roomId, roomParam } = options;
   try {
-    if (!roomEngine.instance) {
-      return;
-    }
-    basicStore.setRoomId(roomId);
-    logger.debug(`${logPrefix}enterRoom:`, roomId, roomParam);
-    const roomInfo = await doEnterRoom(roomId);
-    roomStore.setRoomInfo(roomInfo);
-
-    const loginUserInfo = await TUIRoomEngine.getSelfInfo();
-    roomStore.setLocalUser(loginUserInfo);
-    // await this.getUserList();
-    if (roomInfo.isSeatEnabled) {
-      // await this.getSeatList();
-      if (roomStore.isMaster) {
-        await roomEngine.instance?.takeSeat({ seatIndex: -1, timeout: 0 });
-        roomEngine.instance?.unmuteLocalAudio();
-        roomEngine.instance?.openLocalMicrophone();
-        basicStore.setIsOpenMic(true);
-      }
-    }
-    /**
-     * setRoomParam must come after setRoomInfo,because roomInfo contains information
-     * about whether or not to turn on the no-mac ban.
-     **/
-    // roomStore.setRoomParam(roomParam);
-    emit('on-enter-room', { code: 0, message: 'enter room success' });
+    await TUIRoomEngine.setSelfInfo({ userName, avatarUrl });
   } catch (error) {
-    logger.error(`${logPrefix}enterRoom error:`, error);
-    basicStore.reset();
-    throw error;
+    logger.error(`${logPrefix}retryInit setSelfInfo() error:`, error);
   }
-}
-
-async function dismissRoom () {
-  try {
-    logger.log(`${logPrefix}dismissRoom: enter`);
-    await closeMediaBeforeLeave();
-    await roomEngine.instance?.destroyRoom();
-    trtcCloud.stopSystemAudioLoopback();
-    emit('on-destroy-room');
-  } catch (error) {
-    logger.error(`${logPrefix}dismissRoom error:`, error);
-  }
-}
-
-async function leaveRoom () {
-  try {
-    await closeMediaBeforeLeave();
-    const response = await roomEngine.instance?.exitRoom();
-    trtcCloud.stopSystemAudioLoopback();
-    emit('on-exit-room');
-    logger.log(`${logPrefix}leaveRoom:`, response);
-  } catch (error) {
-    logger.error(`${logPrefix}leaveRoom error:`, error);
-  }
-}
-
-async function closeMediaBeforeLeave () {
-  // To do: to be implemented
-  // if (localUser.value.hasAudioStream) {
-  //   await roomEngine.instance?.closeLocalMicrophone();
-  // }
-  // if (localUser.value.hasVideoStream) {
-  //   // await roomEngine.instance?.closeLocalCamera();
-  //   await mediaMixingManager.stopPublish();
-  // }
 }
 // ***************** LiveKit interface end *****************
 
@@ -417,7 +380,7 @@ function onSeatListChanged (eventInfo: {
   roomStore.updateOnSeatList(seatedList, leftList);
 }
 
-TUIRoomEngine.once("ready", () => {
+TUIRoomEngine.once('ready', () => {
   roomEngine.instance?.on(TUIRoomEvents.onError, onError);
   roomEngine.instance?.on(
     TUIRoomEvents.onRemoteUserEnterRoom,
@@ -480,19 +443,40 @@ function onStatistics (statis: TRTCStatistics) {
 }
 
 onMounted(() => {
-  deviceManager.on("onDeviceChange", onDeviceChange);
-  trtcCloud.on("onTestMicVolume", onTestMicVolume);
-  trtcCloud.on("onTestSpeakerVolume", onTestSpeakerVolume);
-  trtcCloud.on("onStatistics", onStatistics);
+  deviceManager.on('onDeviceChange', onDeviceChange);
+  trtcCloud.on('onTestMicVolume', onTestMicVolume);
+  trtcCloud.on('onTestSpeakerVolume', onTestSpeakerVolume);
+  trtcCloud.on('onStatistics', onStatistics);
 });
 
 onBeforeUnmount(() => {
-  deviceManager.off("onDeviceChange", onDeviceChange);
-  trtcCloud.off("onTestMicVolume", onTestMicVolume);
-  trtcCloud.off("onTestSpeakerVolume", onTestSpeakerVolume);
-  trtcCloud.off("onStatistics", onStatistics);
+  deviceManager.off('onDeviceChange', onDeviceChange);
+  trtcCloud.off('onTestMicVolume', onTestMicVolume);
+  trtcCloud.off('onTestSpeakerVolume', onTestSpeakerVolume);
+  trtcCloud.off('onStatistics', onStatistics);
+
+  if (loginRetryTimer) {
+    clearTimeout(loginRetryTimer);
+    loginRetryTimer = null;
+  }
 });
 // ***************** Device event listener end *****************
+
+// ***************** Media source restore start *****************
+onMounted(() => {
+  const storedMediaStateStr = window.localStorage.getItem(MEDIA_SOURCE_STORAGE_KEY);
+  if (storedMediaStateStr) {
+    logger.log(`${logPrefix}restore media state:`, storedMediaStateStr);
+    try {
+      const storedMediaState: TUIMediaSourcesState = JSON.parse(storedMediaStateStr);
+      roomStore.restoreMediaSource(storedMediaState);
+    } catch (error) {
+      logger.warn(`${logPrefix}invalid store media source state:`, storedMediaStateStr, error);
+      window.localStorage.removeItem(MEDIA_SOURCE_STORAGE_KEY);
+    }
+  }
+});
+// ***************** Media source restore end *****************
 </script>
 
 <style lang="scss">
@@ -519,6 +503,7 @@ onBeforeUnmount(() => {
   .tui-layout-left,
   .tui-layout-right {
     flex: 0 0 18rem;
+    width: 18px;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-color-topbar);

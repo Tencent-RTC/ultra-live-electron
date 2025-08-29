@@ -31,8 +31,7 @@ import Select from './base/Select.vue';
 import Option from './base/Option.vue';
 import { useCurrentSourceStore } from '../store/child/currentSource';
 import { storeToRefs } from 'pinia';
-
-const logger = console;
+import logger from '../utils/logger';
 
 interface Props {
   deviceType: string,
@@ -81,7 +80,7 @@ function getDeviceList() {
   return [];
 }
 async function handleChange(deviceId: string) {
-  logger.log("[DeviceSelect]handleChange:", deviceId);
+  logger.log('[DeviceSelect]handleChange:', deviceId);
   onChange && onChange(deviceId);
   switch (deviceType) {
   case 'camera':

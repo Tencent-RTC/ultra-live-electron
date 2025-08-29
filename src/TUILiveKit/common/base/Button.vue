@@ -101,7 +101,7 @@ const buttonClassList = computed(() => [
   border-radius:62499.9375rem;
 }
 
-.tui-button-disable {
+.tui-button-disabled {
   cursor: not-allowed;
   opacity: 0.3;
 }

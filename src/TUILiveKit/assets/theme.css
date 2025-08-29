@@ -15,6 +15,9 @@
   --text-color-success: #3BA673;
   --text-color-error: #E6594C;
 
+  --font-size-primary: 1rem;
+  --font-size-secondary: 0.75rem;
+
   /* Background */
   --bg-color-topbar: #16171A;
   --bg-color-operate: #1F2024;
@@ -101,6 +104,9 @@
   --tab-color-selected: #48494F;
   --tab-color-unselected: #3A3C42;
 
+  /* Scroll-bar */
+  --color-background-scrollbar: #595959;
+  --color-background-scrollbar-thumb: #000000;
 }
 
 .light-theme {
@@ -119,6 +125,9 @@
   --text-color-warning: #FF7200;
   --text-color-success: #0ABF77;
   --text-color-error: #E54545;
+
+  --font-size-primary: 1rem;
+  --font-size-secondary: 0.75rem;
 
   /* Background */
   --bg-color-topbar: #F9FAFC;
@@ -206,4 +215,7 @@
   --tab-color-selected: #CCE2FF;
   --tab-color-unselected: #F0F2F7;
 
+  /* Scroll-bar */
+  --color-background-scrollbar: #F0F0F0;
+  --color-background-scrollbar-thumb: #999999;
 }

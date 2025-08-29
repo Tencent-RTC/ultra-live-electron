@@ -1,10 +1,11 @@
 import { ref, Ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { TRTCMediaSource, TRTCMediaMixingEvent } from 'trtc-electron-sdk';
-import { TUIMediaSourceViewModel } from '../../types';
+import { TUIMediaMixingError, TUIMediaSourceViewModel } from '../../types';
 import useMediaMixingManager from '../../utils/useMediaMixingManager';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
+import onMediaMixingError from '../../hooks/useMediaMixingErrorHandler';
+import logger from '../../utils/logger';
 
-const logger = console;
 const logPrefix = '[useContextMenu]';
 
 const mediaMixingManager = useMediaMixingManager();
@@ -18,37 +19,41 @@ function useContextMenu() {
     console.log(`${logPrefix}context-menu-command:`, command);
     if (selectedMediaSource.value) {
       switch (command) {
-      case "move-up":
+      case 'move-up':
         mediaSourcesStore.changeMediaOrder(selectedMediaSource.value, 1);
         break;
-      case "move-down":
+      case 'move-down':
         mediaSourcesStore.changeMediaOrder(selectedMediaSource.value, -1);
         break;
-      case "move-top":
+      case 'move-top':
         mediaSourcesStore.moveMediaTop(selectedMediaSource.value);
         break;
-      case "move-bottom":
+      case 'move-bottom':
         mediaSourcesStore.moveMediaBottom(selectedMediaSource.value);
         break;
-      case "transform-clockwise-90":
+      case 'transform-clockwise-90':
         mediaSourcesStore.rotateMediaSource(selectedMediaSource.value, 90);
         break;
-      case "transform-anti-clockwise-90":
+      case 'transform-anti-clockwise-90':
         mediaSourcesStore.rotateMediaSource(selectedMediaSource.value, -90);
         break;
-      case "transform-mirror-horizontal":
+      case 'transform-mirror-horizontal':
         mediaSourcesStore.toggleHorizontalMirror(selectedMediaSource.value);
         break;
-      case "transform-mirror-vertical":
+      case 'transform-mirror-vertical':
         break;
-      case "hide":
+      case 'hide':
         mediaSourcesStore.muteMediaSource(selectedMediaSource.value, true);
         break;
-      case "edit":
+      case 'edit':
         contextCommand.value = command;
         break;
-      case "remove":
-        mediaSourcesStore.removeMediaSource(selectedMediaSource.value);
+      case 'remove':
+        try {
+          await mediaSourcesStore.removeMediaSource(selectedMediaSource.value);
+        } catch (error) {
+          onMediaMixingError(error as TUIMediaMixingError);
+        }
         break;
       default:
         console.warn(`[LivePreview]context-menu-command: command not supported: ${command}`);

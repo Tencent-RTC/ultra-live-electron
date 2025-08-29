@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import TUILiveKitChild from "../TUILiveKit/Child.vue";
+import TUILiveKitChild from '../TUILiveKit/ChildView.vue';
 </script>
 
 <style>

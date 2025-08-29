@@ -7,7 +7,6 @@
       </div>
       <div class="tui-title-right">
         <span class="tui-statis-item tui-online-count">{{ remoteUserList.length }}{{ t("viewer") }}</span>
-        <span class="tui-statis-item tui-history-count">{{ historyRemoteUserCount }}{{ t("history viewer") }}</span>
       </div>
     </div>
     <div class="tui-live-designer" ref="moveAndResizeContainerRef">
@@ -19,16 +18,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, Ref, watch, defineEmits, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
+import { ref, Ref, watch, defineEmits, onBeforeMount, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
-import { Rect, TRTCMediaSource, TRTCMediaMixingEvent } from 'trtc-electron-sdk';
+import { Rect, TRTCMediaSource, TRTCMediaMixingEvent, TRTCMediaMixingServiceEvent, TRTCRoleType, TRTCParams, TRTCAppScene } from 'trtc-electron-sdk';
+import trtcCloud from '../../utils/trtcCloud';
+import useRoomEngine from '../../utils/useRoomEngine';
 import { TUIMediaSourceViewModel } from '../../types';
-import useMediaMixingManager from "../../utils/useMediaMixingManager";
-import { useBasicStore } from "../../store/main/basic";
-import { useRoomStore } from "../../store/main/room";
+import useMediaMixingManager, { mediaMixingService } from '../../utils/useMediaMixingManager';
+import TUIMessageBox from '../../common/base/MessageBox';
+import { useBasicStore } from '../../store/main/basic';
+import { useRoomStore } from '../../store/main/room';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
 import useContextMenu from './useContextMenu';
-import { useI18n } from "../../locales/index";
+import { useI18n } from '../../locales/index';
+import streamLayoutService from '../../service/StreamLayoutService';
+import { useAudioEffectStore } from '@/TUILiveKit/store/main/audioEffect';
+import logger from '../../utils/logger';
+
+const logPrefix = '[LivePreview]';
 
 const emits = defineEmits(['edit-media-source']);
 
@@ -36,12 +43,16 @@ const { t } = useI18n();
 const basicStore = useBasicStore();
 const roomStore = useRoomStore();
 const mediaSourcesStore = useMediaSourcesStore();
+const audioEffectStore = useAudioEffectStore();
 
 const { roomName, roomId } = storeToRefs(basicStore);
-const { remoteUserList, historyRemoteUserCount } = storeToRefs(roomStore);
+const { remoteUserList } = storeToRefs(roomStore);
 const { mediaList, selectedMediaKey } = storeToRefs(mediaSourcesStore);
 
 const mediaMixingManager = useMediaMixingManager();
+const roomEngine = useRoomEngine();
+
+const isServerStarted: Ref<boolean> = ref(false);
 
 const nativeWindowsRef:Ref<HTMLDivElement | null> = ref(null);
 const isNativeWindowCreated: Ref<boolean> = ref(false);
@@ -52,8 +63,8 @@ const selectedMediaSource: Ref<TUIMediaSourceViewModel | null> = ref(null);
 watch(
   () => selectedMediaKey,
   (newSelected, oldSelected) => {
-    console.log(
-      "[LivePreview]watch selected media key:",
+    logger.log(
+      `${logPrefix}watch selected media key:`,
       newSelected,
       oldSelected
     );
@@ -65,7 +76,7 @@ watch(
         source.sourceId === newSelected.value.sourceId
       ) {
         selectedSource = mediaList.value[i];
-        console.log("[LivePreview]selectedMediaSource watched:", source);
+        logger.log(`${logPrefix}selectedMediaSource watched:`, source);
         break;
       }
     }
@@ -77,32 +88,57 @@ watch(
   }
 );
 
+const MAX_START_PREVIEW_COUNT= 50;
+let startPreviewRetryCount = 0;
+// eslint-disable-next-line no-undef
+let startPreviewRetryTimer: NodeJS.Timeout | null;
+
 const startMediaMixingPreview = async () => {
+  logger.log(`${logPrefix}startMediaMixingPreview`, window.nativeWindowHandle, nativeWindowsRef.value, isServerStarted.value);
+  if (startPreviewRetryTimer) {
+    startPreviewRetryTimer = null;
+  }
+
+  startPreviewRetryCount++;
+  if (startPreviewRetryCount > MAX_START_PREVIEW_COUNT) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: t('Start video preview failed.'),
+      confirmButtonText: t('Sure'),
+    });
+    startPreviewRetryCount = 0;
+    return;
+  }
+
   if (!isNativeWindowCreated.value) {
-    if (!!window.nativeWindowHandle && nativeWindowsRef.value) {
-      mediaMixingManager.setDisplayParams(window.nativeWindowHandle, nativeWindowsRef.value);
+    if (!!window.nativeWindowHandle && nativeWindowsRef.value && isServerStarted.value) {
+      mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
       isNativeWindowCreated.value = true;
-      const { mixingVideoEncodeParam, backgroundColor } = mediaSourcesStore;
+      const { mixingVideoEncodeParam, backgroundColor, selectedBorderColor } = mediaSourcesStore;
       await mediaMixingManager.startPublish();
       await mediaMixingManager.updatePublishParams({
         videoEncoderParams: mixingVideoEncodeParam,
         canvasColor: backgroundColor,
+        selectedBorderColor
       });
+      streamLayoutService.setContainer(nativeWindowsRef.value);
     } else {
-      setTimeout(()=>{
+      startPreviewRetryTimer = setTimeout(()=>{
         startMediaMixingPreview();
       }, 100);
     }
+  } else {
+    logger.error(`${logPrefix}startMediaMixingPreview: no native window ID`);
   }
 }
 
 const onSelect = (mediaSource: TRTCMediaSource) => {
-  console.log(`onSelect`, mediaSource);
+  logger.log(`${logPrefix}onSelect`, mediaSource);
   if (mediaSource) {
     mediaSourcesStore.setSelectedMediaKey({
       sourceId: mediaSource.sourceId,
       sourceType: mediaSource.sourceType
-    });
+    }, true);
   } else {
     mediaSourcesStore.setSelectedMediaKey({
       sourceId: '',
@@ -112,18 +148,70 @@ const onSelect = (mediaSource: TRTCMediaSource) => {
 };
 
 const onMoveAndResize = (mediaSource: TRTCMediaSource, rect: Rect) => {
-  console.log(`onMoveAndResize`, mediaSource, rect);
+  logger.log(`${logPrefix}onMoveAndResize`, mediaSource, rect);
   if (selectedMediaSource.value && selectedMediaKey.value.sourceId === mediaSource.sourceId && selectedMediaKey.value.sourceType === mediaSource.sourceType) {
     selectedMediaSource.value.mediaSourceInfo.rect = rect;
-    mediaSourcesStore.updateMediaSourceRect(selectedMediaSource.value);
+    mediaSourcesStore.updateMediaSourceRect(selectedMediaSource.value, true);
   } else {
-    console.error('onMoveAndResize error', selectedMediaKey.value, selectedMediaSource.value);
+    logger.error(`${logPrefix}onMoveAndResize error`, selectedMediaKey.value, selectedMediaSource.value);
+  }
+};
+
+const onMediaMixingServerLost = async () => {
+  logger.log(`${logPrefix}onMediaMixingServerLost`);
+  isServerStarted.value = false;
+  if (isNativeWindowCreated.value && nativeWindowsRef.value) {
+    try {
+      await mediaMixingService?.startMediaMixingServer();
+      isServerStarted.value = true;
+      mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
+      const { mixingVideoEncodeParam, backgroundColor, selectedBorderColor } = mediaSourcesStore;
+      await mediaMixingManager.startPublish();
+      await mediaMixingManager.updatePublishParams({
+        videoEncoderParams: mixingVideoEncodeParam,
+        canvasColor: backgroundColor,
+        selectedBorderColor
+      });
+      streamLayoutService.refreshLayout();
+      mediaSourcesStore.recoverMediaSource();
+      if (basicStore.roomId && basicStore.isLiving) {
+        const trtcParams = new TRTCParams();
+        trtcParams.sdkAppId = basicStore.sdkAppId;
+        trtcParams.userId = basicStore.userId;
+        trtcParams.userSig = basicStore.userSig;
+        trtcParams.strRoomId = basicStore.roomId;
+        trtcParams.role = TRTCRoleType.TRTCRoleAnchor;
+        trtcCloud.enterRoom(trtcParams, TRTCAppScene.TRTCAppSceneLIVE);
+      }
+      if (basicStore.isOpenMic) {
+        roomEngine.instance?.unmuteLocalAudio();
+        roomEngine.instance?.openLocalMicrophone();
+      }
+      audioEffectStore.initVoiceEffect();
+      audioEffectStore.startPlayMusic();
+      logger.log(`${logPrefix}onMediaMixingServerLost recovery from crash success`);
+    } catch (err) {
+      logger.error(`${logPrefix}onMediaMixingServerLost recovery from crash failed:`, err);
+    }
+  } else {
+    logger.warn(`${logPrefix}onMediaMixingServerLost cannot recovery from crash failed. No parent window.`);
+  }
+};
+
+const onBeforeUnload = async () => {
+  logger.warn(`${logPrefix}onBeforeUnload`);
+  try {
+    mediaMixingManager.bindPreviewArea(0, null);
+    await mediaMixingService?.stopMediaMixingServer();
+    isServerStarted.value = false;
+  } catch (error) {
+    logger.error(`${logPrefix}onBeforeUnload stop media server failed:`, error);
   }
 };
 
 const { contextCommand } = useContextMenu();
 watch(contextCommand, (newVal) => {
-  console.log(`[LivePreview]watch contextCommand:`, newVal);
+  console.log('[LivePreview]watch contextCommand:', newVal);
   if (newVal && newVal === 'edit') {
     emits('edit-media-source', selectedMediaSource.value);
   } else {
@@ -131,35 +219,50 @@ watch(contextCommand, (newVal) => {
   }
 });
 
+onBeforeMount(async () => {
+  logger.log(`${logPrefix}onBeforeMount`);
+  await mediaMixingService?.startMediaMixingServer();
+  isServerStarted.value = true;
+  logger.log(`${logPrefix}onBeforeMount finished`);
+});
+
 onMounted(() => {
-  console.log("[LivePreview]onMounted create display window");
+  logger.log(`${logPrefix}onMounted create display window`);
   if (moveAndResizeContainerRef.value && nativeWindowsRef.value) {
     setTimeout(() => {
       startMediaMixingPreview();
     }, 100);
   } else {
-    console.error("no HTML element to preview live stream");
+    logger.error(`${logPrefix}no HTML element to preview live stream`);
   }
 
   mediaMixingManager.on(TRTCMediaMixingEvent.onSourceSelected, onSelect);
   mediaMixingManager.on(TRTCMediaMixingEvent.onSourceMoved, onMoveAndResize);
   mediaMixingManager.on(TRTCMediaMixingEvent.onSourceResized, onMoveAndResize);
+  mediaMixingService?.on(TRTCMediaMixingServiceEvent.onMediaMixingServerLost, onMediaMixingServerLost);
+  window.addEventListener('beforeunload', onBeforeUnload);
 });
 
 onBeforeUnmount(()=> {
-  console.log('onBeforeUnmount')
+  logger.log(`${logPrefix}onBeforeUnmount`);
   mediaMixingManager.stopPublish();
 
   mediaMixingManager.off(TRTCMediaMixingEvent.onSourceSelected, onSelect);
   mediaMixingManager.off(TRTCMediaMixingEvent.onSourceMoved, onMoveAndResize);
   mediaMixingManager.off(TRTCMediaMixingEvent.onSourceResized, onMoveAndResize);
+  mediaMixingService?.off(TRTCMediaMixingServiceEvent.onMediaMixingServerLost, onMediaMixingServerLost);
+
+  if (startPreviewRetryTimer) {
+    clearTimeout(startPreviewRetryTimer);
+    startPreviewRetryTimer = null;
+  }
 });
 
-onUnmounted(()=> {
-  console.log('onUnmounted')
-  mediaMixingManager.setDisplayParams(0, null);
+onUnmounted(async ()=> {
+  logger.log(`${logPrefix}onUnmounted`);
+  await onBeforeUnload();
+  window.removeEventListener('beforeunload', onBeforeUnload);
 });
-
 </script>
 
 <style scoped lang="scss">

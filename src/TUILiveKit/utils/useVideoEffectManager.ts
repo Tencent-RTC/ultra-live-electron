@@ -1,8 +1,7 @@
 import TRTCCloud, { TRTCVideoPixelFormat, TRTCPluginType, TRTCPluginInfo, TRTCVideoProcessPluginOptions, } from 'trtc-electron-sdk';
 import trtcCloud from './trtcCloud';
-import { TRTCXmagicFactory, XmagicLicense, TRTCXmagicEffectProperty } from "./beauty";
-
-const logger = console;
+import { TRTCXmagicFactory, XmagicLicense, TRTCXmagicEffectProperty } from './beauty';
+import logger from '../utils/logger';
 
 export enum TUIVideoEffectEvents {
   // Error event

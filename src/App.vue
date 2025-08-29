@@ -14,8 +14,8 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: $color-app-external-background;
-  color: $font-app-external-color;
+  background-color: $color-black;
+  color: $font-app-color;
 }
 
 #app {

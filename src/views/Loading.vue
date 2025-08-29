@@ -5,40 +5,44 @@
 </template>
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import TUIMessageBox from '../TUILiveKit/common/base/MessageBox';
-import { useI18n } from '../TUILiveKit/locales';
-import { getBasicInfo } from '../debug/basic-info-config';
+import router from '../router';
 import { isMainWindow } from '../TUILiveKit/utils/envUtils';
+import { useI18n } from '../TUILiveKit/locales';
+import logger from '../TUILiveKit/utils/logger';
 
-const logger = console;
-const logPrefix = "[Loading.vue]";
+const logPrefix = '[Loading.vue]';
 const { t } = useI18n();
+
+const gotoLogin = () => {
+  window.localStorage.removeItem('TUILiveKit-userInfo');
+  router.push('/login');
+}
 
 async function init(userInfo: Record<string, any>) {
   logger.log(`${logPrefix}init:`, userInfo);
   const isMain = await isMainWindow();
   if (isMain) {
-    window.ipcRenderer.send("openTUILiveKit", {
+    window.ipcRenderer.send('openTUILiveKit', {
       userInfo
     });
   }
 }
 
-async function handleInit() {
-  logger.log(`${logPrefix}handleInit`);
-  const currentUserInfo = await getBasicInfo();
-  if (currentUserInfo) {
-    await init(currentUserInfo);
-  } else {
-    TUIMessageBox({
-      title: t('Note'),
-      message: t('Please configure the basic information'),
-      confirmButtonText: t('Sure'),
-    });
-  }
-}
-
 onMounted(() => {
-  handleInit();
+  const currentUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+  if (!currentUserInfo) {
+    gotoLogin();
+    return;
+  }
+
+  let userInfo;
+  try {
+    userInfo = JSON.parse(currentUserInfo);
+  } catch (e) {
+    logger.error(`${logPrefix}onMounted parse userInfo error:`, e);
+    gotoLogin();
+    return;
+  }
+  init(userInfo);
 });
 </script>

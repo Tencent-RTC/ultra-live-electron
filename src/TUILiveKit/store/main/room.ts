@@ -1,39 +1,50 @@
 import { defineStore } from 'pinia';
 import {
+  TRTCVideoResolutionMode,
   TUIRole,
   TUIRoomInfo,
   TUISeatInfo,
   TUISeatMode,
 } from '@tencentcloud/tuiroom-engine-electron';
-import { TUILiveUserInfo } from '../../types';
+import { TUILiveUserInfo, TUIStreamLayoutMode, TUISeatLayoutTemplate } from '../../types';
 import { useBasicStore } from './basic';
 import { useChatStore } from './chat';
+import { TUIMediaSourcesState, useMediaSourcesStore } from './mediaSources';
 import { set, del } from '../../utils/vue';
 import useRoomEngine from '../../utils/useRoomEngine';
 import { messageChannels } from '../../communication';
-import { onError } from '../../hooks/useErrorHandler';
+import { onError } from '../../hooks/useRoomErrorHandler';
 import { useI18n } from '../../locales';
+import streamLayoutService from '../../service/StreamLayoutService';
+import TUIMessageBox from '../../common/base/MessageBox';
+import logger from '../../utils/logger';
 
-const logger = console;
-const logPrefix = '[roomStore]';
+const logPrefix = '[RoomStore]';
 const { t } = useI18n();
 
 const roomEngine = useRoomEngine();
+const mediaSourceStore = useMediaSourcesStore();
 
 interface RoomState {
-    localUser: TUILiveUserInfo,
-    remoteUserObj: Record<string, TUILiveUserInfo>,
-    masterUserId: string,
-    canControlSelfAudio: boolean;
-    canControlSelfVideo: boolean;
-    isMicrophoneDisableForAllUser: boolean;
-    isCameraDisableForAllUser: boolean;
-    isMessageDisableForAllUser: boolean;
-    isSeatEnabled: boolean;
-    seatMode: TUISeatMode;
-    maxSeatCount: number;
-    roomName: string;
-    historyRemoteUserCount: number;
+  localUser: TUILiveUserInfo,
+  remoteUserObj: Record<string, TUILiveUserInfo>,
+  masterUserId: string,
+  canControlSelfAudio: boolean;
+  canControlSelfVideo: boolean;
+  isMicrophoneDisableForAllUser: boolean;
+  isCameraDisableForAllUser: boolean;
+  isMessageDisableForAllUser: boolean;
+  isSeatEnabled: boolean;
+  seatMode: TUISeatMode;
+  maxSeatCount: number;
+  roomId: string;
+  roomName: string;
+  streamLayout: {
+    layoutMode: TUIStreamLayoutMode;
+    isAutoAdjusting: boolean;
+  };
+  seatLayoutTemplateId: TUISeatLayoutTemplate;
+  localVideoResMode: TRTCVideoResolutionMode;
 }
 export const useRoomStore = defineStore('room', {
   state: (): RoomState => ({
@@ -54,8 +65,14 @@ export const useRoomStore = defineStore('room', {
     isSeatEnabled: true,
     seatMode: TUISeatMode.kApplyToTake,
     maxSeatCount: 0,
+    roomId: '',
     roomName: '',
-    historyRemoteUserCount: 0,
+    streamLayout: {
+      layoutMode: TUIStreamLayoutMode.Grid,
+      isAutoAdjusting: true,
+    },
+    seatLayoutTemplateId: TUISeatLayoutTemplate.PortraitDynamic_Grid9,
+    localVideoResMode: TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait,
   }),
   getters: {
     isMaster(state) {
@@ -80,7 +97,7 @@ export const useRoomStore = defineStore('room', {
       const {
         roomOwner, isMicrophoneDisableForAllUser,
         isCameraDisableForAllUser, isMessageDisableForAllUser,
-        isSeatEnabled, seatMode, maxSeatCount, roomName,
+        isSeatEnabled, seatMode, maxSeatCount, roomName, roomId,
       } = roomInfo;
       if (this.localUser.userId === roomOwner) {
         this.localUser.userRole = TUIRole.kRoomOwner;
@@ -96,6 +113,13 @@ export const useRoomStore = defineStore('room', {
       this.canControlSelfVideo = !this.isCameraDisableForAllUser;
       this.maxSeatCount = maxSeatCount;
       this.roomName = roomName;
+      this.roomId = roomId;
+
+      streamLayoutService.setRoomInfo({
+        roomId: roomId,
+        roomOwner: roomOwner,
+      });
+      streamLayoutService.setLayoutMode(this.streamLayout.layoutMode);
     },
     getNewUserInfo(userId: string) {
       const newUserInfo = {
@@ -109,13 +133,16 @@ export const useRoomStore = defineStore('room', {
     },
     addRemoteUser(userInfo: TUILiveUserInfo) {
       const { userId, userName } = userInfo;
+      if (userId === this.localUser.userId) {
+        return;
+      }
+
       if (this.remoteUserObj[userId]) {
         Object.assign(this.remoteUserObj[userId], userInfo);
       } else {
         const newUserInfo = Object.assign(this.getNewUserInfo(userId), userInfo);
         this.remoteUserObj[userId] = newUserInfo;
       }
-      this.historyRemoteUserCount++;
 
       const chatStore = useChatStore();
       chatStore.updateMessageList({
@@ -132,6 +159,12 @@ export const useRoomStore = defineStore('room', {
     },
     removeRemoteUser(userId: string) {
       del(this.remoteUserObj, userId);
+      for(let i = 0; i < this.remoteUserList.length; i++) {
+        if (userId === this.remoteUserList[i].userId) {
+          this.remoteUserList.splice(i, 1);
+          break;
+        }
+      }
     },
     addApplyToAnchorUser(options: { userId: string, requestId: string, timestamp: number }) {
       const { userId, requestId, timestamp } = options;
@@ -143,7 +176,7 @@ export const useRoomStore = defineStore('room', {
         remoteUserInfo.onSeat = false;
       }
       messageChannels.messagePortToChild?.postMessage({
-        key: "set-apply-list",
+        key: 'set-apply-list',
         data: JSON.stringify(this.applyToAnchorList),
       });
     },
@@ -156,7 +189,7 @@ export const useRoomStore = defineStore('room', {
         remoteUserInfo.onSeat = false;
 
         messageChannels.messagePortToChild?.postMessage({
-          key: "set-apply-list",
+          key: 'set-apply-list',
           data: JSON.stringify(this.applyToAnchorList),
         });
       }
@@ -179,7 +212,7 @@ export const useRoomStore = defineStore('room', {
           remoteUserInfo.onSeatTimestamp = Date.now();
 
           messageChannels.messagePortToChild?.postMessage({
-            key: "set-apply-list",
+            key: 'set-apply-list',
             data: JSON.stringify(this.applyToAnchorList),
           });
         } catch (e: any) {
@@ -232,13 +265,97 @@ export const useRoomStore = defineStore('room', {
       });
 
       messageChannels.messagePortToChild?.postMessage({
-        key: "set-apply-list",
-        data: JSON.stringify(this.applyToAnchorList),
+        key: 'set-apply-and-anchor-list',
+        data: JSON.stringify({
+          applyList: this.applyToAnchorList,
+          anchorList: this.anchorList,
+        })
       });
-      messageChannels.messagePortToChild?.postMessage({
-        key: "set-anchor-list",
-        data: JSON.stringify(this.anchorList),
-      });
+    },
+    setStreamLayoutMode(layoutMode: TUIStreamLayoutMode) {
+      this.streamLayout.layoutMode = layoutMode;
+      this.updateSeatLayoutTemplate();
+
+      streamLayoutService.setLayoutMode(layoutMode);
+    },
+    setStreamLayoutAutoAdjust(value: boolean) {
+      this.streamLayout.isAutoAdjusting = value;
+      this.updateSeatLayoutTemplate();
+
+      streamLayoutService.setIsAutoAdjusting(value);
+    },
+    setLocalVideoResMode(resMode: TRTCVideoResolutionMode) {
+      this.localVideoResMode = resMode;
+      if (resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape) {
+        this.seatLayoutTemplateId = TUISeatLayoutTemplate.LandscapeDynamic_1v3;
+      } else {
+        this.seatLayoutTemplateId = TUISeatLayoutTemplate.PortraitDynamic_Grid9;
+        this.streamLayout = {
+          layoutMode: TUIStreamLayoutMode.Grid,
+          isAutoAdjusting: true,
+        };
+      }
+      mediaSourceStore.updateResolutionMode(resMode);
+
+      streamLayoutService.setResolutionMode(resMode);
+    },
+    async updateSeatLayoutTemplate() {
+      if (this.localVideoResMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape) {
+        this.seatLayoutTemplateId = TUISeatLayoutTemplate.LandscapeDynamic_1v3;
+      } else if (this.streamLayout.isAutoAdjusting) {
+        switch (this.streamLayout.layoutMode) {
+        case TUIStreamLayoutMode.Float:
+          this.seatLayoutTemplateId = TUISeatLayoutTemplate.PortraitDynamic_1v6;
+          break;
+        case TUIStreamLayoutMode.Grid:
+          this.seatLayoutTemplateId = TUISeatLayoutTemplate.PortraitDynamic_Grid9;
+          break;
+        case TUIStreamLayoutMode.None:
+          break;
+        default:
+          logger.warn(`${logPrefix}updateLiveStreamTemplate failed: Invalid layoutMode: ${this.streamLayout.layoutMode}`);
+          break;
+        }
+      } else {
+        switch (this.streamLayout.layoutMode) {
+        case TUIStreamLayoutMode.Float:
+          this.seatLayoutTemplateId = TUISeatLayoutTemplate.PortraitFixed_1v6;
+          break;
+        case TUIStreamLayoutMode.Grid:
+          this.seatLayoutTemplateId = TUISeatLayoutTemplate.PortraitFixed_Grid9
+          break;
+        case TUIStreamLayoutMode.None:
+          break;
+        default:
+          logger.warn(`${logPrefix}updateLiveStreamTemplate failed: Invalid layoutMode: ${this.streamLayout.layoutMode}`);
+          break;
+        }
+      }
+
+      if (this.seatLayoutTemplateId && this.roomId) {
+        const liveListManager = roomEngine.instance?.getLiveListManager();
+        if (liveListManager) {
+          try {
+            await liveListManager.setLiveInfo({
+              roomId: this.roomId,
+              seatLayoutTemplateId: this.seatLayoutTemplateId,
+            });
+          } catch (error: any) {
+            logger.error(`${logPrefix}setLiveInfo error:`, error);
+            if (error.code !== undefined && error.code !== -2) {
+              onError(error);
+            } else {
+              TUIMessageBox({
+                title: t('Note'),
+                message: t('Layout switch failed, please retry'),
+                confirmButtonText: t('Sure'),
+              });
+            }
+          }
+        } else {
+          logger.error(`${logPrefix}updateSeatLayoutTemplate failed: No LiveListManager`);
+        }
+      }
     },
     reset() {
       this.localUser = {
@@ -259,7 +376,13 @@ export const useRoomStore = defineStore('room', {
       this.seatMode = TUISeatMode.kApplyToTake;
       this.maxSeatCount = 0;
       this.roomName = '';
-      this.historyRemoteUserCount = 0;
+      this.roomId = '';
+
+      streamLayoutService.reset();
+    },
+    restoreMediaSource(mediaSourceState: TUIMediaSourcesState) {
+      this.setLocalVideoResMode(mediaSourceState.mixingVideoEncodeParam.resMode);
+      mediaSourceStore.restoreState(mediaSourceState);
     }
   }
-})
+});

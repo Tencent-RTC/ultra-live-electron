@@ -15,7 +15,7 @@
           </div>
         </div>
         <div class="user-info-content" @click="handleUserControl" v-click-outside="handleHideUserControl">
-          <img class="avatar" :src="props.user.avatarUrl" alt="">
+          <img class="avatar" :src="props.user.avatarUrl || defaultAvatarURL" alt="">
           <div class="name">{{ props.user.name || props.user.userId }}</div>
           <button class="tui-icon">
             <svg-icon
@@ -47,23 +47,22 @@
   </template>
 
 <script setup lang="ts">
-import { ref, Ref, defineProps, defineEmits, computed, watch } from "vue";
+import { ref, Ref, defineProps, defineEmits, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useI18n } from '../../locales';
-import SvgIcon from "../../common/base/SvgIcon.vue";
-import LogoIcon from "../../common/icons/LogoIcon.vue";
+import SvgIcon from '../../common/base/SvgIcon.vue';
+import LogoIcon from '../../common/icons/LogoIcon.vue';
 import MaximizeIcon from '../../common/icons/MaximizeIcon.vue';
 import MinimizeIcon from '../../common/icons/MinimizeIcon.vue';
 import MiniIcon from '../../common/icons/MiniIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
-import SwitchThemeIcon from "@/TUILiveKit/common/icons/SwitchThemeIcon.vue";
+import SwitchThemeIcon from '../../common/icons/SwitchThemeIcon.vue';
 import ArrowStrokeSelectDownIcon from '../../common/icons/ArrowStrokeSelectDownIcon.vue'
 import vClickOutside from '../../utils/vClickOutside';
 import { useBasicStore } from '../../store/main/basic';
-import { messageChannels } from "../../communication"
-import { changeTheme, ThemeColor } from "../../utils/utils";
-
-const buttonElement = ref();
+import { messageChannels } from '../../communication'
+import { changeTheme, ThemeColor } from '../../utils/utils';
+import { defaultAvatarURL } from '../../utils/common';
 
 interface Props {
   user: {
@@ -77,7 +76,7 @@ const basicStore = useBasicStore();
 const props = defineProps<Props>();
 const showUserControl = ref(false);
 const { t } = useI18n();
-const emits = defineEmits(["logout"]);
+const emits = defineEmits(['logout']);
 const { statistics } = storeToRefs(basicStore);
 const isMaximized: Ref<boolean> = ref(false);
 const currentTheme = ref(ThemeColor.DarkTheme);
@@ -113,19 +112,19 @@ function handleHideUserControl() {
 }
 
 const onMinimize = () => {
-  console.log("[LiveHeader]onMinimize");
-  window.ipcRenderer.send("on-minimize-window", null);
+  console.log('[LiveHeader]onMinimize');
+  window.ipcRenderer.send('on-minimize-window', null);
 };
 
 const onToggleMaximize = () => {
-  console.log("[LiveHeader]onToggleMaximize");
+  console.log('[LiveHeader]onToggleMaximize');
   isMaximized.value = !isMaximized.value;
-  window.ipcRenderer.send("on-maximize-window", isMaximized.value);
+  window.ipcRenderer.send('on-maximize-window', isMaximized.value);
 };
 
 const onClose = () => {
-  console.log("[LiveHeader]onClose");
-  window.ipcRenderer.send("on-close-window", null);
+  console.log('[LiveHeader]onClose');
+  window.ipcRenderer.send('on-close-window', null);
 };
 
 const handleChangeTheme = () => {
@@ -134,7 +133,11 @@ const handleChangeTheme = () => {
     key: 'change-theme',
     data: currentTheme.value
   });
-  const mainWindowElement = document.querySelector(".tui-live-kit-main");
+  messageChannels.messagePortToCover?.postMessage({
+    key: 'change-theme',
+    data: currentTheme.value
+  });
+  const mainWindowElement = document.querySelector('.tui-live-kit-main');
   changeTheme(mainWindowElement,currentTheme.value);
 }
 

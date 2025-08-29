@@ -8,11 +8,14 @@
       v-if="currentViewName === 'screen'"
       :data="dataInEdit"
     ></live-screen-share-source>
-    <live-image-source
-      v-if="currentViewName === 'image'"
+    <live-phone-mirror
+      v-if="currentViewName === 'phone-mirror'"
       :data="dataInEdit"
-    ></live-image-source>
-    <live-voice-chat v-if="currentViewName === 'voice-chat'"></live-voice-chat>
+    ></live-phone-mirror>
+    <live-connection
+      v-if="currentViewName === 'connection'"
+      :data="dataInEdit"
+    ></live-connection>
     <live-setting v-if="currentViewName === 'setting'"></live-setting>
     <live-add-bgm v-if="currentViewName === 'add-bgm'"></live-add-bgm>
     <live-reverb-voice v-if="currentViewName === 'reverb-voice'"></live-reverb-voice>
@@ -23,25 +26,25 @@
 <script setup lang='ts'>
 import { onMounted, ref, Ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import trtcCloud from "./utils/trtcCloud";
+import trtcCloud from './utils/trtcCloud';
 import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType, TRTCDeviceType, TRTCDeviceState } from 'trtc-electron-sdk';
 import LiveCameraSource from './components/LiveSource/LiveCameraSource.vue';
 import LiveScreenShareSource from './components/LiveSource/LiveScreenShareSource.vue';
-import LiveImageSource from './components/LiveSource/LiveImageSource.vue';
-import LiveVoiceChat from './components/LiveChildView/LiveVoiceChat.vue';
+import LiveConnection from './components/LiveChildView/LiveConnection.vue';
 import LiveSetting from './components/LiveChildView/LiveSetting.vue';
 import LiveAddBgm from './components/LiveMoreTool/LiveAddBgm.vue';
 import LiveReverbVoice from './components/LiveMoreTool/LiveReverbVoice.vue';
 import LiveChangeVoice from './components/LiveMoreTool/LiveChangeVoice.vue';
+import LivePhoneMirror from './components/LiveSource/LivePhoneMirror.vue';
 import TUIMessageBox from './common/base/MessageBox';
 import { useCurrentSourceStore } from './store/child/currentSource';
 import useDeviceManager from './utils/useDeviceManager';
 import { useI18n } from './locales/index';
-import { useAudioEffectStore } from './store/audioEffect';
+import { useAudioEffectStore } from './store/child/audioEffect';
 import { changeTheme } from './utils/utils';
+import logger from './utils/logger';
 
-const logger = console;
-const logPrefix = '[ChildWindowView]';
+const logPrefix = '[ChildView]';
 
 const audioEffectStore = useAudioEffectStore();
 const { t } = useI18n();
@@ -59,9 +62,9 @@ onMounted(() => {
 
 function initMainWindowMessageListener() {
   logger.log(`${logPrefix}initMainWindowMessageListener`);
-  if (window.mainWindowPort) {
-    window.mainWindowPort.addEventListener('message', (event) => {
-      console.log(`${logPrefix}message from main window:`, event.data, event);
+  if (window.mainWindowPortInChild) {
+    window.mainWindowPortInChild.addEventListener('message', (event) => {
+      logger.log(`${logPrefix}message from main window:`, event.data, event);
       const { key, data } = event.data;
       switch (key) {
       case 'set-apply-list':
@@ -69,6 +72,9 @@ function initMainWindowMessageListener() {
         break;
       case 'set-anchor-list':
         currentSourceStore.setAnchorList(JSON.parse(data));
+        break;
+      case 'set-apply-and-anchor-list':
+        currentSourceStore.setApplyAndAnchorList(JSON.parse(data));
         break;
       case 'reset':
         currentSourceStore.reset();
@@ -86,29 +92,33 @@ function initMainWindowMessageListener() {
         if(data !== audioEffectStore.playingMusicId){
           audioEffectStore.updatePlayingMusicId(data);
         }else{
-          window.mainWindowPort?.postMessage({
+          window.mainWindowPortInChild?.postMessage({
             key:'singleLoopPlay',
             data,
           });
         }
         break;
-      case 'change-theme': {
-        const childWindowElement = document.querySelector('.tui-live-kit-child');
-        changeTheme(childWindowElement,data);
-      }
+      case 'change-theme':
+        {
+          const childWindowElement = document.querySelector('.tui-live-kit-child');
+          changeTheme(childWindowElement,data);
+        }
+        break;
+      case 'update-phone-list':
+        currentSourceStore.setPhoneDeviceList(data);
         break;
       default:
         logger.warn(`${logPrefix}message from main: not supported message key: ${key}`);
         break;
       }
     });
-    window.mainWindowPort.addEventListener('messageerror', (event) => {
+    window.mainWindowPortInChild.addEventListener('messageerror', (event) => {
       logger.error(`${logPrefix}message from main window error:`, event.data, event);
     });
-    window.mainWindowPort.start();
-    window.mainWindowPort.postMessage({
-      key: 'notice',
-      data: 'child port started',
+    window.mainWindowPortInChild.start();
+    window.mainWindowPortInChild.postMessage({
+      key: 'notice-from-child',
+      data: 'child window port started',
     });
   } else {
     logger.warn(`${logPrefix}initMainWindowMessageListener port not ready, will retry in 1s`);
@@ -157,9 +167,9 @@ function refreshCameraDeviceList() {
     } else {
       currentSourceStore.setCameraList([]);
       TUIMessageBox({
-        title: t("Note"),
-        message: t("No camera"),
-        confirmButtonText: t("Sure"),
+        title: t('Note'),
+        message: t('No camera'),
+        confirmButtonText: t('Sure'),
       });
     }
   }
@@ -175,9 +185,9 @@ function refreshMicrophoneDeviceList() {
     } else {
       currentSourceStore.setMicrophoneList([]);
       TUIMessageBox({
-        title: t("Note"),
-        message: t("No microphone"),
-        confirmButtonText: t("Sure"),
+        title: t('Note'),
+        message: t('No microphone'),
+        confirmButtonText: t('Sure'),
       });
     }
   }
@@ -193,9 +203,9 @@ function refreshSpeakerDeviceList() {
     } else {
       currentSourceStore.setSpeakerList([]);
       TUIMessageBox({
-        title: t("Note"),
-        message: t("No speaker"),
-        confirmButtonText: t("Sure"),
+        title: t('Note'),
+        message: t('No speaker'),
+        confirmButtonText: t('Sure'),
       });
     }
   }
@@ -259,15 +269,9 @@ const commandHandlers = new Map([
     },
   ],
   [
-    'image',
+    'connection',
     () => {
-      currentViewName.value = 'image';
-    },
-  ],
-  [
-    'voice-chat',
-    () => {
-      currentViewName.value = 'voice-chat';
+      currentViewName.value = 'connection';
     },
   ],
   [
@@ -295,6 +299,12 @@ const commandHandlers = new Map([
       currentViewName.value = 'change-voice';
     },
   ],
+  [
+    'phone-mirror',
+    () => {
+      currentViewName.value = 'phone-mirror';
+    },
+  ]
 ]);
 
 window.ipcRenderer.on('logout', () => {
@@ -322,6 +332,6 @@ window.ipcRenderer.on('show', (event: any, args: Record<string, any>) => {
 
 .tui-live-kit-child {
   height: 100%;
-  color: $font-child-color;
+  color: $font-sub-window-color;
 }
 </style>

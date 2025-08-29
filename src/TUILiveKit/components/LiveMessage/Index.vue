@@ -3,6 +3,9 @@
     <div class="tui-title">
       {{t('Message List')}}
     </div>
+    <div v-if="!isLiving" class="tui-live-message-disabled">
+      <div>{{t('No message yet')}}</div>
+    </div>
     <div v-if="isLiving" class="tui-live-message-list-container">
       <div class="tui-live-message-gift">
         <span class="tui-live-message-title">{{t('Gift-giving news')}}</span>
@@ -26,7 +29,7 @@
         <div class="tui-live-message-list">
           <span v-for="item in messageList" :key="item.ID" class="tui-live-message-item">
             <span class="tui-live-message-item-level">{{ 0 }}</span>
-            <div class="tui-live-message-item-nick-container"><span class="tui-live-message-item-nick">{{item.nick}}</span></div>
+            <span class="tui-live-message-item-nick">{{item.nick}}</span>
             <message-text  v-if="item.type === 'TIMTextElem'" :data="item.payload.text" />
             <message-text  v-else-if="item.type === 'CustomUserEnter'" :data="item.payload.text" />
           </span>
@@ -34,10 +37,7 @@
         </div>
       </div>
     </div>
-    <chat-editor v-if="isLiving"></chat-editor>
-    <div v-if="!isLiving" class="tui-live-message-disabled">
-      {{t('Message chat can be used after the live starts')}}
-    </div>
+    <chat-editor :disabled="!isLiving"></chat-editor>
   </div>
 </template>
 <script setup lang="ts">
@@ -162,10 +162,6 @@ onUnmounted(() => {
       border-radius: 0.5rem;
       background-color: $color-live-message-item-level-background;
     }
-    &-nick-container{
-      display: inline-flex;
-      max-width: 8rem;
-    }
     &-nick{
       overflow: hidden;
       text-overflow: ellipsis;
@@ -197,11 +193,12 @@ onUnmounted(() => {
     }
   }
   &-disabled {
-    height: calc(100% - 2.5rem);
-    text-align: center;
-    padding-top: 10rem;
-    font-size: $font-live-message-disabled-size;
-    color: $font-live-message-disabled-color;
+    height: calc(100% - 6.75rem);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: var(--font-size-secondary);
+    color: var(--text-color-secondary);
   }
 }
 </style>

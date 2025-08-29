@@ -2,19 +2,55 @@
   <div class="video-tab">
     <div class="tui-camera-preview" ref="cameraPreviewRef"></div>
     <div class="camera-setting-container">
-      <div class="camera-setting">
-        <span class="title">{{ t('Camera') }}</span>
-        <device-select device-type="camera"></device-select>
+      <div class="camera-setting-row">
+        <div class="camera-setting">
+          <span class="title">{{ t('Camera') }}</span>
+          <device-select device-type="camera"></device-select>
+        </div>
+        <div class="resolution-setting">
+          <span class="title">{{ t('Resolution') }}</span>
+          <video-profile></video-profile>
+        </div>
+        <div class="mirror-container">
+          <span @click="handleChangeMirror">
+            <CameraMirror v-if="isCurrentCameraMirrored"/>
+            <CameraUnmirror v-else />
+          </span>
+        </div>
       </div>
-      <div class="resolution-setting">
-        <span class="title">{{ t('Resolution') }}</span>
-        <video-profile></video-profile>
-      </div>
-      <div class="mirror-container">
-        <span @click="handleChangeMirror">
-          <CameraMirror v-if="isCurrentCameraMirrored"/>
-          <CameraUnmirror v-else />
-        </span>
+      <div class="camera-setting-row camera-color-row">
+        <div class="options-container">
+          <span class="title">{{t('Color Space')}}</span>
+          <TUISelect
+            class="color-select"
+            :modelValue="currentCameraColorSpace"
+            :teleported="false"
+            :popper-append-to-body="false"
+            @change="handleColorSpaceChange">
+            <TUIOption
+              v-for="item in cameraColorSpaceOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </TUISelect>
+        </div>
+        <div class="options-container">
+          <span class="title">{{t('Color Range')}}</span>
+          <TUISelect
+            class="color-select"
+            :modelValue="currentCameraColorRange"
+            :teleported="false"
+            :popper-append-to-body="false"
+            @change="handleColorRangeChange">
+            <TUIOption
+              v-for="item in cameraColorRangeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </TUISelect>
+        </div>
       </div>
     </div>
     <div class="beauty-setting" v-if="props.withBeauty">
@@ -24,41 +60,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, Ref, defineProps, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, Ref, shallowRef, defineProps, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TRTCMediaSourceType, TRTCVideoMirrorType } from 'trtc-electron-sdk';
+import { TRTCMediaSourceType, TRTCVideoMirrorType, TRTCVideoColorSpace, TRTCVideoColorRange } from 'trtc-electron-sdk';
 import { TUIMediaSourceViewModel } from '../types';
 import DeviceSelect from './DeviceSelect.vue';
 import VideoProfile from './VideoProfile.vue';
 import CameraMirror from '../common/icons/CameraMirror.vue';
 import CameraUnmirror from '../common/icons/CameraUnmirror.vue';
 import BeautyConfigPanel from '../common/BeautyConfigPanel.vue';
+import TUISelect from './base/Select.vue';
+import TUIOption from './base/Option.vue';
 import { useI18n } from '../locales/index';
 import { useCurrentSourceStore } from '../store/child/currentSource';
 import { TRTCXmagicEffectProperty } from '../utils/beauty';
+import { colorSpaceOptions, colorRangeOptions } from '../constants/tuiConstant';
+import logger from '../utils/logger';
 
 const { t } = useI18n()
 const currentSourceStore = useCurrentSourceStore();
-const { isCurrentCameraMirrored, beautyProperties } = storeToRefs(currentSourceStore);
+const { isCurrentCameraMirrored, beautyProperties, currentCameraColorSpace, currentCameraColorRange } = storeToRefs(currentSourceStore);
 interface Props {
   withBeauty?: boolean;
   data?: Record<string, any>;
 }
-const logger = console;
 const logPrefix = '[VideoSettingTab]';
 const props = defineProps<Props>();
 
 const cameraPreviewRef: Ref<HTMLDivElement | undefined> = ref();
 const isFirstBeautyEffectProperty: Ref<boolean> = ref(false);
+
+const cameraColorSpaceOptions = shallowRef([...colorSpaceOptions]);
+const cameraColorRangeOptions = shallowRef([...colorRangeOptions]);
+
+const mediaQueryString = `(resolution: ${window.devicePixelRatio}dppx)`;
+const media = window.matchMedia(mediaQueryString);
+media.addEventListener('change', onDevicePixelRatioChanged);
+
 const handleChangeMirror = async () => {
   logger.log(`${logPrefix}handleChangeMirror: ${isCurrentCameraMirrored.value}`);
   currentSourceStore.setIsCurrentCameraMirrored(!isCurrentCameraMirrored.value);
-  window.mainWindowPort?.postMessage({
-    key: "setCameraTestRenderMirror",
+  window.mainWindowPortInChild?.postMessage({
+    key: 'setCameraTestRenderMirror',
     data: {
       mirror: isCurrentCameraMirrored.value
     }
   });
+}
+
+function onDevicePixelRatioChanged() {
+  logger.log(`${logPrefix}onDevicePixelRatioChanged:`, window.devicePixelRatio);
+  stopCameraPreview();
+  startCameraPreview();
 }
 
 function startCameraPreview() {
@@ -67,8 +120,8 @@ function startCameraPreview() {
     if (cameraPreviewRef.value && window.nativeWindowHandle) {
       const bodyRect = document.body.getBoundingClientRect();
       const clientRect = cameraPreviewRef.value.getBoundingClientRect();
-      window.mainWindowPort?.postMessage({
-        key: "startCameraDeviceTest",
+      window.mainWindowPortInChild?.postMessage({
+        key: 'startCameraDeviceTest',
         data: {
           windowID: window.nativeWindowHandle,
           rect: {
@@ -83,6 +136,12 @@ function startCameraPreview() {
             devicePixelRatio: ${window.devicePixelRatio}`
         }
       });
+      window.mainWindowPortInChild?.postMessage({
+        key: 'setCameraTestRenderMirror',
+        data: {
+          mirror: isCurrentCameraMirrored.value
+        }
+      });
     } else {
       logger.error(`${logPrefix}Preview camera failed, not DIV view or native window ID.`, cameraPreviewRef.value, window.nativeWindowHandle);
     }
@@ -91,8 +150,8 @@ function startCameraPreview() {
 
 function stopCameraPreview() {
   logger.debug(`${logPrefix}stopCameraPreview`);
-  window.mainWindowPort?.postMessage({
-    key: "stopCameraDeviceTest"
+  window.mainWindowPortInChild?.postMessage({
+    key: 'stopCameraDeviceTest'
   });
   logger.log(`${logPrefix}stopCameraPreview finished`);
 }
@@ -100,19 +159,19 @@ function stopCameraPreview() {
 function setBeautyEffectProperty(properties: TRTCXmagicEffectProperty[]) {
   if (!isFirstBeautyEffectProperty.value) {
     isFirstBeautyEffectProperty.value = true;
-    window.mainWindowPort?.postMessage({
-      key: "setCameraTestVideoPluginPath",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'setCameraTestVideoPluginPath',
       data: true
     });
     setTimeout(() => {
-      window.mainWindowPort?.postMessage({
-        key: "setCameraTestVideoPluginParameter",
+      window.mainWindowPortInChild?.postMessage({
+        key: 'setCameraTestVideoPluginParameter',
         data: properties
       });
     }, 3000); // There is a delay when the camera is turned on and when beauty effects are enabled for the first time. Here, setting beauty effect parameters requires a delay. The beauty effect parameters can only take effect after the camera is turned on and the beauty effect plugin is created.
   } else {
-    window.mainWindowPort?.postMessage({
-      key: "setCameraTestVideoPluginParameter",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'setCameraTestVideoPluginParameter',
       data: properties
     });
   }
@@ -124,6 +183,14 @@ function handleBeautyEffectChange(properties: TRTCXmagicEffectProperty[]) {
   setBeautyEffectProperty(properties);
 }
 
+function handleColorSpaceChange(value: number) {
+  currentSourceStore.setCameraCaptureColorSpace(value as TRTCVideoColorSpace);
+}
+
+function handleColorRangeChange(value: number){
+  currentSourceStore.setCameraCaptureColorRange(value as TRTCVideoColorRange);
+}
+
 onMounted(() => {
   logger.log(`${logPrefix}onMounted`);
   startCameraPreview();
@@ -131,20 +198,21 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   logger.log(`${logPrefix}onBeforeUnmount`);
+  media.removeEventListener('change', onDevicePixelRatioChanged);
   stopCameraPreview();
   if (isFirstBeautyEffectProperty.value) {
-    window.mainWindowPort?.postMessage({
-      key: "setCameraTestVideoPluginPath",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'setCameraTestVideoPluginPath',
       data: false
     });
     isFirstBeautyEffectProperty.value = false;
   }
 });
 
-watch(props, async (val) => {
+watch(props, async (val: Record<string, any>) => {
   logger.log(`${logPrefix}watch props.data`, val);
   if (val.data?.mediaSourceInfo) {
-    const { mediaSourceInfo, beautyConfig, resolution } = val.data as TUIMediaSourceViewModel;
+    const { mediaSourceInfo, beautyConfig, resolution, colorSpace, colorRange } = val.data as TUIMediaSourceViewModel;
     if (mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera && resolution && beautyConfig) {
       const { sourceId, mirrorType } = mediaSourceInfo;
       const { width, height } = resolution;
@@ -152,6 +220,12 @@ watch(props, async (val) => {
       currentSourceStore.setCurrentCameraId(sourceId);
       currentSourceStore.setCurrentCameraResolution({ width, height });
       currentSourceStore.setIsCurrentCameraMirrored(mirrorType === TRTCVideoMirrorType.TRTCVideoMirrorType_Enable);
+      if (colorSpace || colorRange) {
+        currentSourceStore.setCameraCaptureColor({
+          colorSpace: colorSpace || TRTCVideoColorSpace.TRTCVideoColorSpace_Auto,
+          colorRange: colorRange || TRTCVideoColorRange.TRTCVideoColorRange_Auto,
+        });
+      }
       currentSourceStore.setBeautyProperties(beautyProperties);
 
       await nextTick(); // Wait for parent Vue component rendered and camera started.
@@ -171,10 +245,20 @@ watch(props, async (val) => {
 @import "../assets/variable.scss";
 .camera-setting-container{
   width: 100%;
+  padding: 0.25rem 0;
+}
+.camera-setting-row {
   display: flex;
   align-items: center;
-  height: 4.625rem;
-  padding: 0.5rem 0;
+  height: 4.125rem;
+  padding: 0.25rem 0
+
+}
+.camera-color-row {
+  justify-content: space-between;
+  .options-container {
+    width: 49%;
+  }
 }
 .camera-setting{
   width: 20rem;
@@ -223,7 +307,7 @@ watch(props, async (val) => {
 }
 .tui-camera-preview{
   width: 100%;
-  height: 17rem;
+  height: 12.875rem;
   overflow: hidden;
 }
 .mirror-container {
@@ -243,5 +327,11 @@ watch(props, async (val) => {
   height: 1.25rem;
   cursor: pointer;
   color: var(--font-color-3);
+}
+.color-select {
+  width: 100%;
+  font-size: $font-device-select-size;
+  background-color: var(--bg-color-input);
+  border-radius: 0.5rem;
 }
 </style>

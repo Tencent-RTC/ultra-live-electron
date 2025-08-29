@@ -6,11 +6,11 @@
   &::-webkit-scrollbar {
     width: 0.125rem;
     height: 0.125rem;
-    background-color: $color-gray-8;
+    background-color: var(--color-background-scrollbar);
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: $color-black;
+    background-color: var(--color-background-scrollbar-thumb);
   }
 }
 
@@ -98,7 +98,7 @@ button {
 
 .tui-button-cancel{
   background: var(--bg-color-transparency);
-  color: var(--text-color-link);    
+  color: var(--text-color-link);
   font-size: $font-style-scss-button-cancel-size;
   font-style: $font-style-scss-button-cancel-style;
   font-weight: $font-style-scss-button-cancel-weight;

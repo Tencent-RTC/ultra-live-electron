@@ -3,28 +3,36 @@
       <emoji class="chat-emoji" @choose-emoji="handleChooseEmoji"></emoji>
       <textarea
         ref="editorInputEle"
+        :disabled="props.disabled"
         v-model="sendMsg"
+        maxlength="80"
         spellcheck="false"
         class="content-bottom-input"
-        :placeholder="t('Type a message')"
+        :placeholder="placeholder"
         @keyup.enter="sendMessage"
       />
     </div>
   </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, defineProps, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TencentCloudChat } from '@tencentcloud/tuiroom-engine-electron';
 import Emoji from './emoji.vue';
 import { useI18n } from '../../locales'
-import useRoomEngine from "../../utils/useRoomEngine";
+import useRoomEngine from '../../utils/useRoomEngine';
 import { useBasicStore } from '../../store/main/basic';
 import { useChatStore } from '../../store/main/chat';
 import { decodeSendTextMsg } from './util';
+import logger from '../../utils/logger';
 
-const logger = console;
-const logPrefix = "[ChatEditor]";
+const logPrefix = '[ChatEditor]';
+
+type Props = {
+  disabled: boolean;
+}
+
+const props = defineProps<Props>()
 
 const { t }  = useI18n()
 const basicStore = useBasicStore();
@@ -34,6 +42,11 @@ const { roomId } = storeToRefs(basicStore);
 const roomEngine = useRoomEngine();
 const sendMsg = ref('');
 const editorInputEle = ref();
+
+const placeholder = computed(() => {
+  return !props.disabled ? t('Type a message') : t('Living not started');
+})
+
 const sendMessage = async () => {
   const msg = decodeSendTextMsg(sendMsg.value);
   sendMsg.value = '';
@@ -119,6 +132,9 @@ const handleChooseEmoji = (emojiName: string) => {
     }
     &::-webkit-scrollbar {
       display: none;
+    }
+    &:disabled {
+      cursor: not-allowed;
     }
   }
 }

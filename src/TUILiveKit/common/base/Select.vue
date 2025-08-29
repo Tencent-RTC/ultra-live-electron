@@ -43,9 +43,6 @@ interface Props {
   disabled?: boolean,
 }
 
-const logger = console;
-const logPrefix = '[Select]';
-
 const props = defineProps<Props>();
 
 const emits = defineEmits(['update:modelValue', 'change']);
@@ -64,6 +61,8 @@ watch(() => props.modelValue, (val) => {
   // To do: to implement when the data is an array of objects
   if (optionObj.value.get(val)) {
     selectedLabel.value = optionObj.value.get(props.modelValue).label;
+  } else {
+    selectedLabel.value = '';
   }
 });
 
@@ -71,6 +70,8 @@ watch(optionDataList, () => {
   // To do: to implement when the data is an array of objects
   if (optionObj.value.get(props.modelValue)) {
     selectedLabel.value = optionObj.value.get(props.modelValue).label;
+  } else {
+    selectedLabel.value = '';
   }
 });
 
@@ -92,7 +93,7 @@ function onOptionDestroyed(value: string | number | boolean | object) {
 function onOptionSelected(option: OptionData) {
   selectedValue.value = option.value;
   showSelectDropdown.value = false;
-  
+
   emits('update:modelValue', option.value);
 }
 

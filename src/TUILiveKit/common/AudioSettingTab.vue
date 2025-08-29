@@ -103,16 +103,16 @@ function handleMicrophoneTest() {
   isTestingMicrophone.value = !isTestingMicrophone.value;
   const isStartMicrophoneTest = isTestingMicrophone.value;
   if (isStartMicrophoneTest) {
-    window.mainWindowPort?.postMessage({
-      key: "startTestMic",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'startTestMic',
       data: {
         interval: 200,
         playback: true,
       }
     });
   } else {
-    window.mainWindowPort?.postMessage({
-      key: "stopTestMic",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'stopTestMic',
     });
   }
 }
@@ -125,28 +125,28 @@ async function handleSpeakerTest() {
   isTestingSpeaker.value = !isTestingSpeaker.value;
   const isStartSpeakerTest = isTestingSpeaker.value;
   if (isStartSpeakerTest) {
-    window.mainWindowPort?.postMessage({
-      key: "startTestSpeaker",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'startTestSpeaker',
       data: SPEAKER_TEST_URL
     });
   } else {
-    window.mainWindowPort?.postMessage({
-      key: "stopTestSpeaker",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'stopTestSpeaker',
     });
   }
 }
 
 onBeforeUnmount(() => {
   if (isTestingMicrophone.value) {
-    window.mainWindowPort?.postMessage({
-      key: "stopTestMic",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'stopTestMic',
     });
     isTestingMicrophone.value = false;
   }
 
   if (isTestingSpeaker.value) {
-    window.mainWindowPort?.postMessage({
-      key: "stopTestSpeaker",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'stopTestSpeaker',
     });
     isTestingSpeaker.value = false;
   }

@@ -41,6 +41,7 @@
         </div>
     </div>
 </template>
+
 <script setup lang="ts">
 import { Ref, ref, defineProps, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
@@ -51,12 +52,11 @@ import CloseIcon from '../../common/icons/CloseIcon.vue';
 import { useCurrentSourceStore } from '../../store/child/currentSource';
 import ScreenWindowPreviewer from './ScreenWindowPreviewer.vue';
 import { TUIMediaSourceEditMode } from './constant';
+import logger from '../../utils/logger';
 
 type TUIMediaSourceEditProps = {
   data?: Record<string, any>;
 }
-
-const logger = console;
 
 const props = defineProps<TUIMediaSourceEditProps>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
@@ -75,7 +75,7 @@ const isSameScreen = computed(() => {
 });
 
 const handleCloseWindow = () => {
-  window.ipcRenderer.send("close-child");
+  window.ipcRenderer.send('close-child');
   resetCurrentView();
 }
 
@@ -90,11 +90,11 @@ const handleAddScreen = () => {
       screenType: selected.value.type,
     };
 
-    window.mainWindowPort?.postMessage({
-      key: "addMediaSource",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'addMediaSource',
       data: screenWindowInfo,
     });
-    window.ipcRenderer.send("close-child");
+    window.ipcRenderer.send('close-child');
     resetCurrentView();
   } else {
     // To do: Message('Please choose a screen or window')；
@@ -114,12 +114,12 @@ const handleEditScreen = () => {
       predata: JSON.parse(JSON.stringify(props.data)),
     };
 
-    window.mainWindowPort?.postMessage({
-      key: "updateMediaSource",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'updateMediaSource',
       data: newData,
     })
 
-    window.ipcRenderer.send("close-child");
+    window.ipcRenderer.send('close-child');
     resetCurrentView();
   } else {
     // To do: Message('Please choose a new screen or window');
@@ -136,7 +136,7 @@ const onSelect = (item: any) => {
 }
 
 watch(props, (val) => {
-  logger.log(`[LiveScreenShareSource]watch props.data`, val);
+  logger.log('[LiveScreenShareSource]watch props.data', val);
   if (val.data?.mediaSourceInfo) {
     selected.value = null;
     for(let i = 0; i < screenList.value.length; i++) {
@@ -201,10 +201,9 @@ watch(props, (val) => {
     justify-content: flex-end;
     padding: 0 1.5rem;;
     background-color: var(--bg-color-dialog);
-    border-top: 1px solid var(--stroke-color-primary);
 }
 .selected {
   color: $font-live-screen-share-selected-color;
   background-color: $color-live-screen-share-selected-background;
 }
-</style>./types./type-define./type-define./constant./constant
+</style>

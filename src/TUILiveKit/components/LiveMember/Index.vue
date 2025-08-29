@@ -1,13 +1,18 @@
 <template>
   <div class="tui-live-member">
     <div class="tui-title">
-      {{t('Audience List')}}
+      {{t('Online audience')}}
     </div>
     <div class="tui-member-list">
-      <div v-for="item in remoteUserList" :key="item.userId" class="tui-member-item">
-        <img class="tui-user-avatar" :src="item.avatarUrl || defaultAvatarURL" alt="">
-        <span class="tui-user-name">{{item.userName || item.userId}}</span>
-        <span class="tui-user-level">{{ 0 }}</span>
+      <template v-if="remoteUserList.length">
+        <div v-for="item in remoteUserList" :key="item.userId" class="tui-member-item">
+          <img class="tui-user-avatar" :src="item.avatarUrl || defaultAvatarURL" alt="">
+          <span class="tui-user-name">{{item.userName || item.userId}}</span>
+          <span class="tui-user-level">{{ 0 }}</span>
+        </div>
+      </template>
+      <div v-else class="tui-no-member">
+        <div>{{ t('No audience yet') }}</div>
       </div>
     </div>
   </div>
@@ -72,5 +77,14 @@ const { remoteUserList }  = storeToRefs(roomStore);
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+.tui-no-member {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: var(--font-size-secondary);
+  color: var(--text-color-secondary);
 }
 </style>

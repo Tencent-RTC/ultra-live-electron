@@ -1,25 +1,27 @@
 <template>
-  <TUILiveKitMain ref="liveKitRef" @on-logout="handleLogout"/>
+    <TUILiveKitMain ref="liveKitRef" @on-logout="handleLogout"/>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import TUILiveKitMain from "../TUILiveKit/Main.vue";
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import router from '../router';
+import TUILiveKitMain from '../TUILiveKit/MainView.vue';
 import TUIMessageBox from '../TUILiveKit/common/base/MessageBox';
 import { useI18n } from '../TUILiveKit/locales';
+import logger from '../TUILiveKit/utils/logger';
 
-const logger = console;
 const logPrefix = '[LiveStudioView]';
 const liveKitRef = ref();
 const { t } = useI18n();
 
-function handleLogout() {
+const gotoLogin = () => {
   window.localStorage.removeItem('TUILiveKit-userInfo');
-  alert('You should implement your own "Login" logic to work with "logout"');
-  // Solution 1
-  window.ipcRenderer.send('on-close-window');
-  // Solution 2
-  // router.push('/login');
+  window.ipcRenderer.send('user-logout');
+  router.push('/login');
+}
+
+const handleLogout = () => {
+  gotoLogin();
 }
 
 async function init(userInfo: Record<string, any>) {
@@ -33,17 +35,32 @@ async function init(userInfo: Record<string, any>) {
       avatarUrl,
     });
   } catch (error) {
-    logger.error(`${logPrefix}onMounted init RoomEngine and State failed:`, error);
+    logger.error(`${logPrefix}onMounted init RoomEngine and State error:`, error);
     TUIMessageBox({
       title: t('Note'),
-      message: t('init RoomEngine and State failed'),
+      message: t('init RoomEngine and State error'),
       confirmButtonText: t('Sure'),
     });
+    gotoLogin();
   }
 }
 
-window.ipcRenderer.on("openTUILiveKit", (event: any, userInfo: Record<string, any>) => {
+function openTUILiveKit(event: any, userInfo: Record<string, any>) {
+  logger.log(`${logPrefix}openTUILiveKit:`, userInfo);
   init(userInfo);
+}
+
+onMounted(async () => {
+  window.ipcRenderer.on('openTUILiveKit', openTUILiveKit);
+
+  const currentUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+  if (!currentUserInfo) {
+    gotoLogin();
+  }
+});
+
+onBeforeUnmount(() => {
+  window.ipcRenderer.off('openTUILiveKit', openTUILiveKit);
 });
 </script>
 

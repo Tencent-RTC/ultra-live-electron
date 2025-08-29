@@ -1,29 +1,32 @@
-import { TRTCMediaSourceType, TRTCVideoRotation, TRTCAudioMusicParam, TRTCDeviceType } from 'trtc-electron-sdk';
-import { TUIMediaSourceViewModel, TUIMusicPlayMode } from '../types';
-import { useAudioEffectStore } from '../store/audioEffect';
+import { TRTCMediaSourceType, TRTCDeviceType } from 'trtc-electron-sdk';
+import { TUIMediaMixingError, TUIMediaSourceViewModel, TUIMusicPlayMode } from '../types';
+import { defaultCameraCaptureWidth, defaultCameraCaptureHeight } from '../constants/tuiConstant';
+import { useAudioEffectStore } from '../store/main/audioEffect';
 import TUIMessageBox from '../common/base/MessageBox';
 import useAudioEffectManager from '../utils/useAudioEffectManager';
-import useDeviceManager from "../utils/useDeviceManager";
-import useMediaMixingManager from '../utils/useMediaMixingManager';
+import useDeviceManager from '../utils/useDeviceManager';
+import useMediaMixingManager, { fitMediaSourceToOldRect } from '../utils/useMediaMixingManager';
 import trtcCloud from '../utils/trtcCloud';
-import { TRTCXmagicFactory, XmagicLicense, } from "../utils/beauty";
-import {useI18n} from '../locales/index';
+import { TRTCXmagicFactory, XmagicLicense, } from '../utils/beauty';
+import { useI18n } from '../locales/index';
+import onMediaMixingError from '../hooks/useMediaMixingErrorHandler';
+import logger from '../utils/logger';
 
 const audioEffectStore = useAudioEffectStore();
 const deviceManager = useDeviceManager();
 const audioEffectManager = useAudioEffectManager();
 const mediaMixingManager = useMediaMixingManager();
 const {t} = useI18n();
-const logger = console;
 const logPrefix = '[MainWindow Message Handler]';
 let mediaSourcesStore: any = null;
 let roomStore: any = null;
 
-
 export const messageChannels: {
   messagePortToChild: MessagePort|null;
+  messagePortToCover: MessagePort|null;
 } = {
   messagePortToChild: null,
+  messagePortToCover: null,
 };
 
 export async function addMediaSource(data: Record<string, any>) {
@@ -40,21 +43,34 @@ export async function addMediaSource(data: Record<string, any>) {
       rect: {
         left: 0,
         top: 0,
-        right: data.width ||
-            640,
-        bottom: data.height ||
-            320,
+        right: data.width || defaultCameraCaptureWidth,
+        bottom: data.height || defaultCameraCaptureHeight,
       }
     },
   };
   if (data.type === TRTCMediaSourceType.kCamera) {
     mediaSource.resolution = {width: data.width, height: data.height};
     mediaSource.mediaSourceInfo.mirrorType = data.mirrorType;
+    mediaSource.colorSpace = data.colorSpace;
+    mediaSource.colorRange = data.colorRange;
     if (data.beautyConfig) {
       mediaSource.beautyConfig = data.beautyConfig;
     }
   } else if (data.type === TRTCMediaSourceType.kScreen) {
     mediaSource.screenType = data.screenType;
+  } else if (data.type === TRTCMediaSourceType.kPhoneMirror) {
+    mediaSource.mirrorParams = {
+      frameRate: data.frameRate,
+      bitrateKbps: data.bitrateKbps,
+      connectType: data.connectType,
+      platformType: data.platformType,
+      deviceId: data.deviceId,
+      deviceName: data.deviceName,
+      placeholderImagePath: data.placeholderImagePath,
+    };
+    if (data.connectType === 0) {
+      window.ipcRenderer.send('start-use-driver-installer', data.platformType);
+    }
   }
 
   if (mediaSource) {
@@ -63,41 +79,9 @@ export async function addMediaSource(data: Record<string, any>) {
       await mediaSourcesStore.addMediaSource(mediaSource);
       await mediaSourcesStore.selectMediaSource(mediaSource);
     } catch (error) {
-      TUIMessageBox({
-        title: t('Note'),
-        message: (error as any).message,
-        confirmButtonText: t('Sure'),
-      });
+      onMediaMixingError(error as TUIMediaMixingError);
     }
   }
-}
-
-
-function checkRectAndResolution(
-  newSize: {width: number, height: number},
-  rect: {left: number, top: number, right: number, bottom: number},
-  rotation: TRTCVideoRotation) {
-  let width = rect.right - rect.left;
-  let height = rect.bottom - rect.top;
-  if (rotation === TRTCVideoRotation.TRTCVideoRotation90 ||
-      rotation === TRTCVideoRotation.TRTCVideoRotation270) {
-    const temp = width;
-    width = height;
-    height = temp;
-  }
-  const shrinkRate = width / newSize.width > height / newSize.height ?
-    height / newSize.height :
-    width / newSize.width;
-
-  if (rotation === TRTCVideoRotation.TRTCVideoRotation90 ||
-      rotation === TRTCVideoRotation.TRTCVideoRotation270) {
-    rect.right = rect.left + Math.round(newSize.height * shrinkRate);
-    rect.bottom = rect.top + Math.round(newSize.width * shrinkRate);
-  } else {
-    rect.right = rect.left + Math.round(newSize.width * shrinkRate);
-    rect.bottom = rect.top + Math.round(newSize.height * shrinkRate);
-  }
-  return rect;
 }
 
 async function _updateScreenImageMediaSource(data: Record<string, any>) {
@@ -114,7 +98,13 @@ async function _updateScreenImageMediaSource(data: Record<string, any>) {
         sourceType: data.type,
         sourceId: data.id,
         zOrder: data.predata?.mediaSourceInfo.zOrder,
-        rect: checkRectAndResolution({ width: data.width, height: data.height }, data.predata?.mediaSourceInfo.rect, data.predata?.mediaSourceInfo.rotation),
+        rect: fitMediaSourceToOldRect(
+          {
+            rect: data.predata?.mediaSourceInfo.rect,
+            rotation: data.predata?.mediaSourceInfo.rotation,
+          },
+          { width: data.width, height: data.height }
+        ),
         rotation: data.predata?.mediaSourceInfo.rotation,
       }
     };
@@ -165,15 +155,21 @@ async function _updateCameraMediaSource(data: Record<string, any>) {
       sourceType: data.type,
       sourceId: data.id,
       zOrder: data.predata?.mediaSourceInfo.zOrder,
-      rect: checkRectAndResolution({ width: data.width, height: data.height }, data.predata?.mediaSourceInfo.rect, data.predata?.mediaSourceInfo.rotation),
+      rect: fitMediaSourceToOldRect(
+        {
+          rect: data.predata?.mediaSourceInfo.rect,
+          rotation: data.predata?.mediaSourceInfo.rotation,
+        },
+        { width: data.width, height: data.height }
+      ),
       mirrorType: data.mirrorType,
       rotation: data.predata?.mediaSourceInfo.rotation,
     },
+    colorSpace: data.colorSpace,
+    colorRange: data.colorRange,
     beautyConfig: data.beautyConfig
   };
-  logger.log(
-    `${logPrefix}updateMediaSource newdata:`, JSON.stringify(newMediaSource));
-
+  logger.log(`${logPrefix}updateMediaSource newdata:`, JSON.stringify(newMediaSource));
 
   try {
     if (data.id === data.predata?.mediaSourceInfo.sourceId) {
@@ -181,6 +177,40 @@ async function _updateCameraMediaSource(data: Record<string, any>) {
     } else {
       await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
     }
+    await mediaSourcesStore.selectMediaSource(newMediaSource);
+  } catch (error) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: (error as any).message,
+      confirmButtonText: t('Sure'),
+    });
+  }
+}
+
+async function _updatePhoneMirrorMediaSource(data: Record<string, any>) {
+  logger.log(`${logPrefix}updateMediaSource predata:`, JSON.stringify(data));
+  const newMediaSource: TUIMediaSourceViewModel = {
+    sourceName: data.predata.name,
+    aliasName: data.predata.aliasName,
+    left: data.predata.left,
+    top: data.predata.top,
+    muted: false,
+    mediaSourceInfo: data.predata.mediaSourceInfo,
+    mirrorParams: {
+      frameRate: data.frameRate,
+      bitrateKbps: data.bitrateKbps,
+      connectType: data.connectType,
+      platformType: data.platformType,
+      deviceId: data.deviceId,
+      deviceName: data.deviceName,
+      placeholderImagePath: data.placeholderImagePath,
+    }
+  }
+  if (data.connectType === 0) {
+    window.ipcRenderer.send('start-use-driver-installer', data.platformType);
+  }
+  try {
+    await mediaSourcesStore.updateMediaSource(newMediaSource);
     await mediaSourcesStore.selectMediaSource(newMediaSource);
   } catch (error) {
     TUIMessageBox({
@@ -199,6 +229,9 @@ export async function updateMediaSource(data: Record<string, any>) {
     break;
   case TRTCMediaSourceType.kCamera:
     await _updateCameraMediaSource(data);
+    break;
+  case TRTCMediaSourceType.kPhoneMirror:
+    await _updatePhoneMirrorMediaSource(data);
     break;
   default:
     logger.warn(
@@ -273,7 +306,7 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
       mediaMixingManager.setCameraTestVideoPluginPath('');
     }
     break;
-  case "setCameraTestVideoPluginParameter":
+  case 'setCameraTestVideoPluginParameter':
     mediaMixingManager.setCameraTestVideoPluginParameter(JSON.stringify({
       beautySetting: Array.isArray(data) ? data : [data],
     }));
@@ -287,10 +320,10 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
   case 'handleUserApply':
     handleUserApply(data);
     break;
-  case 'cancelWheatPosition':
+  case 'kickOffSeat':
     handleKickSeat(data);
     break;
-  case 'kickOut':
+  case 'kickOutRoom':
     handleKickOut(data);
     break;
   case 'startTestSpeaker':
@@ -307,22 +340,22 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   case 'resumePlayMusic':
     if (data !== -1) {
-      audioEffectManager.resumePlayMusic(data);
+      audioEffectStore.resumePlayMusic(data);
     }
     break;
   case 'pausePlayMusic':
     if (data !== -1) {
-      audioEffectManager.pausePlayMusic(data);
+      audioEffectStore.pausePlayMusic(data);
     }
     break;
   case 'stopPlayMusic':
     if (data !== -1) {
-      audioEffectManager.stopPlayMusic(data);
+      audioEffectStore.stopPlayMusic(data);
     }
     break;
   case 'setAllMusicVolume':
     if (data >= 0) {
-      audioEffectManager.setAllMusicVolume(data);
+      audioEffectStore.setAllMusicVolume(data);
     }
     break;
   case 'setCurrentDeviceVolume':
@@ -340,15 +373,10 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     }
     break;
   case 'setMusicPublishVolume':
-    if (data) {
-      data.id ? audioEffectManager.setMusicPublishVolume(data.id, data.volume) : null;
-    }
+    audioEffectStore.setMusicPublishVolume(data);
     break;
   case 'seekMusicToPosInTime':
-    if (data) {
-      const {id, startTimeMS} = data;
-      id && audioEffectManager.seekMusicToPosInTime(id, startTimeMS);
-    }
+    audioEffectStore.seekMusicToPosInTime(data);
     break;
   case 'singleLoopPlay':
     singleLoopPlay(data);
@@ -356,9 +384,9 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
   case 'sequentialPlay':
     sequentialPlay(data);
     break;
-  case 'updateMusicData':
+  case 'updateAudioEffectData':
     if (data) {
-      audioEffectStore.updateMusicData(data);
+      audioEffectStore.updateAudioEffectData(data);
     }
     break;
   case 'updatePlayingMusicId':
@@ -366,7 +394,7 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
       audioEffectStore.updatePlayingMusicId(data);
       if (messageChannels.messagePortToChild) {
         messageChannels.messagePortToChild.postMessage({
-          key:"update-playing-music-id",
+          key:'update-playing-music-id',
           data
         });
       } else {
@@ -376,13 +404,19 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   case 'setVoiceReverbType':
     if (data>=0) {
-      audioEffectManager.setVoiceReverbType(data);
+      audioEffectStore.setVoiceReverbType(data);
     }
     break;
   case 'setVoiceChangerType':
     if (data>=0) {
-      audioEffectManager.setVoiceChangerType(data);
+      audioEffectStore.setVoiceChangerType(data);
     }
+    break;
+  case 'setStreamLayoutMode':
+    roomStore.setStreamLayoutMode(data.layoutMode);
+    break;
+  case 'setStreamLayoutAutoAdjust':
+    roomStore.setStreamLayoutAutoAdjust(data.isAutoAdjusting);
     break;
   default:
     logger.warn(
@@ -418,34 +452,14 @@ audioEffectManager.setMusicObserver({
 
 async function singleLoopPlay(id:number) {
   if(id === -1) return;
-  const startTimeMS = await audioEffectManager.getMusicCurrentPosInMS(id);
-  const path = audioEffectStore.getMusicPath(id);
-  const playParams: TRTCAudioMusicParam = {
-    id,
-    path,
-    publish: true,
-    loopCount: 0,
-    isShortFile: false,
-    startTimeMS: startTimeMS,
-    endTimeMS: 0,
-  };
-  audioEffectManager.startPlayMusic(playParams);
+  audioEffectStore.startPlayMusic(id);
 }
 
 async function sequentialPlay(playingMusicIndex: number) {
   const id = audioEffectStore.audioEffect.musicDataList[playingMusicIndex].id;
-  const path = audioEffectStore.audioEffect.musicDataList[playingMusicIndex].path;
-  const startTimeMS = await audioEffectManager.getMusicCurrentPosInMS(id);
-  const playParams: TRTCAudioMusicParam = {
-    id,
-    path,
-    publish: true,
-    loopCount: 0,
-    isShortFile: false,
-    startTimeMS: startTimeMS === -1 ? 0 : startTimeMS,
-    endTimeMS: 0,
-  };
-  audioEffectManager.startPlayMusic(playParams);
+  if (id !== -1) {
+    audioEffectStore.startPlayMusic(id);
+  }
 }
 
 export function initCommunicationChannels(data: Record<string, any>) {
@@ -464,6 +478,21 @@ export function initCommunicationChannels(data: Record<string, any>) {
     };
     messageChannels.messagePortToChild.start();
     window.ipcRenderer.postMessage('port-to-child', null, [messagePortToMain]);
+  } else {
+    logger.warn(`${logPrefix}initCommunicationChannels MessageChannel already existed.`);
+  }
+
+  if (!messageChannels.messagePortToCover) {
+    const messageChannel = new MessageChannel();
+
+    messageChannels.messagePortToCover = messageChannel.port1;
+    const messagePortToMain = messageChannel.port2;
+    messageChannels.messagePortToCover.onmessage = handleChildWindowMessage;
+    messageChannels.messagePortToCover.onmessageerror =  (event) => {
+      logger.log(`${logPrefix}onmessageerror from cover window:`, event.data);
+    };
+    messageChannels.messagePortToCover.start();
+    window.ipcRenderer.postMessage('port-to-cover', null, [messagePortToMain]);
   } else {
     logger.warn(`${logPrefix}initCommunicationChannels MessageChannel already existed.`);
   }

@@ -1,6 +1,6 @@
 import { getUrlParam } from './envUtils';
 
-export function getLanguage() {
+export function getLanguage(): string {
   let language = getUrlParam('lang') || navigator.language || 'zh';
   language = language.replace(/_/, '-').toLowerCase();
 

@@ -21,98 +21,98 @@
   </div>
 </template>
 <script setup lang="ts">
-import { onUnmounted } from "vue";
-import { storeToRefs } from "pinia";
-import { TRTCVoiceChangerType } from "trtc-electron-sdk";
-import SvgIcon from "../../common/base/SvgIcon.vue";
-import CloseIcon from "../../common/icons/CloseIcon.vue";
-import OriginVoiceIcon from "../../common/icons/ChangeVoiceIcons/OriginVoiceIcon.vue";
-import NaughtyKidIcon from "../../common/icons/ChangeVoiceIcons/NaughtyKidIcon.vue";
-import LolitaIcon from "../../common/icons/ChangeVoiceIcons/LolitaIcon.vue";
-import UncleIcon from "../../common/icons/ChangeVoiceIcons/UncleIcon.vue";
-import HeavyMetalIcon from "../../common/icons/ChangeVoiceIcons/HeavyMetalIcon.vue";
-import InfluenzaIcon from "../../common/icons/ChangeVoiceIcons/InfluenzaIcon.vue";
-import ForeignLanguagesIcon from "../../common/icons/ChangeVoiceIcons/ForeignLanguagesIcon.vue";
-import TrappedBeastIcon from "../../common/icons/ChangeVoiceIcons/TrappedBeastIcon.vue";
-import PlumpIcon from "../../common/icons/ChangeVoiceIcons/PlumpIcon.vue";
-import HeavyCurrentIcon from "../../common/icons/ChangeVoiceIcons/HeavyCurrentIcon.vue";
-import HeavyMachineryIcon from "../../common/icons/ChangeVoiceIcons/HeavyMachineryIcon.vue";
-import IntangibleIcon from "../../common/icons/ChangeVoiceIcons/IntangibleIcon.vue";
-import { useAudioEffectStore } from "../../store/audioEffect";
-import { useI18n } from "../../locales";
+import { onUnmounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { TRTCVoiceChangerType } from 'trtc-electron-sdk';
+import SvgIcon from '../../common/base/SvgIcon.vue';
+import CloseIcon from '../../common/icons/CloseIcon.vue';
+import OriginVoiceIcon from '../../common/icons/ChangeVoiceIcons/OriginVoiceIcon.vue';
+import NaughtyKidIcon from '../../common/icons/ChangeVoiceIcons/NaughtyKidIcon.vue';
+import LolitaIcon from '../../common/icons/ChangeVoiceIcons/LolitaIcon.vue';
+import UncleIcon from '../../common/icons/ChangeVoiceIcons/UncleIcon.vue';
+import HeavyMetalIcon from '../../common/icons/ChangeVoiceIcons/HeavyMetalIcon.vue';
+import InfluenzaIcon from '../../common/icons/ChangeVoiceIcons/InfluenzaIcon.vue';
+import ForeignLanguagesIcon from '../../common/icons/ChangeVoiceIcons/ForeignLanguagesIcon.vue';
+import TrappedBeastIcon from '../../common/icons/ChangeVoiceIcons/TrappedBeastIcon.vue';
+import PlumpIcon from '../../common/icons/ChangeVoiceIcons/PlumpIcon.vue';
+import HeavyCurrentIcon from '../../common/icons/ChangeVoiceIcons/HeavyCurrentIcon.vue';
+import HeavyMachineryIcon from '../../common/icons/ChangeVoiceIcons/HeavyMachineryIcon.vue';
+import IntangibleIcon from '../../common/icons/ChangeVoiceIcons/IntangibleIcon.vue';
+import { useAudioEffectStore } from '../../store/child/audioEffect';
+import { useI18n } from '../../locales';
 
 const audioEffectStore = useAudioEffectStore();
 const { audioEffect } = storeToRefs(audioEffectStore);
 const { updateAudioEffectOrChangeVoiceInfo } = audioEffectStore;
 const { t } = useI18n();
 const changeVoiceList = [
-  { 
+  {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_0,
     icon: OriginVoiceIcon,
-    text: "Original Audio",
+    text: 'Original Audio',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_1,
     icon: NaughtyKidIcon,
-    text: "Naughty Kid",
+    text: 'Naughty Kid',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_2,
     icon: LolitaIcon,
-    text: "Lolita",
+    text: 'Lolita',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_3,
     icon: UncleIcon,
-    text: "Uncle",
+    text: 'Uncle',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_4,
     icon: HeavyMetalIcon,
-    text: "Heavy Metal",
+    text: 'Heavy Metal',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_5,
     icon: InfluenzaIcon,
-    text: "Influenza",
+    text: 'Influenza',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_6,
     icon: ForeignLanguagesIcon,
-    text: "Foreign Language",
+    text: 'Foreign Language',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_7,
     icon: TrappedBeastIcon,
-    text: "Trapped Beast",
+    text: 'Trapped Beast',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_8,
     icon: PlumpIcon,
-    text: "Plump",
+    text: 'Plump',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_9,
     icon: HeavyCurrentIcon,
-    text: "Heavy Current",
+    text: 'Heavy Current',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_10,
     icon: HeavyMachineryIcon,
-    text: "Heavy Machinery",
+    text: 'Heavy Machinery',
   },
   {
     id: TRTCVoiceChangerType.TRTCLiveVoiceChangerType_11,
     icon: IntangibleIcon,
-    text: "Intangible",
+    text: 'Intangible',
   }
 ];
 
 onUnmounted(() => {
   audioEffect.value.voiceChanger.selectId = audioEffect.value.voiceChanger.activeId;
-  updateAudioEffectOrChangeVoiceInfo("voiceChanger",audioEffect.value.voiceChanger);
-  window.mainWindowPort?.postMessage({
-    key:"setVoiceChangerType",
+  updateAudioEffectOrChangeVoiceInfo('voiceChanger',audioEffect.value.voiceChanger);
+  window.mainWindowPortInChild?.postMessage({
+    key:'setVoiceChangerType',
     data:audioEffect.value.voiceChanger.selectId,
   });
 })
@@ -120,8 +120,8 @@ onUnmounted(() => {
 function onSelectChangeVoice(id:number){
   if(typeof id !== 'number')return;
   audioEffect.value.voiceChanger.selectId = id;
-  window.mainWindowPort?.postMessage({
-    key:"setVoiceChangerType",
+  window.mainWindowPortInChild?.postMessage({
+    key:'setVoiceChangerType',
     data:id,
   });
 }
@@ -131,16 +131,14 @@ function onConfirmSelect(){
   handleCloseSetting();
 }
 
-
-
 function handleCloseSetting(){
   audioEffect.value.voiceChanger.selectId = audioEffect.value.voiceChanger.activeId;
-  updateAudioEffectOrChangeVoiceInfo("voiceChanger", audioEffect.value.voiceChanger);
-  window.mainWindowPort?.postMessage({
-    key:"setVoiceChangerType",
+  updateAudioEffectOrChangeVoiceInfo('voiceChanger', audioEffect.value.voiceChanger);
+  window.mainWindowPortInChild?.postMessage({
+    key:'setVoiceChangerType',
     data:audioEffect.value.voiceChanger.selectId,
   });
-  window.ipcRenderer.send("close-child");
+  window.ipcRenderer.send('close-child');
 }
 </script>
 <style scoped lang="scss">

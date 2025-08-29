@@ -181,7 +181,7 @@ import { customEffectConstant, TRTCXmagicEffectCategory, TRTCXmagicFactory } fro
 export default {
   data() {
     return {
-      activeName: "",
+      activeName: '',
       beautyEffectConstants: {},
       currentBeautyProperty: {},
       progressElement: null
@@ -233,7 +233,7 @@ export default {
       if(diffValue !== 100) {
         progress = (progress + diffValue - 100)/2;
       }
-      this.progressElement.style.setProperty("--slider-filled-width", `${progress}%`)
+      this.progressElement.style.setProperty('--slider-filled-width', `${progress}%`)
     },
     handleBasicBeautyPropertyClick(item) {
       console.log('handleBasicBeautyPropertyClick', item);
@@ -368,7 +368,7 @@ export default {
     }
   },
   mounted(){
-    this.progressElement = document.querySelector(".tui-form-range");
+    this.progressElement = document.querySelector('.tui-form-range');
   },
   created() {
     let beautyEffectConstants;

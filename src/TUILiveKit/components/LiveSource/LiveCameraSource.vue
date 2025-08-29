@@ -26,12 +26,12 @@ import SvgIcon from '../../common/base/SvgIcon.vue';
 import CloseIcon from '../../common/icons/CloseIcon.vue';
 import VideoSettingTab from '../../common/VideoSettingTab.vue';
 import { TUIMediaSourceEditMode } from './constant';
+import logger from '../../utils/logger';
 
 interface TUIMediaSourceEditProps {
   data?: Record<string, any>;
 }
 
-const logger = console;
 const logPrefix = '[LiveCameraSource]';
 
 const props = defineProps<TUIMediaSourceEditProps>();
@@ -51,7 +51,7 @@ const {
 } = storeToRefs(currentSourceStore);
 
 const handleCloseSetting = () => {
-  window.ipcRenderer.send("close-child");
+  window.ipcRenderer.send('close-child');
   resetCurrentView();
 }
 
@@ -69,15 +69,17 @@ const handleAddCamera = () => {
       beautyConfig: {
         isEnabled: true,
         beautyProperties: JSON.parse(JSON.stringify(beautyProperties.value))
-      }
+      },
+      colorSpace: currentSourceStore.currentCameraColorSpace,
+      colorRange: currentSourceStore.currentCameraColorRange,
     }
 
     resetCurrentView();
-    window.mainWindowPort?.postMessage({
-      key: "addMediaSource",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'addMediaSource',
       data: cameraSource
     });
-    window.ipcRenderer.send("close-child");
+    window.ipcRenderer.send('close-child');
   } else {
     // To do: Message('Please choose a camera')；
     logger.warn('Please choose a camera');
@@ -99,15 +101,17 @@ const handleEditCamera = () => {
         isEnabled: true,
         beautyProperties: JSON.parse(JSON.stringify(beautyProperties.value))
       },
+      colorSpace: currentSourceStore.currentCameraColorSpace,
+      colorRange: currentSourceStore.currentCameraColorRange,
       predata: JSON.parse(JSON.stringify(props.data)),
     };
 
     resetCurrentView();
-    window.mainWindowPort?.postMessage({
-      key: "updateMediaSource",
+    window.mainWindowPortInChild?.postMessage({
+      key: 'updateMediaSource',
       data: newData,
     });
-    window.ipcRenderer.send("close-child");
+    window.ipcRenderer.send('close-child');
   } else {
     // To do: Message('Please choose a camera')；
     logger.warn('Please choose a camera');

@@ -48,19 +48,22 @@ export const userInfo = {
   avatarUrl: './avatar.png',
 };
 
-export function getBasicInfo() {
-  if (SDKAppID === Number(0) || SDKSecretKey === String('')) {
-    alert("Please configure your \"SDKAppID\" and \"SDKSecretKey\" in src/debug/basic-info-config.js");
+export function getBasicInfo(sdkAppId, sdkSecretKey, userId) {
+  if ((SDKAppID === Number(0) || SDKSecretKey === String('')) && (!sdkAppId || !sdkSecretKey)) {
+    alert('Please configure your "SDKAppID" and "SDKSecretKey" in src/debug/basic-info-config.js');
     return;
   }
-  const generator = new LibGenerateTestUserSig(SDKAppID, SDKSecretKey, EXPIRETIME);
-  const userSig = generator.genTestUserSig(userInfo.userId);
-  const { userId, userName, avatarUrl } = userInfo;
+
+  const realSDKAppID = sdkAppId || SDKAppID;
+  const realSDKSecretKey = sdkSecretKey || SDKSecretKey;
+  const realUserId = userId || userInfo.userId;
+  const generator = new LibGenerateTestUserSig(realSDKAppID, realSDKSecretKey, EXPIRETIME);
+  const userSig = generator.genTestUserSig(realUserId);
   return {
-    sdkAppId: SDKAppID,
-    userId,
+    sdkAppId: realSDKAppID,
+    userId: realUserId,
     userSig,
-    userName,
-    avatarUrl,
+    userName: userId || userInfo.userName,
+    avatarUrl: userInfo.avatarUrl,
   };
 }

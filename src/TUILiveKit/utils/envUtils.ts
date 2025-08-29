@@ -1,10 +1,10 @@
-const logger = console;
+import logger from '../utils/logger';
 
 export function getUrlParam(key: string) {
   const url = window?.location.href.replace(/^[^?]*\?/, '');
   const regexp = new RegExp(`(^|&)${key}=([^&#]*)(&|$|)`, 'i');
   const paramMatch = url?.match(regexp);
-  
+
   return paramMatch ? paramMatch[2] : null;
 }
 
@@ -23,20 +23,20 @@ export async function isMainWindow() {
 }
 
 export async function getWindowType(): Promise<string> {
-  return await window.ipcRenderer.invoke("window-type");
+  return await window.ipcRenderer.invoke('window-type');
 }
 
 export async function getAppPath() {
   if (!(window as any).APP_PATH) {
-    console.log("[util]getAppPath from main process ...");
-    const appPath = await window.ipcRenderer.invoke("app-path");
+    console.log('[util]getAppPath from main process ...');
+    const appPath = await window.ipcRenderer.invoke('app-path');
     if (appPath) {
       (window as any).APP_PATH = appPath;
-      logger.log("[util]getAppPath from main process success");
+      logger.log('[util]getAppPath from main process success');
     } else {
-      logger.error("[util]getAppPath from main process success");
-      const errorMessage = "query APP_PATH failed";
-      logger.error("[util]getAppPath:", errorMessage);
+      logger.error('[util]getAppPath from main process success');
+      const errorMessage = 'query APP_PATH failed';
+      logger.error('[util]getAppPath:', errorMessage);
       throw new Error(errorMessage);
     }
   }

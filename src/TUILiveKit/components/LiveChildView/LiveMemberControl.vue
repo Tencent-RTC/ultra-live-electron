@@ -1,12 +1,12 @@
 <template>
     <div class="tui-member-control">
-        <div 
+        <div
           class="tui-member-control-container"
           :class="{'danger': index === controlList.length - 1}"
           v-for="(item, index) in controlList"
-          :key="index" 
+          :key="index"
           @click="item.fun()"
-          
+
         >
             <svg-icon class="tui-member-control-icon" :icon="item.icon"></svg-icon>
             <span class="tui-member-control-options" >{{item.text}}</span>
@@ -24,9 +24,7 @@ import MicropositionIcon from '../../common/icons/MicropositionIcon.vue';
 import CancelMikeIcon from '../../common/icons/CancelMikeIcon.vue';
 import BlacklistIcon from '../../common/icons/BlacklistIcon.vue';
 import KickedIcon from '../../common/icons/KickedIcon.vue';
-import useRoomEngine from '../../utils/useRoomEngine';
-
-const logger = console;
+import logger from '../../utils/logger';
 
 const logPrefix = '[LiveMemberControl]';
 
@@ -34,10 +32,10 @@ interface Props {
   userId: string;
 }
 
-const roomEngine = useRoomEngine();
-
 const emit = defineEmits([
-  "on-close",
+  'on-close',
+  'on-kick-off-seat',
+  'on-kick-out-room',
 ]);
 const props = defineProps<Props>();
 const { t } = useI18n();
@@ -70,36 +68,24 @@ const controlList = shallowRef([
 ])
 
 function handleViewProfile() {
-  console.log(props.userId,'view profile')
+  logger.log(props.userId,'view profile')
 }
 
 function handleMoveSeat() {
-  console.log('mobile seat')
+  logger.log('mobile seat')
 }
 
 function handleKickSeat() {
-  window.mainWindowPort?.postMessage({
-    key: "cancelWheatPosition",
-    data: {
-      userId: props.userId,
-    }
-  });
-  logger.log(`${logPrefix}cancelWheatPosition`);
+  emit('on-kick-off-seat', props.userId);
   emit('on-close');
 }
 
 function handleBlackList() {
-  console.log('blackList')
+  logger.log('blackList')
 }
 
 async function handleKickOut() {
-  window.mainWindowPort?.postMessage({
-    key: "kickOut",
-    data: {
-      userId: props.userId,
-    }
-  });
-  logger.log(`${logPrefix}kickOut`)
+  emit('on-kick-out-room', props.userId);
   emit('on-close');
 }
 </script>

@@ -1,43 +1,28 @@
 <template>
   <div class="tui-live-controller">
-    <!-- <div class="tui-layout-toolbar">
-      <div class="tui-layout-toolbar-left">
-          <div v-for="(item, index) in screenStyleList" :key="index" class="tui-layout-toolbar-left-container">
-            <span @click="handleChangeScreenStyle(item)" :class="[currentScreenStyle === item ? 'tui-layout-toolbar-left-isChoose': 'tui-layout-toolbar-left-isNormal']">
-              <svg-icon :icon="item.icon"></svg-icon>
-              <span class="tui-layout-toolbar-left-text">{{item.text}}</span>
-            </span>
-          </div>
-      </div>
-      <div class="tui-layout-toolbar-right">
-        <span class="tui-layout-toolbar-right-custom">
-          <svg-icon :icon="AddIcon"></svg-icon>
-          <span class="tui-layout-toolbar-right-text">{{t('Customizable')}}</span>
-        </span>
-        <span class="tui-layout-toolbar-right-icon" v-for="(item, index) in dispositionList" :key="index" >
-          <svg-icon :icon="item.icon"></svg-icon>
-        </span>
-      </div>
-    </div> -->
     <div class="tui-streaming-toolbar">
       <div class="tui-streaming-toolbar-left" >
         <audio-control></audio-control>
         <speaker-control></speaker-control>
       </div>
       <div class="tui-streaming-toolbar-middle">
-        <tui-badge :hidden="applyToAnchorListNumber === 0" :value="applyToAnchorListNumber" :max="10" type="danger">
-          <div class="middle-container"  @click="handleVoiceChat">
-            <svg-icon class="icon-container" :icon=VoiceChatIcon :size="1.5"></svg-icon>
-          </div>
+        <tui-badge
+          :hidden="applyToAnchorListNumber === 0 || mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape"
+          :value="applyToAnchorListNumber"
+          :max="8"
+          type="danger">
+          <tui-button class="tui-toolbar-button"  @click="handleConnection" :disabled="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape">
+            <svg-icon :icon=VoiceChatIcon :size="1.5"></svg-icon>
+          </tui-button>
         </tui-badge>
-        <div class="middle-container" v-for="(item, index) in streamingTooBarList" :key="index" @click="item.fun()">
-          <svg-icon class="icon-container" :icon=item.icon :size="1.5"></svg-icon>
-        </div>
+        <tui-button class="tui-toolbar-button" v-for="(item, index) in streamingTooBarList" :key="index" @click="item.fun()">
+          <svg-icon :icon=item.icon :size="1.5"></svg-icon>
+        </tui-button>
+        <tui-button class="tui-toolbar-button" @click="toggleVideoResolutionMode" :disabled="isLiving">
+          <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
+        </tui-button>
       </div>
       <div class="tui-streaming-toolbar-right">
-        <span @click="toggleVideoResolutionMode" class="tui-resolution-mode-switch">
-          <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
-        </span>
         <tui-button @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled || !userId">
           <svg-icon :icon="liveStatusIcon" class="live-status"></svg-icon>
           <span :class="[isLiving ? 'text-living': ' text-living-start']">
@@ -45,55 +30,37 @@
           </span>
         </tui-button>
       </div>
-
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, computed, defineEmits, nextTick, shallowRef, watch } from 'vue';
+import { ref, Ref, computed, defineEmits, nextTick, shallowRef, watch, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCVideoResolutionMode } from 'trtc-electron-sdk';
-import BeautyIcon from '../../common/icons/BeautyIcon.vue';
 import AudioControl from '../../common/AudioControl.vue';
 import SpeakerControl from '../../common/SpeakerControl.vue';
 import VoiceChatIcon from '../../common/icons/VoiceChatIcon.vue';
-import PKIcon from '../../common/icons/PKIcon.vue';
 import SetIcon from '../../common/icons/SetIcon.vue';
 import StartLivingIcon from '../../common/icons/StartLivingIcon.vue';
 import EndLivingIcon from '../../common/icons/EndLivingIcon.vue';
 import VerticalScreenIcon from '../../common/icons/VerticalScreenIcon.vue';
 import HorizontalScreenIcon from '../../common/icons/HorizontalScreenIcon.vue';
-import NineSquareGridIcon from '../../common/icons/NineSquareGridIcon.vue';
-import BottomBarIcon from '../../common/icons/BottomBarIcon.vue';
-import SpeakerLayoutIcon from '../../common/icons/SpeakerLayoutIcon.vue';
-import SidebarLayoutIcon from '../../common/icons/SidebarLayoutIcon.vue';
-import ThreeColumnIcon from '../../common/icons/SidebarLayoutIcon.vue';
-import AddIcon from '../../common/icons/AddIcon.vue'
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import TuiButton from '../../common/base/Button.vue';
 import { useI18n } from '../../locales';
 import { useBasicStore } from '../../store/main/basic';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
 import { useRoomStore } from '../../store/main/room';
-import { useAudioEffectStore } from '../../store/audioEffect';
+import { useAudioEffectStore } from '../../store/main/audioEffect';
 import { messageChannels } from '../../communication';
 import TuiBadge from '../../common/base/Badge.vue';
+import logger from '../../utils/logger';
 
-interface screenStyle {
-  icon: object,
-  text: string,
-  value: TRTCVideoResolutionMode,
-}
-interface disposition {
-  icon: object,
-  value: string, // Preserved field
-}
 const { t } = useI18n();
 
-const logger = console;
 const logPrefix = '[LiveController]';
 
-const emits = defineEmits(["onStartLiving", "onStopLiving"]);
+const emits = defineEmits(['onStartLiving', 'onStopLiving']);
 
 const basicStore = useBasicStore();
 const mediaSourcesStore = useMediaSourcesStore();
@@ -123,43 +90,6 @@ const streamingTooBarList = shallowRef([
   }
 ]);
 
-const screenStyleList = shallowRef([
-  {
-    icon: VerticalScreenIcon,
-    text: t('Vertical screen'),
-    value: TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape,
-  },
-  {
-    icon: HorizontalScreenIcon,
-    text: t('Horizontal screen'),
-    value: TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait,
-  }
-]);
-
-const dispositionList = ref([
-  {
-    icon: NineSquareGridIcon,
-    value: '',
-  },
-  {
-    icon: BottomBarIcon,
-    value: '',
-  },
-  {
-    icon: SpeakerLayoutIcon,
-    value: '',
-  },
-  {
-    icon: SidebarLayoutIcon,
-    value: '',
-  },
-  {
-    icon: ThreeColumnIcon,
-    value: '',
-  }
-]);
-
-const currentScreenStyle = ref(screenStyleList.value[0]);
 const liveStatus = computed (()=>
   isLiving.value ? t('End Live'): t('Go Live')
 );
@@ -170,26 +100,31 @@ const liveStatusIcon = computed (()=>
 
 const isLiveSwitchDisabled: Ref<boolean> = ref(false);
 
-function handleBeauty() {
-  console.log('Beauty');
+function onStopLivingResult(event:any, result: Record<string, any>) {
+  logger.log(`${logPrefix}stop-living-result:`, result);
+  if (result.confirm) {
+    stopLiving();
+  } else {
+    isLiveSwitchDisabled.value = false;
+  }
 }
+window.ipcRenderer.on('stop-living-result', onStopLivingResult);
 
-function handleVoiceChat() {
+function handleConnection() {
   messageChannels.messagePortToChild?.postMessage({
-    key: 'set-apply-list',
-    data: JSON.stringify(applyToAnchorList.value)
-  });
-  messageChannels.messagePortToChild?.postMessage({
-    key: 'set-anchor-list',
-    data: JSON.stringify(anchorList.value)
+    key: 'set-apply-and-anchor-list',
+    data: JSON.stringify({
+      applyList: applyToAnchorList.value,
+      anchorList: anchorList.value
+    })
   });
   window.ipcRenderer.send('open-child', {
-    'command': 'voice-chat'
+    'command': 'connection',
+    data: {
+      layoutMode: roomStore.streamLayout.layoutMode,
+      isAutoAdjusting: roomStore.streamLayout.isAutoAdjusting,
+    }
   });
-}
-
-function handlePK() {
-  console.log('PK');
 }
 
 function handleSetting() {
@@ -200,10 +135,21 @@ function handleSetting() {
 
 function toggleVideoResolutionMode() {
   if (mixingVideoEncodeParam.value.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape) {
-    mediaSourcesStore.updateResolutionMode(TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait);
+    roomStore.setLocalVideoResMode(TRTCVideoResolutionMode.TRTCVideoResolutionModePortrait);
   } else {
-    mediaSourcesStore.updateResolutionMode(TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape);
+    roomStore.setLocalVideoResMode(TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape);
   }
+}
+
+async function preStopLiving() {
+  window.ipcRenderer.send('stop-living', {
+    title: t('End the live streaming?'),
+    content: anchorList.value.length > 0 ? t('Live guest active.') : '',
+  });
+}
+
+function stopLiving() {
+  emits('onStopLiving');
 }
 
 async function handleChangeLivingStatus() {
@@ -214,14 +160,10 @@ async function handleChangeLivingStatus() {
   await nextTick();
   if (!isLiving.value) {
     audioEffectStore.initVoiceEffect();
-    emits("onStartLiving");
+    emits('onStartLiving');
   } else {
-    emits("onStopLiving");
+    preStopLiving();
   }
-}
-
-function handleChangeScreenStyle(item: screenStyle) {
-  mediaSourcesStore.updateResolutionMode(item.value);
 }
 
 watch(
@@ -235,6 +177,10 @@ watch(
     }
   }
 );
+
+onUnmounted(() => {
+  window.ipcRenderer.off('stop-living-result', onStopLivingResult);
+});
 </script>
 <style scoped lang="scss">
 @import "../../assets/variable.scss";
@@ -242,77 +188,6 @@ watch(
   height: 4rem;
   padding: 0 0.5rem;
   background-color: var(--bg-color-operate);
-
-  .tui-layout-toolbar {
-    height: 100%;
-    border-bottom: 1px solid $color-divider-line;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    &-left{
-      display: flex;
-      &-container{
-        display: flex;
-        align-items: center;
-      }
-      &-isChoose{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 4rem;
-        height: 2.5rem;
-        border-radius: 0.375rem;
-        fill: $color-white;
-        opacity: 0.5;
-        background: $color-live-controller-is-choose-background;
-      }
-      &-isNormal{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 4rem;
-        height: 2.5rem;
-        border-radius: 0.375rem;
-        opacity: 0.5;
-        background: $color-live-controller-is-normal-background;
-      }
-      &-text{
-        color: $font-live-controller-text-color;
-        font-size: $font-live-controller-text-size;
-        font-style: $font-live-controller-text-style;
-        font-weight: $font-live-controller-text-weight;
-        line-height: 1.25rem;
-      }
-    }
-    &-right{
-      display: flex;
-      align-items: center;
-      &-custom{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 4rem;
-        height: 2.5rem;
-        background-color: $color-live-controller-right-custom;
-        border-radius: 0.375rem;
-        margin-right: 0.75rem;
-        cursor: pointer;
-      }
-      &-icon{
-        margin-right: 0.75rem;
-        cursor: pointer;
-        width: 4rem;
-        height: 2.5rem;
-      }
-      &-text{
-        color: $font-live-controller-text-color;
-        font-size: $font-live-controller-text-size;
-        font-style: $font-live-controller-text-style;
-        font-weight: $font-live-controller-text-weight;
-        line-height: 1.25rem;
-      }
-    }
-  }
 
   .tui-streaming-toolbar {
     height: 4rem;
@@ -332,13 +207,7 @@ watch(
       &-right{
         display: inline-flex;
         align-items: center;
-        width: 9rem;
       }
-  }
-
-  .tui-resolution-mode-switch {
-    cursor: pointer;
-    margin-right: 1rem;
   }
 
   .tui-btn-live-switch {
@@ -397,14 +266,14 @@ watch(
       }
     }
   }
-  .middle-container{
+  .tui-toolbar-button{
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 4rem;
-  }
-  .icon-container{
-    cursor: pointer;
+    width: 2rem;
+    margin: 0 1rem;
+    border: none;
+    background: none;
   }
 }
 </style>

@@ -1,17 +1,20 @@
 import { defineStore } from 'pinia';
-import { TRTCScreenCaptureSourceInfo, TRTCDeviceInfo, TRTCDeviceType } from 'trtc-electron-sdk';
+import { TRTCScreenCaptureSourceInfo, TRTCDeviceInfo, TRTCDeviceType, TRTCPhoneMirrorParam, TRTCVideoColorSpace, TRTCVideoColorRange } from 'trtc-electron-sdk';
 import { TUILiveUserInfo } from '../../types';
+import { defaultCameraCaptureWidth, defaultCameraCaptureHeight } from '@/TUILiveKit/constants/tuiConstant';
 import { TRTCXmagicEffectProperty, TRTCXmagicEffectCategory } from '../../utils/beauty';
+import logger from '../../utils/logger';
 
-const logger = console;
 const logPrefix = '[currentSources]';
 
-const defaultCameraResolution = { width: 640, height: 360 };
+const defaultCameraResolution = { width: defaultCameraCaptureWidth, height: defaultCameraCaptureHeight };
 
-type CurrentViewType = 'camera' | 'screen' | 'file' | 'image' | 'voice-chat' | 'setting' | 'add-bgm' | 'reverb-voice' | 'change-voice' | '';
+type CurrentViewType = 'camera' | 'screen' | 'file' | 'image' | 'connection' | 'setting' | 'add-bgm' | 'reverb-voice' | 'change-voice' | 'phone-mirror' | '';
 
 interface TUICurrentMediaSourceState {
     currentCameraResolution: {width: number; height: number;};
+    currentCameraColorSpace: TRTCVideoColorSpace;
+    currentCameraColorRange: TRTCVideoColorRange;
     isCurrentCameraMirrored: boolean;
     currentCameraId: string;
     currentMicrophoneId: string;
@@ -28,11 +31,14 @@ interface TUICurrentMediaSourceState {
     micVolume: number;
     speakerVolume: number;
     beautyProperties: Array<TRTCXmagicEffectProperty>;
+    phoneDeviceList: Array<TRTCPhoneMirrorParam>;
 }
 
 export const useCurrentSourceStore = defineStore('currentSource', {
   state: (): TUICurrentMediaSourceState => ({
     currentCameraResolution: defaultCameraResolution,
+    currentCameraColorSpace: TRTCVideoColorSpace.TRTCVideoColorSpace_Auto,
+    currentCameraColorRange: TRTCVideoColorRange.TRTCVideoColorRange_Auto,
     currentCameraId: '',
     currentMicrophoneId: '',
     currentSpeakerId: '',
@@ -49,6 +55,7 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     micVolume: 0,
     speakerVolume: 0,
     beautyProperties: [],
+    phoneDeviceList: [],
   }),
   getters:{
     getBeautyPropertyByEffKey(state): Record<string, any> | null {
@@ -56,6 +63,28 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     }
   },
   actions:{
+    reset() {
+      this.currentCameraResolution = defaultCameraResolution;
+      this.currentCameraColorSpace = TRTCVideoColorSpace.TRTCVideoColorSpace_Auto;
+      this.currentCameraColorRange = TRTCVideoColorRange.TRTCVideoColorRange_Auto;
+      this.currentCameraId = '';
+      this.currentMicrophoneId = '';
+      this.currentSpeakerId = '';
+      this.cameraList = [];
+      this.microphoneList = [];
+      this.speakerList = [];
+      this.isCurrentCameraMirrored = false;
+      this.screenList = [];
+      this.windowList = [];
+      this.pictureList = [];
+      this.currentViewName = '';
+      this.applyToAnchorList = [];
+      this.currentAnchorList = [];
+      this.micVolume = 0;
+      this.speakerVolume = 0;
+      this.beautyProperties = [];
+      this.phoneDeviceList = [];
+    },
     setCurrentCameraId(deviceId: string) {
       this.currentCameraId = deviceId;
       const currentCamera = this.cameraList.find((item: TRTCDeviceInfo) => item.deviceId === deviceId);
@@ -65,25 +94,25 @@ export const useCurrentSourceStore = defineStore('currentSource', {
         this.currentCameraResolution =  defaultCameraResolution;
       }
       logger.log(`${logPrefix}setCurrentCameraId`, this.currentCameraId, this.currentCameraResolution, this.cameraList);
-      window.mainWindowPort?.postMessage({
-        key: "setCurrentDevice",
+      window.mainWindowPortInChild?.postMessage({
+        key: 'setCurrentDevice',
         data: {
           deviceType: TRTCDeviceType.TRTCDeviceTypeCamera,
           deviceId,
         }
       });
-      window.mainWindowPort?.postMessage({
-        key: "setCameraTestDeviceId",
-        data: { 
-          cameraId: deviceId 
+      window.mainWindowPortInChild?.postMessage({
+        key: 'setCameraTestDeviceId',
+        data: {
+          cameraId: deviceId
         }
       });
     },
     setCurrentMicrophoneId(deviceId: string) {
       this.currentMicrophoneId = deviceId;
       logger.log(`${logPrefix}setCurrentMicrophoneId`, this.currentMicrophoneId, this.microphoneList);
-      window.mainWindowPort?.postMessage({
-        key: "setCurrentDevice",
+      window.mainWindowPortInChild?.postMessage({
+        key: 'setCurrentDevice',
         data: {
           deviceType: TRTCDeviceType.TRTCDeviceTypeMic,
           deviceId,
@@ -93,8 +122,8 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     setCurrentSpeakerId(deviceId: string) {
       this.currentSpeakerId = deviceId;
       logger.log(`${logPrefix}setCurrentSpeakerId`, this.currentSpeakerId);
-      window.mainWindowPort?.postMessage({
-        key: "setCurrentDevice",
+      window.mainWindowPortInChild?.postMessage({
+        key: 'setCurrentDevice',
         data: {
           deviceType: TRTCDeviceType.TRTCDeviceTypeSpeaker,
           deviceId,
@@ -103,6 +132,16 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     },
     setCurrentCameraResolution(resolution: {width: number; height: number;}) {
       this.currentCameraResolution = resolution;
+    },
+    setCameraCaptureColorSpace(colorSpace: TRTCVideoColorSpace) {
+      this.currentCameraColorSpace = colorSpace;
+    },
+    setCameraCaptureColorRange(colorRange: TRTCVideoColorRange) {
+      this.currentCameraColorRange = colorRange;
+    },
+    setCameraCaptureColor(options: {colorSpace: TRTCVideoColorSpace; colorRange: TRTCVideoColorRange;}) {
+      this.currentCameraColorSpace = options.colorSpace;
+      this.currentCameraColorRange = options.colorRange;
     },
     setCameraList(deviceList: TRTCDeviceInfo[]) {
       this.cameraList = deviceList;
@@ -128,22 +167,25 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     },
     setIsCurrentCameraMirrored(mirror: boolean) {
       this.isCurrentCameraMirrored = mirror;
-      // To do: send change state to main window
     },
     setCurrentViewName(name: CurrentViewType) {
       this.currentViewName = name;
     },
-    setScreenList(screenList: any) {
+    setScreenList(screenList: Array<TRTCScreenCaptureSourceInfo>) {
       this.screenList = screenList;
     },
-    setWindowList(windowList: any){
+    setWindowList(windowList: Array<TRTCScreenCaptureSourceInfo>){
       this.windowList = windowList;
     },
-    setApplyToAnchorList(applyToAnchorList: any) {
+    setApplyToAnchorList(applyToAnchorList: Array<TUILiveUserInfo>) {
       this.applyToAnchorList = applyToAnchorList;
     },
-    setAnchorList(anchorList: any){
+    setAnchorList(anchorList: Array<TUILiveUserInfo>){
       this.currentAnchorList = anchorList;
+    },
+    setApplyAndAnchorList(data: {applyList: Array<TUILiveUserInfo>; anchorList: Array<TUILiveUserInfo>;}) {
+      this.applyToAnchorList = data.applyList;
+      this.currentAnchorList = data.anchorList;
     },
     updateAudioVolume(volume: number) {
       this.micVolume = volume;
@@ -195,7 +237,7 @@ export const useCurrentSourceStore = defineStore('currentSource', {
     setBeautyProperty_1(setting: TRTCXmagicEffectProperty){
       const currentSetting = Object.assign({},setting);
       const index = this.beautyProperties.findIndex(obj => {
-        return obj.effKey === currentSetting.effKey 
+        return obj.effKey === currentSetting.effKey
           || (currentSetting.category === TRTCXmagicEffectCategory.Segmentation && obj.category === TRTCXmagicEffectCategory.Segmentation);
       });
       if (index !== -1) {
@@ -205,27 +247,10 @@ export const useCurrentSourceStore = defineStore('currentSource', {
       }
     },
     setBeautyProperties(properties: TRTCXmagicEffectProperty[]) {
-      // this.beautyProperties = properties;
       properties.forEach(item => this.setBeautyProperty(item));
     },
-    reset() {
-      this.currentCameraResolution = defaultCameraResolution;
-      this.currentCameraId = '';
-      this.currentMicrophoneId = '';
-      this.currentSpeakerId = '';
-      this.cameraList = [];
-      this.microphoneList = [];
-      this.speakerList = [];
-      this.isCurrentCameraMirrored = false;
-      this.screenList = [];
-      this.windowList = [];
-      this.pictureList = [];
-      this.currentViewName = ''; 
-      this.applyToAnchorList = [];
-      this.currentAnchorList = [];
-      this.micVolume = 0;
-      this.speakerVolume = 0;
-      this.beautyProperties = [];
+    setPhoneDeviceList(data: TRTCPhoneMirrorParam[]){
+      this.phoneDeviceList = data;
     },
   },
 });

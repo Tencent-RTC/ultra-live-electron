@@ -59,7 +59,7 @@ class TUIKitI18n {
   }
 }
 
-const language = getLanguage() || 'zh-CN';
+const language = getLanguage();
 const i18n = new TUIKitI18n({
   locale: language,
   messages: {

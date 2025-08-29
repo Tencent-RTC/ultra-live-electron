@@ -23,8 +23,8 @@ import { TUIDeviceInfo } from '@tencentcloud/tuiroom-engine-electron';
 import Select from './base/Select.vue';
 import Option from './base/Option.vue';
 import { useCurrentSourceStore } from '../store/child/currentSource';
+import logger from '../utils/logger';
 
-const logger = console;
 const logPrefix = '[VideoProfile]';
 
 const currentSourceStore = useCurrentSourceStore();
@@ -38,8 +38,8 @@ const handleCameraResolutionChange = (value: string) => {
   logger.debug(`${logPrefix}handleCameraResolutionChange: ${value}`)
   const [width, height] = value.split('_');
   currentSourceStore.setCurrentCameraResolution({ width: Number(width), height: Number(height) });
-  window.mainWindowPort?.postMessage({
-    key: "setCameraTestResolution",
+  window.mainWindowPortInChild?.postMessage({
+    key: 'setCameraTestResolution',
     data: { width: Number(width),  height:Number(height) }
   });
 };
