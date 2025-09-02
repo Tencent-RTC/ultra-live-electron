@@ -34,11 +34,11 @@ npm run start
 
 3. Login to explore and experience
 
-There are 3 login types provided. For first and quick start, you can login with `SDKAppID` and `SDKSecretKey`.
+To help you quickly experience, we provide 3 login methods. For first-time experience, we recommend using the `SecretKey Login` method.
 
-- `SecretKey Login`: used for quick start, login with `SDKAppID` and `SDKSecretKey`.
-- `UserSig Login`: used for quick start, login with `SDKAppID` and `userSig`, which can be generated from [Tencent Cloud Console](https://console.cloud.tencent.com/trtc/usersigtool).
-- `Password Login`: Not fully implemented, you need to add you login REST API URL in `src/views/Login/Index.vue` to complete it. **This is the best and security way for production, that generates `userSig` with `SDKAppID` and `SDKSecretKey` on your server side.**
+- `SecretKey Login`: Use `SDKAppID` and `SDKSecretKey` to login directly. The fastest way to get started.
+- `UserSig Login`: Login with `SDKAppID` and user signature `userSig`. The user signature can be generated via the [Tencent Cloud Console](https://console.trtc.io/usersig).
+- `Password Login`: This method requires you to configure your own server-side login URL in the code and is not recommended for initial experience. You need to configure your own server login URL in the `src/views/Login/Index.vue` file to use this method (**​​This is the best and most secure practice for production environments, where `userSig` is generated on your server using `SDKAppID` and `SDKSecretKey` for login​**​).
 
 
 ### Step 3: Compiles and build for production

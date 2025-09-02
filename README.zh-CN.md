@@ -34,11 +34,13 @@ npm run start
 
 3. 登录体验
 
-我们提供三种登录方式。若需快速体验，您可使用 `SDKAppID` 和 `SDKSecretKey` 进行登录：
+为了让你快速体验，我们提供了多种登录方式。首次体验，强烈推荐您采用 `密钥登录` 方式。
 
-- `密钥登录`：快速入门方案，通过 `SDKAppID` 和 `SDKSecretKey` 直接登录。
-- `签名登录`：快速入门方案，通过 `SDKAppID` 和 `userSig` 登录（用户签名可通过[腾讯云控制台生成](https://console.cloud.tencent.com/trtc/usersigtool)）。
-- `密码登录`：功能尚未完全实现，您需要在 `src/views/Login/Index.vue` 中配置登录接口地址方可使用​​（**此为生产环境最佳安全实践，需在服务端使用 `SDKAppID` 和 `SDKSecretKey` 生成 `userSig`**）​​。
+- `密钥登录`：使用 `SDKAppID` 和 `SDKSecretKey` 直接登录，最快捷的体验方式。
+- `签名登录`：通过 `SDKAppID` 和 用户签名 `userSig` 登录。用户签名可通过 [腾讯云控制台生成](https://console.cloud.tencent.com/trtc/usersigtool)。
+- `密码登录`：此功能需要你在代码中配置自己的服务端登录地址，不推荐初次体验使用。
+您需要在 `src/views/Login/Index.vue` 文件中，配置您自己的服务端登录地址，方可使用​​（**此为生产环境最佳安全实践，需在服务端使用 `SDKAppID` 和 `SDKSecretKey` 生成用户签名 `userSig` 来登录**）​​。
+
 
 ### 第三步：构建安装包
 构建好的安装包在 `release` 目录下，可以按照运行。
