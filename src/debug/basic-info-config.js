@@ -39,18 +39,19 @@ export const EXPIRETIME = 604800;
 /**
  * Set user information on the push side
  */
+const userId = `user_${Math.ceil(Math.random() * 100000)}`;
 export const userInfo = {
   // User ID
-  userId: `user_${Math.ceil(Math.random() * 100000)}`,
+  userId: userId,
   // User Name
-  userName: 'myName',
+  userName: userId,
   // User Avatar
   avatarUrl: './avatar.png',
 };
 
-export function getBasicInfo(sdkAppId, sdkSecretKey, userId) {
+export function getBasicInfo(userId, sdkAppId, sdkSecretKey) {
   if ((SDKAppID === Number(0) || SDKSecretKey === String('')) && (!sdkAppId || !sdkSecretKey)) {
-    alert('Please configure your "SDKAppID" and "SDKSecretKey" in src/debug/basic-info-config.js');
+    alert('Please configure your "SDKAppID" and "SDKSecretKey" in src/debug/basic-info-config.js or input from login page!');
     return;
   }
 

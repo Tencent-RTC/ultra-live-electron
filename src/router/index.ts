@@ -46,9 +46,11 @@ window.ipcRenderer.on('window-type', (event: any, type: string) => {
 });
 
 router.beforeEach((to: RouteLocationNormalized) => {
-  const storedUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
-  if (!storedUserInfo && to.name !== 'login') {
-    return { name: 'login' };
+  if (to.name === 'tui-live-kit-main') {
+    const storedUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+    if (!storedUserInfo) {
+      return { name: 'login' };
+    }
   }
 });
 

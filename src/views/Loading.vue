@@ -8,6 +8,8 @@ import { onMounted } from 'vue';
 import router from '../router';
 import { isMainWindow } from '../TUILiveKit/utils/envUtils';
 import { useI18n } from '../TUILiveKit/locales';
+import { getBasicInfo } from '../debug/basic-info-config.js';
+import { LoginType } from './Login/types';
 import logger from '../TUILiveKit/utils/logger';
 
 const logPrefix = '[Loading.vue]';
@@ -25,24 +27,38 @@ async function init(userInfo: Record<string, any>) {
     window.ipcRenderer.send('openTUILiveKit', {
       userInfo
     });
+    router.push('/tui-live-kit-main');
   }
 }
 
 onMounted(() => {
-  const currentUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
-  if (!currentUserInfo) {
-    gotoLogin();
-    return;
+  const storedUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+  let userInfo;
+  if (!storedUserInfo) {
+    userInfo = getBasicInfo();
+    if (userInfo) {
+      window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+        sdkAppId: userInfo.sdkAppId,
+        userId: userInfo.userId,
+        userName: userInfo.userName,
+        userSig: userInfo.userSig,
+        avatarUrl: userInfo.avatarUrl,
+        loginType: LoginType.SDKSecretKey,
+      }));
+    } else {
+      gotoLogin();
+      return;
+    }
+  } else {
+    try {
+      userInfo = JSON.parse(storedUserInfo);
+    } catch (e) {
+      logger.error(`${logPrefix}onMounted parse userInfo error:`, e);
+      gotoLogin();
+      return;
+    }
   }
 
-  let userInfo;
-  try {
-    userInfo = JSON.parse(currentUserInfo);
-  } catch (e) {
-    logger.error(`${logPrefix}onMounted parse userInfo error:`, e);
-    gotoLogin();
-    return;
-  }
   init(userInfo);
 });
 </script>

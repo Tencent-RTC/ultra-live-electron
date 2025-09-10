@@ -166,7 +166,7 @@ export default {
   'Mobile Login': '手机登录',
   'UserSig Login': '签名登录',
   'SDK SecretKey Login': '密钥登录',
-  'Password Login': '密码登录',
+  'Account Login': '账号登录',
   'SDKAPPID': '请输入您的 SDKAPPID',
   'User ID': '请输入您的用户 ID',
   'User signature': '请输入您的用户签名',

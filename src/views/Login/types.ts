@@ -2,7 +2,7 @@ export enum LoginType {
   MobilePhone = 1,
   UserSig = 2,
   SDKSecretKey = 3,
-  Password = 4,
+  UserAccount = 4,
 }
 
 export type LoginState = {

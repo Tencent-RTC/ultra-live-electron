@@ -186,14 +186,14 @@ async function createWindow(width = 1366, height = 668) {
 
   if (app.isPackaged) {
     windowMap.main.loadFile('dist/index.html');
-    windowMap.child.loadFile('dist/index.html');
-    windowMap.mainCover.loadFile('dist/index.html');
-    windowMap.confirm.loadFile('dist/index.html');
+    windowMap.child.loadFile('dist/index.html#/tui-live-kit-child');
+    windowMap.mainCover.loadFile('dist/index.html#/tui-live-kit-cover');
+    windowMap.confirm.loadFile('dist/index.html#/tui-live-kit-confirm');
   } else {
     windowMap.main.loadURL('http://localhost:8080');
-    windowMap.child.loadURL('http://localhost:8080');
-    windowMap.mainCover.loadURL('http://localhost:8080');
-    windowMap.confirm.loadURL('http://localhost:8080');
+    windowMap.child.loadURL('http://localhost:8080/#/tui-live-kit-child');
+    windowMap.mainCover.loadURL('http://localhost:8080/#/tui-live-kit-cover');
+    windowMap.confirm.loadURL('http://localhost:8080/#/tui-live-kit-confirm');
   }
 }
 

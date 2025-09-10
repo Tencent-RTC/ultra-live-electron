@@ -8,6 +8,7 @@
 
 - 操作系统要求: Windows 10+。
 - 设备要求：需要有摄像头、扬声器、麦克风设备。
+- 运行环境：Node.js 18.0.0+。
 
 ## 跑通代码
 
@@ -25,21 +26,22 @@ git clone https://github.com/Tencent-RTC/ultra-live-electron.git
 
 cd ultra-live-electron
 ```
-2. 以开发模式运行
+
+2. 登录准备
+- 方式一：打开 `src/debug/basic-info-config.js` 文件，填入 `SDKAppID` 和 `SDKSecretKey`，启动时会自动登录。**注意：仅适合快速体验，不可用于生产环境**。
+- 方式二：通过登录页面登录
+  为了便捷您接入自己的登录后台，我们提供了默认的登录页面，方便您的接入。
+   - `账号登录`：此功能需要您在代码中配置自己的服务端登录地址，不推荐初次体验使用。
+您需要在 `src/views/Login/Index.vue` 文件中，配置您自己的服务端登录地址，方可使用​​（**此为生产环境最佳安全实践，需在服务端使用 `SDKAppID` 和 `SDKSecretKey` 生成用户签名 `userSig` 来登录**）​​。
+   - `密钥登录`：使用 `SDKAppID` 和 `SDKSecretKey` 直接登录，**注意：仅适合快速体验，不可用于生产环境**。
+   - `签名登录`：通过 `SDKAppID` 和 用户签名 `userSig` 登录。用户签名可通过 [腾讯云控制台生成](https://console.cloud.tencent.com/trtc/usersigtool)。**注意：仅适合快速体验，不可用于生产环境**。
+
+3. 执行以下命令，启动运行
 ```
 npm install
 
 npm run start
 ```
-
-3. 登录体验
-
-为了让你快速体验，我们提供了多种登录方式。首次体验，强烈推荐您采用 `密钥登录` 方式。
-
-- `密钥登录`：使用 `SDKAppID` 和 `SDKSecretKey` 直接登录，最快捷的体验方式。
-- `签名登录`：通过 `SDKAppID` 和 用户签名 `userSig` 登录。用户签名可通过 [腾讯云控制台生成](https://console.cloud.tencent.com/trtc/usersigtool)。
-- `密码登录`：此功能需要你在代码中配置自己的服务端登录地址，不推荐初次体验使用。
-您需要在 `src/views/Login/Index.vue` 文件中，配置您自己的服务端登录地址，方可使用​​（**此为生产环境最佳安全实践，需在服务端使用 `SDKAppID` 和 `SDKSecretKey` 生成用户签名 `userSig` 来登录**）​​。
 
 
 ### 第三步：构建安装包

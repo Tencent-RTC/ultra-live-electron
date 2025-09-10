@@ -56,6 +56,16 @@ onMounted(async () => {
   const currentUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
   if (!currentUserInfo) {
     gotoLogin();
+  } else {
+    let userInfo;
+    try {
+      userInfo = JSON.parse(currentUserInfo);
+    } catch (e) {
+      logger.error(`${logPrefix}onMounted parse userInfo error:`, e);
+      gotoLogin();
+      return;
+    }
+    init(userInfo);
   }
 });
 

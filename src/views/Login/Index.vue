@@ -22,9 +22,9 @@
           <span>{{t('Live Streaming Assistant')}}</span>
         </div>
         <div class="tui-login-type-container">
+          <span :class="{active:loginType===LoginType.UserAccount}" @click="onChangeLoginType(LoginType.UserAccount)">{{ t('Account Login')}}</span>
           <span :class="{active:loginType===LoginType.SDKSecretKey}" @click="onChangeLoginType(LoginType.SDKSecretKey)">{{ t('SDK SecretKey Login')}}</span>
           <span :class="{active:loginType===LoginType.UserSig}" @click="onChangeLoginType(LoginType.UserSig)">{{ t('UserSig Login')}}</span>
-          <span :class="{active:loginType===LoginType.Password}" @click="onChangeLoginType(LoginType.Password)">{{ t('Password Login')}}</span>
         </div>
         <div class="tui-login-options">
           <secret-key-form v-if="loginType === LoginType.SDKSecretKey"
@@ -41,7 +41,7 @@
             @update:user-id="value => loginState.userId = value"
             @update:user-sig="value => loginState.userSig = value"
           />
-          <password-form v-else-if="loginType === LoginType.Password"
+          <password-form v-else-if="loginType === LoginType.UserAccount"
             :login-state="loginState"
             @update:user-id="value => loginState.userId = value"
             @update:password="value => loginState.password = value"
@@ -98,7 +98,7 @@ const verifyStates:VerifyStates = reactive({
 
 const { t } = useI18n();
 
-const loginType: Ref<LoginType> = ref(LoginType.SDKSecretKey);
+const loginType: Ref<LoginType> = ref(LoginType.UserAccount);
 const isLoggingIn = ref(false);
 
 const onChangeLoginType = (type: LoginType) => {
@@ -108,7 +108,7 @@ const onChangeLoginType = (type: LoginType) => {
 async function handleLogin() {
   isLoggingIn.value = true;
   if (validateLoginForm()) {
-    if (loginType.value === LoginType.Password) {
+    if (loginType.value === LoginType.UserAccount) {
       await doPasswordLogin();
     } else if (loginType.value === LoginType.UserSig) {
       doUserSigLogin();
@@ -146,7 +146,7 @@ function validateLoginForm(): boolean {
     }
   }
 
-  if (loginType.value === LoginType.Password) {
+  if (loginType.value === LoginType.UserAccount) {
     if (loginState.userId.trim() === '') {
       TUIMessageBox({
         title: t('Note'),
@@ -237,7 +237,7 @@ async function doUserSigLogin() {
 
 async function doSDKSecretKeyLogin() {
   const { sdkAppId, userId, userSig, userName, avatarUrl }
-    = getBasicInfo(Number(loginState.sdkAppId.trim()), loginState.sdkSecretKey.trim(), loginState.userId.trim());
+    = getBasicInfo(loginState.userId.trim(), Number(loginState.sdkAppId.trim()), loginState.sdkSecretKey.trim());
   window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
     sdkAppId,
     userId,

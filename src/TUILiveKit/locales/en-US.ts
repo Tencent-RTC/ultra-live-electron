@@ -166,7 +166,7 @@ export default {
   'Mobile Login': 'Mobile Login',
   'UserSig Login': 'UserSig Login',
   'SDK SecretKey Login': 'SecretKey Login',
-  'Password Login': 'Password Login',
+  'Account Login': 'Account Login',
   'SDKAPPID': 'SDKAPPID',
   'User ID': 'User ID',
   'User signature': 'User signature',
