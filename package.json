@@ -22,7 +22,7 @@
     "movable-resizable-js": "^0.2.0",
     "pinia": "^2.1.7",
     "trtc-electron-plugin-xmagic": "^0.0.20",
-    "trtc-electron-sdk": "^12.7.706-beta.2",
+    "trtc-electron-sdk": "^12.7.706-beta.3",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },

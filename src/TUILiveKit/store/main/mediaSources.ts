@@ -688,13 +688,14 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
       const length = storeState.mediaList.length;
       for(let i = length - 1; i >= 0; i--) {
         const current = storeState.mediaList[i];
-        try {
-          await mediaMixingManager.addMediaSource(current.mediaSourceInfo);
-        } catch(error) {
-          onMediaMixingError(error as TUIMediaMixingError);
+        if (!current.muted) {
+          try {
+            await mediaMixingManager.addMediaSource(current.mediaSourceInfo);
+            this.postAddMediaSource(current);
+          } catch(error) {
+            onMediaMixingError(error as TUIMediaMixingError);
+          }
         }
-
-        this.postAddMediaSource(current);
       }
       this.selectedMediaKey = storeState.selectedMediaKey;
       this.updateHevcEncodeState(storeState.isHevcEncodeEnabled);
