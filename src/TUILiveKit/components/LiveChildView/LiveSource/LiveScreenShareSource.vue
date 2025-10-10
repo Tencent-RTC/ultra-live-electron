@@ -46,13 +46,13 @@
 import { Ref, ref, defineProps, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCMediaSourceType } from 'trtc-electron-sdk';
-import { useI18n } from '../../locales';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import { useCurrentSourceStore } from '../../store/child/currentSource';
+import { useI18n } from '../../../locales';
+import SvgIcon from '../../../common/base/SvgIcon.vue';
+import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import { useCurrentSourceStore } from '../../../store/child/currentSource';
 import ScreenWindowPreviewer from './ScreenWindowPreviewer.vue';
-import { TUIMediaSourceEditMode } from './constant';
-import logger from '../../utils/logger';
+import { TUIMediaSourceEditMode } from '../../../constants/tuiConstant';
+import logger from '../../../utils/logger';
 
 type TUIMediaSourceEditProps = {
   data?: Record<string, any>;
@@ -159,7 +159,7 @@ watch(props, (val) => {
 });
 </script>
 <style scoped lang="scss">
-@import "../../assets/global.scss";
+@import "../../../assets/global.scss";
 
 .tui-screen-share-source {
   height: 100%;

@@ -51,22 +51,22 @@
 import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCDeviceType } from '@tencentcloud/tuiroom-engine-electron';
-import { TUIMusicPlayMode } from '../../types';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import SpeakerOffIcon from '../../common/icons/SpeakerOffIcon.vue';
-import SpeakerOnIcon from '../../common/icons/SpeakerOnIcon.vue';
-import MusicListIcon from '../../common/icons/MusicListIcon.vue';
-import AddMusicIcon from '../../common/icons/AddMusicIcon.vue';
-import DeleteMusicIcon from '../../common/icons/DeleteMusicIcon.vue';
-import PausePlayIcon from '../../common/icons/PausePlayIcon.vue';
-import StartPlayIcon from '../../common/icons/StartPlayIcon.vue';
-import SequentialPlayIcon from '../../common/icons/SequentialPlayIcon.vue';
-import SingleLoopPlayIcon from '../../common/icons/SingleLoopPlayIcon.vue';
-import TuiSlider from '../../common/base/Slider.vue';
-import { useAudioEffectStore} from '../../store/child/audioEffect';
-import TUIMessageBox from '../../common/base/MessageBox/index';
-import { useI18n } from '../../locales';
+import { TUIMusicPlayMode } from '../../../types';
+import SvgIcon from '../../../common/base/SvgIcon.vue';
+import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import SpeakerOffIcon from '../../../common/icons/SpeakerOffIcon.vue';
+import SpeakerOnIcon from '../../../common/icons/SpeakerOnIcon.vue';
+import MusicListIcon from '../../../common/icons/MusicListIcon.vue';
+import AddMusicIcon from '../../../common/icons/AddMusicIcon.vue';
+import DeleteMusicIcon from '../../../common/icons/DeleteMusicIcon.vue';
+import PausePlayIcon from '../../../common/icons/PausePlayIcon.vue';
+import StartPlayIcon from '../../../common/icons/StartPlayIcon.vue';
+import SequentialPlayIcon from '../../../common/icons/SequentialPlayIcon.vue';
+import SingleLoopPlayIcon from '../../../common/icons/SingleLoopPlayIcon.vue';
+import TuiSlider from '../../../common/base/Slider.vue';
+import { useAudioEffectStore} from '../../../store/child/audioEffect';
+import TUIMessageBox from '../../../common/base/MessageBox/index';
+import { useI18n } from '../../../locales';
 
 const { t } = useI18n();
 const audioEffectStore = useAudioEffectStore();
@@ -230,7 +230,7 @@ function postMessage(key: string, data: object | number | string | undefined){
 
 </script>
 <style scoped lang="scss">
-@import "../../assets/global.scss";
+@import "../../../assets/global.scss";
 .tui-add-bgm-window {
   display: flex;
   flex-direction: column;

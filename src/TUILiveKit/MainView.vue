@@ -49,6 +49,7 @@ import { TRTCStatistics, TRTCDeviceType, TRTCMediaSourceType, TRTCDeviceState } 
 import trtcCloud from './utils/trtcCloud';
 import TUIRoomEngine, {
   TUIRoomEvents, TUIRoomType, TUIRoomInfo, TUIRequest, TUIRequestAction, TUISeatInfo, TUIUserInfo,
+  TencentCloudChat,
 } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIMediaSourceViewModel } from './types';
 import LiveHeader from './components/LiveHeader/Index.vue';
@@ -132,6 +133,12 @@ const onEditMediaSource = (mediaSource: TUIMediaSourceViewModel) => {
   case TRTCMediaSourceType.kPhoneMirror:
     command = 'phone-mirror';
     break;
+  case TRTCMediaSourceType.kOnlineVideo:
+    command = 'online-video';
+    break;
+  case TRTCMediaSourceType.kVideoFile:
+    command = 'video-file';
+    break;
   default:
     logger.error(
       'onEditMediaSource: sourceType not supported',
@@ -149,16 +156,21 @@ const onEditMediaSource = (mediaSource: TUIMediaSourceViewModel) => {
 
 const onLogout = async () => {
   logger.log(`${logPrefix}onLogout`);
-  if (basicStore.isLiving) {
-    await stopLiving();
+  try {
+    if (basicStore.isLiving) {
+      await stopLiving();
+    }
+    mediaMixingManager.bindPreviewArea(0, null);
+    basicStore.reset();
+    roomStore.reset();
+    chatStore.reset();
+    audioEffectStore.reset();
+    await mediaSourcesStore.asyncClear();
+  } catch (error) {
+    logger.error(`${logPrefix}onLogout error:`, error);
+  } finally {
+    emit('on-logout');
   }
-  mediaMixingManager.bindPreviewArea(0, null);
-  basicStore.reset();
-  roomStore.reset();
-  chatStore.reset();
-  audioEffectStore.reset();
-  mediaSourcesStore.clear();
-  emit('on-logout');
 }
 
 const onBeforeUnload = () => {
@@ -167,7 +179,7 @@ const onBeforeUnload = () => {
     stopLiving();
   }
   audioEffectStore.reset();
-  mediaSourcesStore.clear();
+  mediaSourcesStore.syncClear();
 };
 
 onMounted(() => {
@@ -182,6 +194,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   videoEffectManager.clear();
+  if (basicStore.isLiving) {
+    stopLiving();
+  }
   window.removeEventListener('beforeunload', onBeforeUnload);
 });
 
@@ -312,7 +327,7 @@ async function retryInit(options: RoomInitData) {
   if (loginRetryCount > MAX_LOGIN_RETRY_COUNT) {
     TUIMessageBox({
       title: t('Note'),
-      message: loginError?.message || t('Login failed, please try again.'),
+      message: t('Login failed, please try again.'),
       confirmButtonText: t('Sure'),
     });
     onLogout();
@@ -324,7 +339,10 @@ async function retryInit(options: RoomInitData) {
   roomStore.setLocalUser(options);
   const { sdkAppId, userId, userSig, userName, avatarUrl } = options;
   try {
-    await TUIRoomEngine.login({ sdkAppId, userId, userSig });
+    const chat = TencentCloudChat.create({
+      SDKAppID: sdkAppId,
+    });
+    await TUIRoomEngine.login({ sdkAppId, userId, userSig, tim: chat });
   } catch (error) {
     logger.error(`${logPrefix}retryInit login() error:`, error);
     loginError = error;

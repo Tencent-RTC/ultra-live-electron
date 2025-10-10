@@ -9,7 +9,7 @@ const logPrefix = '[currentSources]';
 
 const defaultCameraResolution = { width: defaultCameraCaptureWidth, height: defaultCameraCaptureHeight };
 
-type CurrentViewType = 'camera' | 'screen' | 'file' | 'image' | 'connection' | 'setting' | 'add-bgm' | 'reverb-voice' | 'change-voice' | 'phone-mirror' | '';
+type CurrentViewType = 'camera' | 'screen' | 'file' | 'image' | 'connection' | 'setting' | 'add-bgm' | 'reverb-voice' | 'change-voice' | 'phone-mirror' | 'online-video' | 'video-file' | '';
 
 interface TUICurrentMediaSourceState {
     currentCameraResolution: {width: number; height: number;};

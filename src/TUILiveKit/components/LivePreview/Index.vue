@@ -112,20 +112,27 @@ const startMediaMixingPreview = async () => {
 
   if (!isNativeWindowCreated.value) {
     if (!!window.nativeWindowHandle && nativeWindowsRef.value && isServerStarted.value) {
-      mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
-      isNativeWindowCreated.value = true;
-      const { mixingVideoEncodeParam, backgroundColor, selectedBorderColor } = mediaSourcesStore;
-      await mediaMixingManager.startPublish();
-      await mediaMixingManager.updatePublishParams({
-        videoEncoderParams: mixingVideoEncodeParam,
-        canvasColor: backgroundColor,
-        selectedBorderColor
-      });
-      streamLayoutService.setContainer(nativeWindowsRef.value);
+      try {
+        mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
+        isNativeWindowCreated.value = true;
+        const { mixingVideoEncodeParam, backgroundColor, selectedBorderColor } = mediaSourcesStore;
+        await mediaMixingManager.startPublish();
+        await mediaMixingManager.updatePublishParams({
+          videoEncoderParams: mixingVideoEncodeParam,
+          canvasColor: parseInt(backgroundColor.substring(1), 16),
+          selectedBorderColor: parseInt(selectedBorderColor.substring(1), 16)
+        });
+        streamLayoutService.setContainer(nativeWindowsRef.value);
+      } catch (err) {
+        logger.error(`${logPrefix}startMediaMixingPreview failed:`, err);
+        startPreviewRetryTimer = setTimeout(()=>{
+          startMediaMixingPreview();
+        }, 200);
+      }
     } else {
       startPreviewRetryTimer = setTimeout(()=>{
         startMediaMixingPreview();
-      }, 100);
+      }, 200);
     }
   } else {
     logger.error(`${logPrefix}startMediaMixingPreview: no native window ID`);
@@ -169,8 +176,8 @@ const onMediaMixingServerLost = async () => {
       await mediaMixingManager.startPublish();
       await mediaMixingManager.updatePublishParams({
         videoEncoderParams: mixingVideoEncodeParam,
-        canvasColor: backgroundColor,
-        selectedBorderColor
+        canvasColor: parseInt(backgroundColor.substring(1), 16),
+        selectedBorderColor: parseInt(selectedBorderColor.substring(1), 16)
       });
       streamLayoutService.refreshLayout();
       mediaSourcesStore.recoverMediaSource();
@@ -198,19 +205,15 @@ const onMediaMixingServerLost = async () => {
   }
 };
 
-const onBeforeUnload = async () => {
+const onBeforeUnload = () => {
   logger.warn(`${logPrefix}onBeforeUnload`);
-  try {
-    mediaMixingManager.bindPreviewArea(0, null);
-    await mediaMixingService?.stopMediaMixingServer();
-    isServerStarted.value = false;
-  } catch (error) {
-    logger.error(`${logPrefix}onBeforeUnload stop media server failed:`, error);
-  }
+  mediaMixingManager.bindPreviewArea(0, null);
+  mediaSourcesStore.syncClear();
+  mediaMixingService?.stopMediaMixingServer();
 };
 
 const { contextCommand } = useContextMenu();
-watch(contextCommand, (newVal) => {
+watch(contextCommand, (newVal: string) => {
   console.log('[LivePreview]watch contextCommand:', newVal);
   if (newVal && newVal === 'edit') {
     emits('edit-media-source', selectedMediaSource.value);
@@ -260,7 +263,13 @@ onBeforeUnmount(()=> {
 
 onUnmounted(async ()=> {
   logger.log(`${logPrefix}onUnmounted`);
-  await onBeforeUnload();
+  try {
+    await mediaMixingManager.bindPreviewArea(0, null);
+    await mediaSourcesStore.asyncClear();
+    await mediaMixingService?.stopMediaMixingServer();
+  } catch (err) {
+    logger.error(`${logPrefix}onUnmounted error:`, err);
+  }
   window.removeEventListener('beforeunload', onBeforeUnload);
 });
 </script>

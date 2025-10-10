@@ -16,7 +16,7 @@ import CameraIcon from '../../common/icons/CameraIcon.vue';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import { useCurrentSourceStore } from '../../store/child/currentSource';
 import imageStorage from './imageStorage';
-import { TUIMediaSourceEditMode } from './constant';
+import { TUIMediaSourceEditMode } from '../../constants/tuiConstant';
 import { addMediaSource, updateMediaSource } from '../../communication';
 import logger from '../../utils/logger';
 

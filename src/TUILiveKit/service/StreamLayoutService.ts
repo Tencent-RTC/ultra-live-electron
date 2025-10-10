@@ -136,6 +136,7 @@ export class StreamLayoutService {
   }
 
   reset(): void {
+    logger.debug(`${this.logPrefix}reset`);
     this.layoutMode = TUIStreamLayoutMode.None;
     this.seatLayout = null;
     this.roomId = '';

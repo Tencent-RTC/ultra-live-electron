@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
   position: relative;
   width: 100%;
   height: 1rem;
-  background-color: $color-tui-slider-backgriund;
+  background-color: $color-tui-slider-background;
   cursor: pointer;
 }
 

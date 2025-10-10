@@ -82,18 +82,18 @@ TRTCXmagicEffectConstant['EFFECT_LUT'].options = TRTCXmagicEffectConstant['EFFEC
 
 // Makeup
 TRTCXmagicEffectConstant['EFFECT_MAKEUP'].options = TRTCXmagicEffectConstant['EFFECT_MAKEUP'].options.concat([
-  { 
-    label: '桃花', 
+  {
+    label: '桃花',
     label_en: 'Peach',
     effKey: platform === 'win32' ? 'makeup.strength' : 'video_fenfenxia',
     valueType: TRTCXmagicEffectValueType.ZERO_ONE,
-    resPath: 
+    resPath:
       platform === 'win32'
         ? 'makeupMotionRes.bundle/video_fenfenxia/template.json'
         : 'makeupMotionRes.bundle/video_fenfenxia',
     icon: './assets/beauty_panel/panel_icon/makeup_icon/video_fenfenxia.png'
   },
-  { 
+  {
     label: '晒伤',
     label_en: 'Sunburn',
     effKey: platform === 'win32' ? 'makeup.strength' : 'video_shaishangzhuang',
@@ -109,28 +109,17 @@ TRTCXmagicEffectConstant['EFFECT_MAKEUP'].options = TRTCXmagicEffectConstant['EF
 // Motion
 TRTCXmagicEffectConstant['EFFECT_MOTION']['2dOptions'] = TRTCXmagicEffectConstant['EFFECT_MOTION']['2dOptions'].concat([
   {
-    label: '可爱涂鸦',
-    label_en: 'Cute graffiti',
-    effKey: 'video_keaituya',
-    resPath: 
-      platform === 'win32' 
-        ? '2dMotionRes.bundle/video_keaituya/template.json'
-        : '2dMotionRes.bundle',
-    icon:'./assets/beauty_panel/panel_icon/motions_icon/video_keaituya.png',
-    valueType: TRTCXmagicEffectValueType.NONE,
-  },
-  {
     label: '兔兔酱',
     label_en: 'Bunny',
     effKey: 'video_tutujiang',
-    resPath: 
+    resPath:
       platform === 'win32'
         ? '2dMotionRes.bundle/video_tutujiang/template.json'
         : '2dMotionRes.bundle',
     icon: './assets/beauty_panel/panel_icon/motions_icon/video_tutujiang.png',
     valueType: TRTCXmagicEffectValueType.NONE,
   },
-]); 
+]);
 TRTCXmagicEffectConstant['EFFECT_MOTION']['3dOptions'] = TRTCXmagicEffectConstant['EFFECT_MOTION']['3dOptions'].concat([
   {
     label: '知性玫瑰',
@@ -143,14 +132,14 @@ TRTCXmagicEffectConstant['EFFECT_MOTION']['3dOptions'] = TRTCXmagicEffectConstan
     icon:'./assets/beauty_panel/panel_icon/motions_icon/video_zhixingmeigui.png',
     valueType: TRTCXmagicEffectValueType.NONE,
   },
-]); 
+]);
 TRTCXmagicEffectConstant['EFFECT_MOTION']['handOptions'] = TRTCXmagicEffectConstant['EFFECT_MOTION']['handOptions'].concat([
   {
     label: '樱花女孩',
     label_en: 'Sakura',
     effKey: 'video_sakuragirl',
-    resPath: 
-      platform === 'win32' 
+    resPath:
+      platform === 'win32'
         ? 'handMotionRes.bundle/video_sakuragirl/template.json'
         : 'handMotionRes.bundle',
     icon:'./assets/beauty_panel/panel_icon/motions_icon/video_sakuragirl.png',

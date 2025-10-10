@@ -12,6 +12,14 @@
       v-if="currentViewName === 'phone-mirror'"
       :data="dataInEdit"
     ></live-phone-mirror>
+    <live-online-video
+      v-if="currentViewName === 'online-video'"
+      :data="dataInEdit"
+    ></live-online-video>
+    <live-video-file
+      v-if="currentViewName === 'video-file'"
+      :data="dataInEdit"
+    ></live-video-file>
     <live-connection
       v-if="currentViewName === 'connection'"
       :data="dataInEdit"
@@ -28,14 +36,16 @@ import { onMounted, ref, Ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import trtcCloud from './utils/trtcCloud';
 import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType, TRTCDeviceType, TRTCDeviceState } from 'trtc-electron-sdk';
-import LiveCameraSource from './components/LiveSource/LiveCameraSource.vue';
-import LiveScreenShareSource from './components/LiveSource/LiveScreenShareSource.vue';
+import LiveCameraSource from './components/LiveChildView/LiveSource/LiveCameraSource.vue';
+import LiveScreenShareSource from './components/LiveChildView/LiveSource/LiveScreenShareSource.vue';
 import LiveConnection from './components/LiveChildView/LiveConnection.vue';
 import LiveSetting from './components/LiveChildView/LiveSetting.vue';
-import LiveAddBgm from './components/LiveMoreTool/LiveAddBgm.vue';
-import LiveReverbVoice from './components/LiveMoreTool/LiveReverbVoice.vue';
-import LiveChangeVoice from './components/LiveMoreTool/LiveChangeVoice.vue';
-import LivePhoneMirror from './components/LiveSource/LivePhoneMirror.vue';
+import LiveAddBgm from './components/LiveChildView/LiveMoreTool/LiveAddBgm.vue';
+import LiveReverbVoice from './components/LiveChildView/LiveMoreTool/LiveReverbVoice.vue';
+import LiveChangeVoice from './components/LiveChildView/LiveMoreTool/LiveChangeVoice.vue';
+import LivePhoneMirror from './components/LiveChildView/LiveSource/LivePhoneMirror.vue';
+import LiveOnlineVideo from './components/LiveChildView/LiveSource/LiveOnlineVideo.vue';
+import LiveVideoFile from './components/LiveChildView/LiveSource/LiveVideoFile.vue';
 import TUIMessageBox from './common/base/MessageBox';
 import { useCurrentSourceStore } from './store/child/currentSource';
 import useDeviceManager from './utils/useDeviceManager';
@@ -304,7 +314,19 @@ const commandHandlers = new Map([
     () => {
       currentViewName.value = 'phone-mirror';
     },
-  ]
+  ],
+  [
+    'online-video',
+    () => {
+      currentViewName.value = 'online-video';
+    },
+  ],
+  [
+    'video-file',
+    () => {
+      currentViewName.value = 'video-file';
+    },
+  ],
 ]);
 
 window.ipcRenderer.on('logout', () => {

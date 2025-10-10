@@ -32,6 +32,8 @@ export type TUIMediaSourceViewModel = {
   mirrorParams?: TRTCPhoneMirrorParam;
   colorSpace?: TRTCVideoColorSpace;
   colorRange?: TRTCVideoColorRange;
+  volume?: number;
+  networkCacheSize?: number;
 }
 
 export type TUILiveUserInfo = {

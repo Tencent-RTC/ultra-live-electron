@@ -24,22 +24,22 @@
 import { onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCVoiceChangerType } from 'trtc-electron-sdk';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import OriginVoiceIcon from '../../common/icons/ChangeVoiceIcons/OriginVoiceIcon.vue';
-import NaughtyKidIcon from '../../common/icons/ChangeVoiceIcons/NaughtyKidIcon.vue';
-import LolitaIcon from '../../common/icons/ChangeVoiceIcons/LolitaIcon.vue';
-import UncleIcon from '../../common/icons/ChangeVoiceIcons/UncleIcon.vue';
-import HeavyMetalIcon from '../../common/icons/ChangeVoiceIcons/HeavyMetalIcon.vue';
-import InfluenzaIcon from '../../common/icons/ChangeVoiceIcons/InfluenzaIcon.vue';
-import ForeignLanguagesIcon from '../../common/icons/ChangeVoiceIcons/ForeignLanguagesIcon.vue';
-import TrappedBeastIcon from '../../common/icons/ChangeVoiceIcons/TrappedBeastIcon.vue';
-import PlumpIcon from '../../common/icons/ChangeVoiceIcons/PlumpIcon.vue';
-import HeavyCurrentIcon from '../../common/icons/ChangeVoiceIcons/HeavyCurrentIcon.vue';
-import HeavyMachineryIcon from '../../common/icons/ChangeVoiceIcons/HeavyMachineryIcon.vue';
-import IntangibleIcon from '../../common/icons/ChangeVoiceIcons/IntangibleIcon.vue';
-import { useAudioEffectStore } from '../../store/child/audioEffect';
-import { useI18n } from '../../locales';
+import SvgIcon from '../../../common/base/SvgIcon.vue';
+import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import OriginVoiceIcon from '../../../common/icons/ChangeVoiceIcons/OriginVoiceIcon.vue';
+import NaughtyKidIcon from '../../../common/icons/ChangeVoiceIcons/NaughtyKidIcon.vue';
+import LolitaIcon from '../../../common/icons/ChangeVoiceIcons/LolitaIcon.vue';
+import UncleIcon from '../../../common/icons/ChangeVoiceIcons/UncleIcon.vue';
+import HeavyMetalIcon from '../../../common/icons/ChangeVoiceIcons/HeavyMetalIcon.vue';
+import InfluenzaIcon from '../../../common/icons/ChangeVoiceIcons/InfluenzaIcon.vue';
+import ForeignLanguagesIcon from '../../../common/icons/ChangeVoiceIcons/ForeignLanguagesIcon.vue';
+import TrappedBeastIcon from '../../../common/icons/ChangeVoiceIcons/TrappedBeastIcon.vue';
+import PlumpIcon from '../../../common/icons/ChangeVoiceIcons/PlumpIcon.vue';
+import HeavyCurrentIcon from '../../../common/icons/ChangeVoiceIcons/HeavyCurrentIcon.vue';
+import HeavyMachineryIcon from '../../../common/icons/ChangeVoiceIcons/HeavyMachineryIcon.vue';
+import IntangibleIcon from '../../../common/icons/ChangeVoiceIcons/IntangibleIcon.vue';
+import { useAudioEffectStore } from '../../../store/child/audioEffect';
+import { useI18n } from '../../../locales';
 
 const audioEffectStore = useAudioEffectStore();
 const { audioEffect } = storeToRefs(audioEffectStore);
@@ -142,7 +142,7 @@ function handleCloseSetting(){
 }
 </script>
 <style scoped lang="scss">
-@import "../../assets/global.scss";
+@import "../../../assets/global.scss";
 .tui-change-voice-window {
   display: flex;
   flex-direction: column;
@@ -203,7 +203,7 @@ function handleCloseSetting(){
     }
 
     .active-item::before{
-      content:url("../../assets/ActiveEffect.svg");
+      content:url("../../../assets/ActiveEffect.svg");
       display:inline-block;
       width: 6.25rem;
       height:6.25rem;

@@ -24,21 +24,21 @@
 import { onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia'
 import { TRTCVoiceReverbType } from 'trtc-electron-sdk';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import NoEffectIcon from '../../common/icons/ReverbVoiceIcons/NoEffectIcon.vue';
-import KTVIcon from '../../common/icons/ReverbVoiceIcons/KTVIcon.vue';
-import MetallicAudioIcon from '../../common/icons/ReverbVoiceIcons/MetallicAudioIcon.vue';
-import DeepAudioIcon from '../../common/icons/ReverbVoiceIcons/DeepAudioIcon.vue';
-import ResonantIcon from '../../common/icons/ReverbVoiceIcons/ResonantIcon.vue';
-import CellIcon from '../../common/icons/ReverbVoiceIcons/CellIcon.vue';
-import AuditoriumIcon from '../../common/icons/ReverbVoiceIcons/AuditoriumIcon.vue';
-import MagneticIcon from '../../common/icons/ReverbVoiceIcons/MagneticIcon.vue';
-import VacantIcon from '../../common/icons/ReverbVoiceIcons/VacantIcon.vue';
-import RecordingRoomIcon from '../../common/icons/ReverbVoiceIcons/RecordingRoomIcon.vue';
-import MelodiousIcon from '../../common/icons/ReverbVoiceIcons/MelodiousIcon.vue';
-import { useAudioEffectStore } from '../../store/child/audioEffect';
-import { useI18n } from '../../locales';
+import SvgIcon from '../../../common/base/SvgIcon.vue';
+import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import NoEffectIcon from '../../../common/icons/ReverbVoiceIcons/NoEffectIcon.vue';
+import KTVIcon from '../../../common/icons/ReverbVoiceIcons/KTVIcon.vue';
+import MetallicAudioIcon from '../../../common/icons/ReverbVoiceIcons/MetallicAudioIcon.vue';
+import DeepAudioIcon from '../../../common/icons/ReverbVoiceIcons/DeepAudioIcon.vue';
+import ResonantIcon from '../../../common/icons/ReverbVoiceIcons/ResonantIcon.vue';
+import CellIcon from '../../../common/icons/ReverbVoiceIcons/CellIcon.vue';
+import AuditoriumIcon from '../../../common/icons/ReverbVoiceIcons/AuditoriumIcon.vue';
+import MagneticIcon from '../../../common/icons/ReverbVoiceIcons/MagneticIcon.vue';
+import VacantIcon from '../../../common/icons/ReverbVoiceIcons/VacantIcon.vue';
+import RecordingRoomIcon from '../../../common/icons/ReverbVoiceIcons/RecordingRoomIcon.vue';
+import MelodiousIcon from '../../../common/icons/ReverbVoiceIcons/MelodiousIcon.vue';
+import { useAudioEffectStore } from '../../../store/child/audioEffect';
+import { useI18n } from '../../../locales';
 
 const audioEffectStore = useAudioEffectStore();
 const { audioEffect } = storeToRefs(audioEffectStore);
@@ -145,7 +145,7 @@ function handleCloseSetting(){
 }
 </script>
 <style scoped lang="scss">
-@import "../../assets/variable.scss";
+@import "../../../assets/variable.scss";
 .tui-reverb-voice-window {
   display: flex;
   flex-direction: column;
@@ -206,7 +206,7 @@ function handleCloseSetting(){
     }
 
     .tui-active-item::before{
-      content:url("../../assets/ActiveEffect.svg");
+      content:url("../../../assets/ActiveEffect.svg");
       display:inline-block;
       width: 6.25rem;
       height:6.25rem;

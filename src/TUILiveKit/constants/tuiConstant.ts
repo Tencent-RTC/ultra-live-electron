@@ -60,3 +60,8 @@ export const colorRangeOptions = [
 ];
 
 export const MEDIA_SOURCE_STORAGE_KEY = 'TRTC_LIVE_MEDIA_SOURCES';
+
+export enum TUIMediaSourceEditMode {
+  Add = 'Add',
+  Edit = 'Edit'
+}

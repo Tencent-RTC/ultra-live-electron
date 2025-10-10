@@ -46,7 +46,7 @@
                 </div>
                 <div class="tui-connection-member">
                     <span class="tui-connection-status" v-if="!isAllowed">{{ t('Not allowed') }}</span>
-                    <div v-else class="tui-connection-seat" v-for="( item, index ) in anchorList" :key="item.userInfo.userId || index">
+                    <div v-else class="tui-connection-seat" v-for="( item, index ) in validAnchorList" :key="item.userInfo.userId || index">
                         <span class="tui-connection-seatIndex">{{item.seat}}</span>
                         <img v-if="item.userInfo.avatarUrl" class="tui-connection-avatar" :src="item.userInfo.avatarUrl" alt="">
                         <span class="tui-connection-name"> {{ item.userInfo.userName || item.userInfo.userId }}</span>
@@ -105,9 +105,7 @@ const applyNumber = computed(() => {
   return '(' + applyToAnchorList.value.length + ')'
 })
 const currentNumber = ref(0);
-const currentSeat = computed(() => {
-  return '(' + currentNumber.value + '/' + anchorList.value.length+ ')'
-})
+
 const anchorList = ref([
   {
     seat: t('Position 1'),
@@ -149,7 +147,15 @@ const anchorList = ref([
     icon: SeatIcon,
     userInfo: {} as TUILiveUserInfo,
   },
-])
+]);
+
+const validAnchorList = computed(() => {
+  return currentLayout.value === TUIStreamLayoutMode.Float ? anchorList.value.slice(0, 6) : anchorList.value;
+});
+
+const currentSeat = computed(() => {
+  return '(' + currentNumber.value + '/' + validAnchorList.value.length+ ')'
+});
 
 watch(currentAnchorList, (newVal,val) => {
   logger.debug(`${logPrefix}wathch currentAnchorList:`, newVal, val);

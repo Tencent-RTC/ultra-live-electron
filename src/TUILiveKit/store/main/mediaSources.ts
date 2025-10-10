@@ -15,6 +15,9 @@ const logPrefix = '[MediaSourceStore]';
 
 const { t } = useI18n();
 
+const defaultMixingBackgroundColor = '#191919';
+const defaultSelectedBorderColor = '#FFFF00';
+
 const mediaMixingManager = useMediaMixingManager();
 const videoEffectManager = useVideoEffectManager();
 
@@ -27,8 +30,8 @@ export type TUIMediaSourcesState = {
   mixingVideoEncodeParam: TRTCVideoEncParam;
   mixingVideoWidth: number;
   mixingVideoHeight: number;
-  backgroundColor: number;
-  selectedBorderColor: number;
+  backgroundColor: string;
+  selectedBorderColor: string;
   mediaList: Array<TUIMediaSourceViewModel>; // 'zOrder' desc order
   selectedMediaKey: TUISelectedMediaKey;
   isHevcEncodeEnabled: boolean;
@@ -38,40 +41,62 @@ function isSameMediaSource(mediaSource1: TUISelectedMediaKey | TRTCMediaSource, 
   return mediaSource1.sourceId === mediaSource2.sourceId && mediaSource1.sourceType === mediaSource2.sourceType;
 }
 
+function extractFileNameFromPath(filePath: string) {
+  if (!filePath) {
+    return '';
+  }
+  const segments = filePath.split(/[/\\]/);
+  const fileName = segments[segments.length - 1];
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex > -1 ? fileName.substring(0, dotIndex) : fileName;
+}
+
 function aliasMediaSource(newMediaSource: TUIMediaSourceViewModel, mediaList: Array<TUIMediaSourceViewModel>) {
   let newAliasName = '';
   switch (newMediaSource.mediaSourceInfo.sourceType) {
   case TRTCMediaSourceType.kCamera:
-    newAliasName = t('Camera');
+    newAliasName = newMediaSource.sourceName;
     break;
   case TRTCMediaSourceType.kScreen:
     if (newMediaSource.screenType === 0) {
-      newAliasName = t('Window');
+      newAliasName = newMediaSource.sourceName;
     } else {
-      newAliasName = t('Screen');
+      newAliasName = `${t('Screen')} ${newMediaSource.mediaSourceInfo.sourceId}`;
     }
     break;
   case TRTCMediaSourceType.kImage:
-    newAliasName = t('Image');
+    newAliasName = extractFileNameFromPath(newMediaSource.mediaSourceInfo.sourceId);
     break;
   case TRTCMediaSourceType.kPhoneMirror:
-    newAliasName = t('Phone Mirror');
+    newAliasName = `${t('Phone Mirror')} ${newMediaSource.mediaSourceInfo.sourceId}`;
+    break;
+  case TRTCMediaSourceType.kOnlineVideo:
+    newAliasName = t('Online Video');
+    break;
+  case TRTCMediaSourceType.kVideoFile:
+    newAliasName = extractFileNameFromPath(newMediaSource.mediaSourceInfo.sourceId);
     break;
   default:
     logger.warn('[MediaSource]aliasMediaSource unsupported media type:', newMediaSource);
     return;
   }
 
-  const aliasNameMap = new Map<string, string>();
-  mediaList.forEach(mediaItem => {
-    aliasNameMap.set(mediaItem.aliasName, '');
-  });
+  if (newMediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kOnlineVideo) {
+    const aliasNameMap = new Map<string, string>();
+    mediaList.forEach(mediaItem => {
+      if(mediaItem.mediaSourceInfo.sourceType === TRTCMediaSourceType.kOnlineVideo) {
+        aliasNameMap.set(mediaItem.aliasName, '');
+      }
+    });
 
-  let i = 0;
-  while(aliasNameMap.has(newAliasName+(i ? i : ''))) {
-    i++;
+    let i = 1;
+    while(aliasNameMap.has(newAliasName+i)) {
+      i++;
+    }
+    newAliasName = newAliasName + i;
   }
-  newMediaSource.aliasName = newAliasName + (i ? i : '');
+
+  newMediaSource.aliasName = newAliasName;
 }
 
 function isCameraCaptureParamChanged(newParam: TUIMediaSourceViewModel, oldParam: TUIMediaSourceViewModel) {
@@ -95,8 +120,8 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
     },
     mixingVideoWidth: 1080,
     mixingVideoHeight: 1920,
-    backgroundColor: 0x191919,
-    selectedBorderColor: 0xFF0000,
+    backgroundColor: defaultMixingBackgroundColor,
+    selectedBorderColor: defaultSelectedBorderColor,
     mediaList: [],
     selectedMediaKey: {
       sourceType: null,
@@ -122,16 +147,16 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
       }
       mediaMixingManager.updatePublishParams({
         videoEncoderParams: this.mixingVideoEncodeParam,
-        canvasColor: this.backgroundColor,
-        selectedBorderColor: this.selectedBorderColor,
+        canvasColor: parseInt(this.backgroundColor.substring(1), 16),
+        selectedBorderColor: parseInt(this.selectedBorderColor.substring(1), 16),
       });
       this.saveState();
     },
-    updateBackgroundColor(color: number) {
+    updateBackgroundColor(color: string) {
       this.backgroundColor = color;
       this.updateMediaMixingParams();
     },
-    updateSelectedBorderColor(color: number) {
+    updateSelectedBorderColor(color: string) {
       this.selectedBorderColor = color;
       this.updateMediaMixingParams();
     },
@@ -185,7 +210,16 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         mediaSource.mediaSourceInfo.rect = fitMediaSourceToResolution(mediaSource.mediaSourceInfo.rect, this.mixingVideoWidth, this.mixingVideoHeight);
         this.mediaList.unshift(mediaSource);
         aliasMediaSource(mediaSource, this.mediaList);
-        await mediaMixingManager.addMediaSource(mediaSource.mediaSourceInfo);
+        try {
+          await mediaMixingManager.addMediaSource(mediaSource.mediaSourceInfo);
+        } catch (error) {
+          logger.error('[MediaSource]addMediaSource error:', error);
+          onMediaMixingError(error as TUIMediaMixingError);
+          if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kOnlineVideo) {
+            await mediaMixingManager.removeMediaSource(mediaSource.mediaSourceInfo);
+            this.mediaList.shift();
+          }
+        }
         this.postAddMediaSource(mediaSource);
       } else {
         logger.error('New added media source with no valid rect:', mediaSource);
@@ -214,6 +248,21 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
             mediaSource.mediaSourceInfo.sourceId,
             mediaSource.mirrorParams
           );
+        }
+      } else if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kOnlineVideo) {
+        if (mediaSource.volume !== undefined && mediaSource.networkCacheSize !== undefined) {
+          const param = {
+            networkCacheSizeKB: mediaSource.networkCacheSize,
+            playoutVolume: mediaSource.volume
+          }
+          mediaMixingManager.setOnlineVideoParam(mediaSource.mediaSourceInfo.sourceId, param);
+        }
+      } else if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kVideoFile) {
+        if (mediaSource.volume !== undefined) {
+          const param = {
+            playoutVolume: mediaSource.volume
+          }
+          mediaMixingManager.setVideoFileParam(mediaSource.mediaSourceInfo.sourceId, param);
         }
       }
     },
@@ -265,7 +314,12 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         if(!target.muted){
           await mediaMixingManager.updateMediaSource(mediaSource.mediaSourceInfo);
         } else {
-          await mediaMixingManager.addMediaSource(mediaSource.mediaSourceInfo);
+          try {
+            await mediaMixingManager.addMediaSource(mediaSource.mediaSourceInfo);
+          } catch (error) {
+            logger.error('[MediaSource]addMediaSource error:', error);
+            onMediaMixingError(error as TUIMediaMixingError);
+          }
         }
 
         if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera) {
@@ -292,6 +346,21 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
               mediaSource.mediaSourceInfo.sourceId,
               mediaSource.mirrorParams
             );
+          }
+        } else if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kOnlineVideo) {
+          if (mediaSource.volume !== undefined && mediaSource.networkCacheSize !== undefined) {
+            const param = {
+              networkCacheSizeKB: mediaSource.networkCacheSize,
+              playoutVolume: mediaSource.volume
+            }
+            await mediaMixingManager.setOnlineVideoParam(mediaSource.mediaSourceInfo.sourceId, param);
+          }
+        } else if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kVideoFile) {
+          if (mediaSource.volume !== undefined) {
+            const param = {
+              playoutVolume: mediaSource.volume
+            }
+            await mediaMixingManager.setVideoFileParam(mediaSource.mediaSourceInfo.sourceId, param);
           }
         }
 
@@ -342,7 +411,15 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         target = {
           ...destMediaSource,
         };
-        await mediaMixingManager.addMediaSource(target.mediaSourceInfo);
+        try {
+          await mediaMixingManager.addMediaSource(target.mediaSourceInfo);
+          if(target.mediaSourceInfo.sourceType !== TRTCMediaSourceType.kOnlineVideo) {
+            aliasMediaSource(target, this.mediaList);
+          }
+        } catch (error) {
+          logger.error('[MediaSource]addMediaSource error:', error);
+          onMediaMixingError(error as TUIMediaMixingError);
+        }
         this.mediaList[targetIndex] = target;
 
         if (target.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera) {
@@ -584,7 +661,12 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
           }
 
           target.mediaSourceInfo.isSelected = true;
-          await mediaMixingManager.addMediaSource(target.mediaSourceInfo);
+          try {
+            await mediaMixingManager.addMediaSource(target.mediaSourceInfo);
+          } catch (error) {
+            logger.error('[MediaSource]addMediaSource error:', error);
+            onMediaMixingError(error as TUIMediaMixingError);
+          }
           target.muted = false;
           this.selectedMediaKey = {
             sourceType: target.mediaSourceInfo.sourceType,
@@ -619,6 +701,12 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         case TRTCMediaSourceType.kImage:
           deviceType = t('Image');
           break;
+        case TRTCMediaSourceType.kOnlineVideo:
+          deviceType = t('Online video');
+          break;
+        case TRTCMediaSourceType.kVideoFile:
+          deviceType = t('Video file');
+          break;
         default:
           logger.warn('[MediaSource]checkMediaExisting unsupported media type:', mediaSource);
           break;
@@ -647,8 +735,9 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         }
       });
     },
-    clear() {
-      this.mediaList.forEach(async (mediaSource: TUIMediaSourceViewModel) => {
+    async asyncClear() {
+      for(let i = this.mediaList.length - 1; i >= 0; i--) {
+        const mediaSource = this.mediaList[i];
         if (!mediaSource.muted) {
           if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera && mediaSource.beautyConfig?.beautyProperties.length) {
             videoEffectManager.stopEffect(mediaSource.mediaSourceInfo.sourceId);
@@ -656,11 +745,28 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
           try {
             await mediaMixingManager.removeMediaSource(mediaSource.mediaSourceInfo);
           } catch (error) {
-            logger.error('[MediaSource]recover media source error:', error);
+            logger.error('[MediaSource]clear media source error:', error);
             onMediaMixingError(error as TUIMediaMixingError);
           }
         }
-      });
+      }
+      this.mediaList = [];
+    },
+    syncClear() {
+      for(let i = this.mediaList.length - 1; i >= 0; i--) {
+        const mediaSource = this.mediaList[i];
+        if (!mediaSource.muted) {
+          if (mediaSource.mediaSourceInfo.sourceType === TRTCMediaSourceType.kCamera && mediaSource.beautyConfig?.beautyProperties.length) {
+            videoEffectManager.stopEffect(mediaSource.mediaSourceInfo.sourceId);
+          }
+          try {
+            mediaMixingManager.removeMediaSource(mediaSource.mediaSourceInfo);
+          } catch (error) {
+            logger.error('[MediaSource]clear media source error:', error);
+            onMediaMixingError(error as TUIMediaMixingError);
+          }
+        }
+      }
       this.mediaList = [];
     },
     saveState() {
@@ -675,13 +781,13 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
       this.mixingVideoEncodeParam = storeState.mixingVideoEncodeParam;
       this.mixingVideoWidth = storeState.mixingVideoWidth;
       this.mixingVideoHeight = storeState.mixingVideoHeight;
-      this.backgroundColor = storeState.backgroundColor;
-      this.selectedBorderColor = storeState.selectedBorderColor;
+      this.backgroundColor = typeof storeState.backgroundColor === 'string' ? storeState.backgroundColor : defaultMixingBackgroundColor;
+      this.selectedBorderColor = typeof storeState.selectedBorderColor === 'string' ? storeState.selectedBorderColor : defaultSelectedBorderColor;
 
       mediaMixingManager.updatePublishParams({
         videoEncoderParams: this.mixingVideoEncodeParam,
-        canvasColor: this.backgroundColor,
-        selectedBorderColor: this.selectedBorderColor,
+        canvasColor: parseInt(this.backgroundColor.substring(1), 16),
+        selectedBorderColor: parseInt(this.selectedBorderColor.substring(1), 16),
       });
 
       this.mediaList = storeState.mediaList;
@@ -693,6 +799,12 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
             await mediaMixingManager.addMediaSource(current.mediaSourceInfo);
             this.postAddMediaSource(current);
           } catch(error) {
+            if (current.mediaSourceInfo.sourceType === TRTCMediaSourceType.kOnlineVideo) {
+              await mediaMixingManager.removeMediaSource(current.mediaSourceInfo);
+              this.mediaList = this.mediaList.filter((item: TUIMediaSourceViewModel) => (
+                !isSameMediaSource(item.mediaSourceInfo, current.mediaSourceInfo)
+              ));
+            }
             onMediaMixingError(error as TUIMediaMixingError);
           }
         }

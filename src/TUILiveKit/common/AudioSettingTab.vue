@@ -121,18 +121,25 @@ function handleMicrophoneTest() {
  * Click on the speaker [Test] button
  */
 async function handleSpeakerTest() {
-  const SPEAKER_TEST_URL = 'https://web.sdk.qcloud.com/trtc/electron/download/resources/media/TestSpeaker.mp3';
   isTestingSpeaker.value = !isTestingSpeaker.value;
   const isStartSpeakerTest = isTestingSpeaker.value;
   if (isStartSpeakerTest) {
     window.mainWindowPortInChild?.postMessage({
       key: 'startTestSpeaker',
-      data: SPEAKER_TEST_URL
+      data: getSpeakerTestUrl(),
     });
   } else {
     window.mainWindowPortInChild?.postMessage({
       key: 'stopTestSpeaker',
     });
+  }
+}
+
+function getSpeakerTestUrl() {
+  if (process.env.NODE_ENV === 'production') {
+    return window.APP_PATH + '/dist/TestSpeaker.mp3';
+  } else {
+    return window.APP_PATH + '/public/TestSpeaker.mp3';
   }
 }
 

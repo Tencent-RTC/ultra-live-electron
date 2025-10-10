@@ -8,16 +8,16 @@
 <script setup lang="ts">
 import { ref, Ref, defineProps, defineEmits } from 'vue';
 interface Props {
-    currentColor: number
+    currentColor: string
 }
 
 const emits = defineEmits(['change']);
 
 const props = defineProps<Props>();
-const colorValue: Ref<string> = ref(`#${props.currentColor.toString(16)}`);
+const colorValue: Ref<string> = ref(props.currentColor);
 
 function onInputColor() {
-  emits('change', parseInt(colorValue.value.substring(1), 16));
+  emits('change', colorValue.value);
 }
 </script>
 

@@ -72,14 +72,14 @@
 import { Ref, ref, shallowRef, defineProps, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCMediaSourceType, TRTCPhoneMirrorParam } from 'trtc-electron-sdk';
-import { TUIMediaSourceViewModel } from '../../types';
-import { useI18n } from '../../locales';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import TUISelect from '../../common/base/Select.vue';
-import TUIOption from '../../common/base/Option.vue';
-import { useCurrentSourceStore } from '../../store/child/currentSource';
-import logger from '../../utils/logger';
+import { TUIMediaSourceViewModel } from '../../../types';
+import { useI18n } from '../../../locales';
+import SvgIcon from '../../../common/base/SvgIcon.vue';
+import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import TUISelect from '../../../common/base/Select.vue';
+import TUIOption from '../../../common/base/Option.vue';
+import { useCurrentSourceStore } from '../../../store/child/currentSource';
+import logger from '../../../utils/logger';
 
 type TUIMediaSourceEditProps = {
   data?: Record<string, any>;
@@ -236,7 +236,7 @@ watch(props, async (val) => {
 </script>
 
 <style scoped lang="scss">
-@import "../../assets/global.scss";
+@import "../../../assets/global.scss";
 
 .tui-phone-mirror-source {
   height: 100%;

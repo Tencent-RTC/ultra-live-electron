@@ -189,6 +189,7 @@ import SvgIcon from '../../common/base/SvgIcon.vue';
 import TUISwitch from '../../common/base/Switch.vue';
 import CameraIcon from '../../common/icons/CameraIcon.vue';
 import AddShareScreenIcon from '../../common/icons/AddShareScreenIcon.vue';
+import AddVideo from '../../common/icons/AddVideo.vue';
 import AddIcon from '../../common/icons/AddIcon.vue';
 import UpIcon from '../../common/icons/UpIcon.vue';
 import DownIcon from '../../common/icons/DownIcon.vue';
@@ -289,6 +290,18 @@ const mediaSourceMenuList = shallowRef([
   //   text: t('Add Phone'),
   //   fun: handleAddPhoneMirror
   // }
+  {
+    icon: AddVideo,
+    id: 'Add Online Video',
+    text: t('Add Online Video'),
+    fun: handleAddOnlineVideo
+  },
+  {
+    icon: AddVideo,
+    id: 'Add Video File',
+    text: t('Add Video File'),
+    fun: handleAddVideoFile
+  },
 ]);
 
 const handleOpenAddMedia = () => {
@@ -362,6 +375,20 @@ async function handleAddPhoneMirror() {
   } catch (error) {
     onMediaMixingError(error as TUIMediaMixingError);
   }
+}
+
+function handleAddOnlineVideo() {
+  isShowAddMedia.value = false;
+  window.ipcRenderer.send('open-child', {
+    'command': 'online-video'
+  });
+}
+
+function handleAddVideoFile() {
+  isShowAddMedia.value = false;
+  window.ipcRenderer.send('open-child', {
+    'command': 'video-file'
+  });
 }
 
 const handleChangeMediaOrder = (item: TUIMediaSourceViewModel, changeValue: number) => {
@@ -468,11 +495,17 @@ const toggleHevcMode = (value: boolean) => {
   mediaSourcesStore.updateHevcEncodeState(value);
 }
 
-const onChangeBgColor = (value: number) => {
+const onChangeBgColor = (value: string) => {
+  if (!/^#[0-9A-F]{6}$/i.test(value)) {
+    return;
+  }
   mediaSourcesStore.updateBackgroundColor(value);
 }
 
-const onChangeBorderColor = (value: number) => {
+const onChangeBorderColor = (value: string) => {
+  if (!/^#[0-9A-F]{6}$/i.test(value)) {
+    return;
+  }
   mediaSourcesStore.updateSelectedBorderColor(value);
 }
 

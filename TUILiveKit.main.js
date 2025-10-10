@@ -113,7 +113,6 @@ async function createWindow(width = 1366, height = 668) {
     minWidth: 1200,
     minHeight: 650,
     frame: false,
-    backgroundColor: 'rgba(0, 0, 0, 0)',
     acceptFirstMouse: true,
     webPreferences: {
       preload: path.join(__dirname, 'TUILiveKit.preload.js'),
@@ -143,9 +142,8 @@ async function createWindow(width = 1366, height = 668) {
     width: 600,
     height: 650,
     frame: false,
-    backgroundColor: 'rgba(0, 0, 0, 0)',
     acceptFirstMouse: true,
-    skitTaskbar: true,
+    skipTaskbar: true,
     resizable: false,
     parent: windowMap.main,
     webPreferences: {
@@ -270,6 +268,11 @@ function bindIPCEvent() {
       windowMap.child?.setSize(600, 560, true);
       windowMap.child?.setContentSize(600, 560, true);
       break;
+    case 'online-video':
+    case 'video-file':
+      windowMap.child?.setSize(600, 360, true);
+      windowMap.child?.setContentSize(600, 360, true);
+      break;
     default:
       break;
     }
@@ -389,6 +392,7 @@ function bindIPCEvent() {
   });
 
   ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
+    console.log(`${logPrefix}set-ignore-mouse-events`, ignore, options);
     const win = BrowserWindow.fromWebContents(event.sender)
     win.setIgnoreMouseEvents(ignore, options); // windowMap.mainCover
   });
@@ -546,7 +550,7 @@ function bindChildWindowEvent() {
 
   windowMap.child?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.child?.webContents.executeJavaScript(`window.location.hash = '/tui-live-kit-child';`);
+    windowMap.child?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-child\';');
     windowMap.child?.webContents.send('app-path', app.getAppPath());
     windowMap.child?.webContents.send('native-window-handle', windowMap.child?.getNativeWindowHandle());
     windowMap.child?.webContents.send('window-type', 'child');
@@ -564,6 +568,20 @@ function bindChildWindowEvent() {
       windowMap.child = null;
     }
   });
+
+  windowMap.child?.on('will-move', () => {
+    console.log('Child window will move');
+    if (windowMap.mainCover?.isVisible()) {
+      windowMap.mainCover?.setIgnoreMouseEvents(false);
+    }
+  });
+
+  windowMap.child?.on('moved', () => {
+    console.log('Child window moved');
+    if (windowMap.mainCover?.isVisible()) {
+      windowMap.mainCover?.setIgnoreMouseEvents(true, { forward: true });
+    }
+  });
 }
 
 function bindCoverWindowEvent() {
@@ -576,7 +594,7 @@ function bindCoverWindowEvent() {
 
   windowMap.mainCover?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.mainCover?.webContents.executeJavaScript(`window.location.hash = '/tui-live-kit-cover';`);
+    windowMap.mainCover?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-cover\';');
     windowMap.mainCover?.webContents.send('app-path', app.getAppPath());
     windowMap.mainCover?.webContents.send('native-window-handle', windowMap.mainCover?.getNativeWindowHandle());
     windowMap.mainCover?.webContents.send('window-type', 'cover');
@@ -599,7 +617,7 @@ function bindConfirmWindowEvent() {
 
   windowMap.confirm?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.confirm?.webContents.executeJavaScript(`window.location.hash = '/tui-live-kit-confirm';`);
+    windowMap.confirm?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-confirm\';');
     windowMap.confirm?.webContents.send('app-path', app.getAppPath());
     windowMap.confirm?.webContents.send('native-window-handle', windowMap.confirm?.getNativeWindowHandle());
     windowMap.confirm?.webContents.send('window-type', 'confirm');

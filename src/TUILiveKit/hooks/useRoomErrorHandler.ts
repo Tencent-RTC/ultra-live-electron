@@ -240,6 +240,10 @@ const RoomErrorInfo: { [key: number]: {
     code:100005,
     messageI18n: t('ERR_USER_NOT_ENTERED'),
   },
+  [TUIErrorCode.ERR_NO_PERMISSION]: {
+    code:100006,
+    messageI18n: t('ERR_NO_PERMISSION'),
+  },
   [TUIErrorCode.ERR_NEED_PASSWORD]: {
     code:100018,
     messageI18n: t('ERR_NEED_PASSWORD'),
@@ -339,30 +343,26 @@ const RoomErrorInfo: { [key: number]: {
 }
 
 export function onError(error: any) {
-  logger.warn(`${logPrefix}onError:`, error);
   if (error.code !== null && error.code !== undefined) {
-    const { code, message } = error;
+    const { code } = error;
     if (RoomErrorInfo[code]) {
       if (code !== 0) {
-        TUIMessageBox({
-          title: t('Note'),
-          message: RoomErrorInfo[code].messageI18n,
-          confirmButtonText: t('Sure'),
-        });
+        logger.warn(`${logPrefix}onError:`, error);
+        if (RoomErrorInfo[code].messageI18n) {
+          TUIMessageBox({
+            title: t('Note'),
+            message: RoomErrorInfo[code].messageI18n,
+            confirmButtonText: t('Sure'),
+          });
+        }
+      } else {
+        // code 0 is successful, do nothing
       }
     } else {
-      TUIMessageBox({
-        title: t('Note'),
-        message: message || 'Unknow error.',
-        confirmButtonText: t('Sure'),
-      });
+      logger.warn(`${logPrefix}onError:`, error);
     }
-  } else if (error.message) {
-    TUIMessageBox({
-      title: t('Note'),
-      message: error.message.toString(),
-      confirmButtonText: t('Sure'),
-    });
+  } else {
+    logger.warn(`${logPrefix}onError:`, error);
   }
 }
 

@@ -71,6 +71,11 @@ export async function addMediaSource(data: Record<string, any>) {
     if (data.connectType === 0) {
       window.ipcRenderer.send('start-use-driver-installer', data.platformType);
     }
+  } else if (data.type === TRTCMediaSourceType.kOnlineVideo) {
+    mediaSource.volume = data.volume;
+    mediaSource.networkCacheSize = data.networkCacheSize;
+  } else if (data.type === TRTCMediaSourceType.kVideoFile) {
+    mediaSource.volume = data.volume;
   }
 
   if (mediaSource) {
@@ -188,7 +193,7 @@ async function _updateCameraMediaSource(data: Record<string, any>) {
 }
 
 async function _updatePhoneMirrorMediaSource(data: Record<string, any>) {
-  logger.log(`${logPrefix}updateMediaSource predata:`, JSON.stringify(data));
+  logger.log(`${logPrefix}updateMediaSource data:`, JSON.stringify(data));
   const newMediaSource: TUIMediaSourceViewModel = {
     sourceName: data.predata.name,
     aliasName: data.predata.aliasName,
@@ -221,6 +226,88 @@ async function _updatePhoneMirrorMediaSource(data: Record<string, any>) {
   }
 }
 
+async function _updateOnlineVideoMediaSource(data: Record<string, any>) {
+  logger.log(`${logPrefix}updateMediaSource data:`, JSON.stringify(data));
+  const newMediaSource: TUIMediaSourceViewModel = {
+    sourceName: data.name,
+    aliasName: data.predata.aliasName,
+    left: data.predata.left,
+    top: data.predata.top,
+    muted: false,
+    mediaSourceInfo: {
+      sourceType: data.type,
+      sourceId: data.id,
+      zOrder: data.predata?.mediaSourceInfo.zOrder,
+      rect: fitMediaSourceToOldRect(
+        {
+          rect: data.predata?.mediaSourceInfo.rect,
+          rotation: data.predata?.mediaSourceInfo.rotation,
+        },
+        { width: data.width, height: data.height }
+      ),
+      rotation: data.predata?.mediaSourceInfo.rotation,
+    },
+    volume: data.volume,
+    networkCacheSize: data.networkCacheSize,
+  }
+
+  try {
+    if (data.id === data.predata?.mediaSourceInfo.sourceId) {
+      await mediaSourcesStore.updateMediaSource(newMediaSource);
+    } else {
+      await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
+    }
+    await mediaSourcesStore.selectMediaSource(newMediaSource);
+  } catch (error) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: (error as any).message,
+      confirmButtonText: t('Sure'),
+    });
+  }
+}
+
+async function _updateOnVideoFileMediaSource(data: Record<string, any>) {
+  logger.log(`${logPrefix}updateMediaSource data:`, JSON.stringify(data));
+
+  const newMediaSource: TUIMediaSourceViewModel = {
+    sourceName: data.name,
+    aliasName: data.predata.aliasName,
+    left: data.predata.left,
+    top: data.predata.top,
+    muted: false,
+    mediaSourceInfo: {
+      sourceType: data.type,
+      sourceId: data.id,
+      zOrder: data.predata?.mediaSourceInfo.zOrder,
+      rect: fitMediaSourceToOldRect(
+        {
+          rect: data.predata?.mediaSourceInfo.rect,
+          rotation: data.predata?.mediaSourceInfo.rotation,
+        },
+        { width: data.width, height: data.height }
+      ),
+      rotation: data.predata?.mediaSourceInfo.rotation,
+    },
+    volume: data.volume,
+  }
+
+  try {
+    if (data.id === data.predata?.mediaSourceInfo.sourceId) {
+      await mediaSourcesStore.updateMediaSource(newMediaSource);
+    } else {
+      await mediaSourcesStore.replaceMediaSource(data.predata, newMediaSource);
+    }
+    await mediaSourcesStore.selectMediaSource(newMediaSource);
+  } catch (error) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: (error as any).message,
+      confirmButtonText: t('Sure'),
+    });
+  }
+}
+
 export async function updateMediaSource(data: Record<string, any>) {
   switch (data.type) {
   case TRTCMediaSourceType.kScreen:
@@ -232,6 +319,12 @@ export async function updateMediaSource(data: Record<string, any>) {
     break;
   case TRTCMediaSourceType.kPhoneMirror:
     await _updatePhoneMirrorMediaSource(data);
+    break;
+  case TRTCMediaSourceType.kOnlineVideo:
+    await _updateOnlineVideoMediaSource(data);
+    break;
+  case TRTCMediaSourceType.kVideoFile:
+    await _updateOnVideoFileMediaSource(data);
     break;
   default:
     logger.warn(

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import {
   TRTCVideoResolutionMode,
+  TUIErrorCode,
   TUIRole,
   TUIRoomInfo,
   TUISeatInfo,
@@ -220,7 +221,15 @@ export const useRoomStore = defineStore('room', {
             data: JSON.stringify(this.applyToAnchorList),
           });
         } catch (e: any) {
-          onError(e);
+          if (e.code === TUIErrorCode.ERR_NO_PERMISSION) {
+            TUIMessageBox({
+              title: t('Note'),
+              message: t('No more seat available'),
+              confirmButtonText: t('Sure'),
+            });
+          } else {
+            onError(e);
+          }
         }
       }
     },

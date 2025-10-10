@@ -20,13 +20,13 @@
 import { ref, Ref, defineProps, computed, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCDeviceInfo, TRTCMediaSourceType, TRTCVideoMirrorType } from 'trtc-electron-sdk';
-import { useI18n } from '../../locales';
-import { useCurrentSourceStore } from '../../store/child/currentSource';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import VideoSettingTab from '../../common/VideoSettingTab.vue';
-import { TUIMediaSourceEditMode } from './constant';
-import logger from '../../utils/logger';
+import { useI18n } from '../../../locales';
+import { useCurrentSourceStore } from '../../../store/child/currentSource';
+import SvgIcon from '../../../common/base/SvgIcon.vue';
+import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import VideoSettingTab from '../../../common/VideoSettingTab.vue';
+import { TUIMediaSourceEditMode } from '../../../constants/tuiConstant';
+import logger from '../../../utils/logger';
 
 interface TUIMediaSourceEditProps {
   data?: Record<string, any>;
@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
 });
 </script>
 <style scoped lang="scss">
-@import "../../assets/global.scss";
+@import "../../../assets/global.scss";
 
 .tui-camera-source{
     display: flex;

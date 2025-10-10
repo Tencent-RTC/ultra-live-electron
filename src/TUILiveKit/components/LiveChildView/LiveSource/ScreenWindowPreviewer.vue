@@ -14,16 +14,16 @@
 <script setup lang="ts">
 import { onMounted, ref, Ref } from 'vue';
 import { TRTCScreenCaptureSourceInfo } from '@tencentcloud/tuiroom-engine-electron';
-  
+
 interface Props {
   data: TRTCScreenCaptureSourceInfo;
 }
-  
+
 // eslint-disable-next-line
 const { data } = defineProps<Props>();
-  
+
 const canvasRef: Ref<HTMLCanvasElement | null> = ref(null);
-  
+
 onMounted(() => {
   if (canvasRef.value) {
     if (data.thumbBGRA?.width && data.thumbBGRA?.height && data.thumbBGRA?.buffer) {
@@ -40,9 +40,9 @@ onMounted(() => {
   }
 });
 </script>
-  
+
 <style scoped lang="scss">
-@import "../../assets/variable.scss";
+@import "../../../assets/variable.scss";
 .screen-window-previewer {
   list-style: none;
   display: inline-block;
@@ -83,5 +83,3 @@ onMounted(() => {
   padding: 0 1.25rem;
 }
 </style>
-  
-  

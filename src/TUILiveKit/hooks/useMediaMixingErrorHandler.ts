@@ -12,8 +12,14 @@ const TRTCMediaMixingErrorMessage: { [key: string]: string; } = {
   [TRTCMediaMixingErrorCode.NotFoundSource.toString()]: t('Media source not found'),
   [TRTCMediaMixingErrorCode.ImageSourceLoadFailed.toString()]: t('Image source load failed'),
   [TRTCMediaMixingErrorCode.CameraNotAuthorized.toString()]: t('Camera not authorized'),
-  [TRTCMediaMixingErrorCode.CameraIsOccupied.toString()]: t('Camera is occupited'),
+  [TRTCMediaMixingErrorCode.CameraIsOccupied.toString()]: t('Camera is occupied'),
   [TRTCMediaMixingErrorCode.CameraDisconnected.toString()]: t('Camera is disconnected'),
+  [TRTCMediaMixingErrorCode.UnsupportedOnlineVideoProtocol.toString()]: t('Unsupported online video protocol'),
+  [TRTCMediaMixingErrorCode.UnsupportedLocalVideoFileFormat.toString()]: t('Unsupported local video file format'),
+  [TRTCMediaMixingErrorCode.OnlineVideoConnectFailed.toString()]: t('Online video connect failed'),
+  [TRTCMediaMixingErrorCode.OnlineVideoConnectionLost.toString()]: t('Online video connection lost'),
+  [TRTCMediaMixingErrorCode.NoAvailableHevcDecoder.toString()]: t('No available hevc decoder'),
+  [TRTCMediaMixingErrorCode.VideoFileNotExist.toString()]: t('Video file not exist'),
 };
 
 export function onMediaMixingError(error: TUIMediaMixingError) {
