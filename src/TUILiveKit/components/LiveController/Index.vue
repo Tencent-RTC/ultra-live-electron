@@ -7,16 +7,16 @@
       </div>
       <div class="tui-streaming-toolbar-middle">
         <tui-badge
-          :hidden="applyToAnchorListNumber === 0 || mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape"
+          :hidden="applyToAnchorListNumber === 0 || isCoAudienceDisabled"
           :value="applyToAnchorListNumber"
           :max="8"
           type="danger">
-          <tui-button class="tui-toolbar-button"  @click="handleConnection" :disabled="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape">
+          <tui-button class="tui-toolbar-button"  @click="handleConnection" :disabled="isCoAudienceDisabled">
             <svg-icon :icon=VoiceChatIcon :size="1.5"></svg-icon>
           </tui-button>
         </tui-badge>
-        <tui-button class="tui-toolbar-button" v-for="(item, index) in streamingTooBarList" :key="index" @click="item.fun()">
-          <svg-icon :icon=item.icon :size="1.5"></svg-icon>
+        <tui-button class="tui-toolbar-button" @click="handleSetting">
+          <svg-icon :icon=SetIcon :size="1.5"></svg-icon>
         </tui-button>
         <tui-button class="tui-toolbar-button" @click="toggleVideoResolutionMode" :disabled="isLiving">
           <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
@@ -34,7 +34,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, computed, defineEmits, nextTick, shallowRef, watch, onUnmounted } from 'vue';
+import { ref, Ref, computed, defineEmits, nextTick, watch, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCVideoResolutionMode } from 'trtc-electron-sdk';
 import AudioControl from '../../common/AudioControl.vue';
@@ -47,13 +47,14 @@ import VerticalScreenIcon from '../../common/icons/VerticalScreenIcon.vue';
 import HorizontalScreenIcon from '../../common/icons/HorizontalScreenIcon.vue';
 import SvgIcon from '../../common/base/SvgIcon.vue';
 import TuiButton from '../../common/base/Button.vue';
+import TuiBadge from '../../common/base/Badge.vue';
 import { useI18n } from '../../locales';
 import { useBasicStore } from '../../store/main/basic';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
 import { useRoomStore } from '../../store/main/room';
 import { useAudioEffectStore } from '../../store/main/audioEffect';
 import { messageChannels } from '../../communication';
-import TuiBadge from '../../common/base/Badge.vue';
+import { TUIConnectionMode } from '../../types';
 import logger from '../../utils/logger';
 
 const { t } = useI18n();
@@ -69,36 +70,19 @@ const { mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
 const roomStore = useRoomStore();
 const { isLiving, userId } = storeToRefs(basicStore);
 
-const { applyToAnchorList, anchorList } = storeToRefs(roomStore);
+const { applyToAnchorList, anchorList, connectionMode } = storeToRefs(roomStore);
 
-const applyToAnchorListNumber = computed(()=> applyToAnchorList.value.length );
-const streamingTooBarList = shallowRef([
-  // {
-  //   icon: BeautyIcon,
-  //   text: t('Beauty'),
-  //   fun: handleBeauty
-  // },
-  // {
-  //   icon: PKIcon,
-  //   text: t('PK'),
-  //   fun: handlePK
-  // },
-  {
-    icon: SetIcon,
-    text: t('Setting'),
-    fun: handleSetting
-  }
-]);
-
-const liveStatus = computed (()=>
-  isLiving.value ? t('End Live'): t('Go Live')
-);
-
-const liveStatusIcon = computed (()=>
-  isLiving.value ? EndLivingIcon: StartLivingIcon
-);
+const applyToAnchorListNumber = computed(()=> applyToAnchorList.value.length);
+const liveStatus = computed (()=> isLiving.value ? t('End Live'): t('Go Live'));
+const liveStatusIcon = computed (()=> isLiving.value ? EndLivingIcon: StartLivingIcon);
 
 const isLiveSwitchDisabled: Ref<boolean> = ref(false);
+
+const isCoAudienceDisabled = computed(() => {
+  return !isLiving.value
+  || mixingVideoEncodeParam.value.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape
+  || connectionMode.value === TUIConnectionMode.CoAnchor;
+});
 
 function onStopLivingResult(event:any, result: Record<string, any>) {
   logger.log(`${logPrefix}stop-living-result:`, result);
@@ -112,14 +96,14 @@ window.ipcRenderer.on('stop-living-result', onStopLivingResult);
 
 function handleConnection() {
   messageChannels.messagePortToChild?.postMessage({
-    key: 'set-apply-and-anchor-list',
+    key: 'set-apply-and-seated-list',
     data: JSON.stringify({
       applyList: applyToAnchorList.value,
       anchorList: anchorList.value
     })
   });
   window.ipcRenderer.send('open-child', {
-    'command': 'connection',
+    'command': 'audience-connection',
     data: {
       layoutMode: roomStore.streamLayout.layoutMode,
       isAutoAdjusting: roomStore.streamLayout.isAutoAdjusting,
@@ -271,7 +255,8 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: center;
     width: 2rem;
-    margin: 0 1rem;
+    margin: 0 0.5rem;
+    padding: 0;
     border: none;
     background: none;
   }

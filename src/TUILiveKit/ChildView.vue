@@ -20,10 +20,14 @@
       v-if="currentViewName === 'video-file'"
       :data="dataInEdit"
     ></live-video-file>
-    <live-connection
-      v-if="currentViewName === 'connection'"
+    <live-audience-connection
+      v-if="currentViewName === 'audience-connection'"
       :data="dataInEdit"
-    ></live-connection>
+    ></live-audience-connection>
+    <live-anchor-connection
+      v-if="currentViewName === 'anchor-connection'"
+      :data="dataInEdit"
+    ></live-anchor-connection>
     <live-setting v-if="currentViewName === 'setting'"></live-setting>
     <live-add-bgm v-if="currentViewName === 'add-bgm'"></live-add-bgm>
     <live-reverb-voice v-if="currentViewName === 'reverb-voice'"></live-reverb-voice>
@@ -38,7 +42,8 @@ import trtcCloud from './utils/trtcCloud';
 import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType, TRTCDeviceType, TRTCDeviceState } from 'trtc-electron-sdk';
 import LiveCameraSource from './components/LiveChildView/LiveSource/LiveCameraSource.vue';
 import LiveScreenShareSource from './components/LiveChildView/LiveSource/LiveScreenShareSource.vue';
-import LiveConnection from './components/LiveChildView/LiveConnection.vue';
+import LiveAudienceConnection from './components/LiveChildView/LiveAudienceConnection.vue';
+import LiveAnchorConnection from './components/LiveChildView/LiveMoreTool/LiveCoHost/Index.vue';
 import LiveSetting from './components/LiveChildView/LiveSetting.vue';
 import LiveAddBgm from './components/LiveChildView/LiveMoreTool/LiveAddBgm.vue';
 import LiveReverbVoice from './components/LiveChildView/LiveMoreTool/LiveReverbVoice.vue';
@@ -77,14 +82,26 @@ function initMainWindowMessageListener() {
       logger.log(`${logPrefix}message from main window:`, event.data, event);
       const { key, data } = event.data;
       switch (key) {
+      case 'set-room-info':
+        currentSourceStore.setRoomInfo(JSON.parse(data));
+        break;
       case 'set-apply-list':
-        currentSourceStore.setApplyToAnchorList(JSON.parse(data));
+        currentSourceStore.setApplyOnSeatList(JSON.parse(data));
         break;
-      case 'set-anchor-list':
-        currentSourceStore.setAnchorList(JSON.parse(data));
+      case 'set-apply-and-seated-list':
+        currentSourceStore.setApplyAndSeatedList(JSON.parse(data));
         break;
-      case 'set-apply-and-anchor-list':
-        currentSourceStore.setApplyAndAnchorList(JSON.parse(data));
+      case 'set-live-list':
+        currentSourceStore.setLiveList(JSON.parse(data));
+        break;
+      case 'append-live-list':
+        currentSourceStore.appendLiveList(JSON.parse(data));
+        break;
+      case 'set-anchor-connection':
+        currentSourceStore.setAnchorConnection(JSON.parse(data));
+        break;
+      case 'set-anchor-battle':
+        currentSourceStore.setAnchorBattle(JSON.parse(data));
         break;
       case 'reset':
         currentSourceStore.reset();
@@ -279,9 +296,15 @@ const commandHandlers = new Map([
     },
   ],
   [
-    'connection',
+    'audience-connection',
     () => {
-      currentViewName.value = 'connection';
+      currentViewName.value = 'audience-connection';
+    },
+  ],
+  [
+    'anchor-connection',
+    () => {
+      currentViewName.value = 'anchor-connection';
     },
   ],
   [
@@ -355,5 +378,6 @@ window.ipcRenderer.on('show', (event: any, args: Record<string, any>) => {
 .tui-live-kit-child {
   height: 100%;
   color: $font-sub-window-color;
+  font-size: 0.75rem;
 }
 </style>

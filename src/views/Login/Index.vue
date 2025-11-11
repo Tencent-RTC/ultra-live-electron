@@ -209,7 +209,7 @@ async function doPasswordLogin() {
       logger.warn('Login failed:', response);
       TUIMessageBox({
         title: t('Note'),
-        message: t('Login failed, please try again.'),
+        message: t('Login failed.'),
         confirmButtonText: t('Sure'),
       });
     }
@@ -217,7 +217,7 @@ async function doPasswordLogin() {
     logger.warn('Login failed:', error);
     TUIMessageBox({
       title: t('Note'),
-      message: t('Login failed, please try again.'),
+      message: t('Login failed.'),
       confirmButtonText: t('Sure'),
     });
   }

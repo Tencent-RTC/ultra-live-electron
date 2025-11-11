@@ -17,7 +17,7 @@ import { computed, StyleValue, withDefaults, defineProps, defineEmits } from 'vu
 
 interface Props {
   size?: 'large' | 'default';
-  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'text';
+  type?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'text';
   customStyle?: StyleValue;
   loading?: boolean;
   disabled?: boolean;
@@ -43,7 +43,7 @@ function handleClick(event: MouseEvent) {
 
 const buttonClassList = computed(() => [
   'tui-button',
-  `tui-button-${props.type}`,
+  `tui-button-${props.type || 'default'}`,
   `tui-button-${props.size}`,
   { 'tui-button-round': props.round },
   { 'tui-button-loading': props.loading },
@@ -85,7 +85,9 @@ const buttonClassList = computed(() => [
   font-weight:500;
   line-height:1.375rem;
   &:hover {
-    background-color: var(--shadow-color);
+    background: $color-button-primary-hover-background;
+    border: 1px solid $color-button-primary-hover-border;
+    outline: none;
   }
 }
 

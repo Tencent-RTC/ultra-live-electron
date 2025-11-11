@@ -1,45 +1,37 @@
-<template> 
+<template>
     <div class="tui-setting">
-        <div class="tui-setting-title tui-window-header" >
-            <span>{{ t('Setting') }}</span>
-            <button class="tui-icon" @click="handleCloseSetting">
-              <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
-            </button>
-        </div>
-        <div class="setting-body">
-          <div class="setting-tabs">
-            <div
-              v-for="(item, index) in settingTabsTitleList"
-              :key="index"
-              :class="['tabs-title', `${activeSettingTab === item.value ? 'active' : ''}`]"
-              @click="handleUpdateActiveTab(item.value)"
-            >
-              {{ item.label }}
-            </div>
-          </div>
-          <div class="divide-line"></div>
-          <div class="setting-content">
-            <audio-setting-tab
-              v-if="activeSettingTab === 'audio'"
-              :mode="SettingMode.Detail"
-            ></audio-setting-tab>
+      <LiveChildHeader :title="t('Setting')"></LiveChildHeader>
+      <div class="setting-body">
+        <div class="setting-tabs">
+          <div
+            v-for="(item, index) in settingTabsTitleList"
+            :key="index"
+            :class="['tabs-title', `${activeSettingTab === item.value ? 'active' : ''}`]"
+            @click="handleUpdateActiveTab(item.value)"
+          >
+            {{ item.label }}
           </div>
         </div>
+        <div class="divide-line"></div>
+        <div class="setting-content">
+          <audio-setting-tab
+            v-if="activeSettingTab === 'audio'"
+            :mode="SettingMode.Detail"
+          ></audio-setting-tab>
+        </div>
+      </div>
     </div>
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
 import { computed } from 'vue';
 import { useI18n } from '../../locales';
-import SvgIcon from '../../common/base/SvgIcon.vue';
-import CloseIcon from '../../common/icons/CloseIcon.vue';
-import { useCurrentSourceStore } from '../../store/child/currentSource';
+import LiveChildHeader from './LiveChildHeader.vue';
 import AudioSettingTab from '../../common/AudioSettingTab.vue';
 import { SettingMode } from '../../constants/render';
 
 const { t } = useI18n();
 
-const currentSourceStore = useCurrentSourceStore();
 const settingTabsTitleList = computed(() => [
   { label: t('Audio settings'), value: 'audio' },
 ]);
@@ -48,14 +40,6 @@ const activeSettingTab = ref('audio');
 
 function handleUpdateActiveTab(tabTitle: string) {
   activeSettingTab.value = tabTitle;
-}
-
-const handleCloseSetting = () => {
-  window.ipcRenderer.send('close-child');
-  resetCurrentView();
-}
-const resetCurrentView = () => {
-  currentSourceStore.setCurrentViewName('');
 }
 </script>
 <style lang="scss" scoped>

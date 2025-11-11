@@ -1,11 +1,6 @@
 <template>
   <div class="tui-add-bgm-window">
-    <div class="tui-bgm-window-title tui-window-header">
-      <span>{{ t("AddBGM") }}</span>
-      <button class="tui-icon" @click="handleCloseSetting">
-        <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
-      </button>
-    </div>
+    <LiveChildHeader :title="t('AddBGM')"></LiveChildHeader>
     <div class="tui-bgm-window-content">
       <div class="tui-audio-control">
         <div class="tui-audio-control-left">
@@ -52,8 +47,8 @@ import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCDeviceType } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIMusicPlayMode } from '../../../types';
+import LiveChildHeader from '../LiveChildHeader.vue';
 import SvgIcon from '../../../common/base/SvgIcon.vue';
-import CloseIcon from '../../../common/icons/CloseIcon.vue';
 import SpeakerOffIcon from '../../../common/icons/SpeakerOffIcon.vue';
 import SpeakerOnIcon from '../../../common/icons/SpeakerOnIcon.vue';
 import MusicListIcon from '../../../common/icons/MusicListIcon.vue';
@@ -176,10 +171,6 @@ function onDeleteMusic (id: number){
   audioEffectStore.deleteMusic(id);
 }
 
-function handleCloseSetting(){
-  window.ipcRenderer.send('close-child');
-}
-
 function handleSingleLoopPlay(id: number){
   postMessage(PostMessageKey.singleLoopPlay,id);
 }
@@ -234,20 +225,7 @@ function postMessage(key: string, data: object | number | string | undefined){
 .tui-add-bgm-window {
   display: flex;
   flex-direction: column;
-  align-items: center;
   height: 100%;
-
-  .tui-bgm-window-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 1rem 1.5rem;
-
-    .close-icon {
-      cursor: pointer;
-    }
-  }
 
   .tui-bgm-window-content {
     display: flex;

@@ -4,7 +4,7 @@
       <div class="tui-stream-avatar" v-if="region.userCameraStatus !== TUIDeviceStatus.TUIDeviceStatusOpened">
         <img :src="region.userAvatar || defaultAvatarURL" width="3rem" height="3rem" />
       </div>
-      <div class="tui-menu-icon" ref="moreIconRef">
+      <div v-if="mode === TUIConnectionMode.CoAudience" class="tui-menu-icon" ref="moreIconRef">
         <MoreIcon @click="openMoreMenu" class="tui-more-icon"/>
       </div>
       <div class="tui-stream-state">
@@ -27,7 +27,7 @@
 import { ref, computed, defineProps, onMounted, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
 import { TUIDeviceStatus } from '@tencentcloud/tuiroom-engine-electron';
-import { TUIUserSeatStreamRegion } from '../../types';
+import { TUIConnectionMode, TUIUserSeatStreamRegion } from '../../types';
 import MicOffIcon from '../../common/icons/MicOffIcon.vue';
 import MoreIcon from '../../common/icons/MoreIcon.vue';
 import LiveMemberControl from '../LiveChildView/LiveMemberControl.vue';
@@ -36,6 +36,7 @@ import logger from '../../utils/logger';
 
 type Props = {
   region: TUIUserSeatStreamRegion;
+  mode: TUIConnectionMode;
 };
 
 const logPrefix = '[TUILiveKitStreamCover]';

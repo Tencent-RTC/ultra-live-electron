@@ -50,8 +50,14 @@ import trtcCloud from './utils/trtcCloud';
 import TUIRoomEngine, {
   TUIRoomEvents, TUIRoomType, TUIRoomInfo, TUIRequest, TUIRequestAction, TUISeatInfo, TUIUserInfo,
   TencentCloudChat,
+  TUILiveConnectionManagerEvents,
+  TUILiveConnectionUser,
+  TUILiveBattleManagerEvents,
+  TUIBattleInfo,
+  TUIBattleStoppedReason,
+  TUIBattleUser,
 } from '@tencentcloud/tuiroom-engine-electron';
-import { TUIMediaSourceViewModel } from './types';
+import { TUIConnectionMode, TUIMediaSourceViewModel } from './types';
 import LiveHeader from './components/LiveHeader/Index.vue';
 import LiveConfig from './components/LiveConfig/Index.vue';
 import LiveMoreTool from './components/LiveMoreTool/Index.vue';
@@ -75,7 +81,7 @@ import { useI18n } from './locales/index';
 import useMessageHook from './components/LiveMessage/useMessageHook';
 import useErrorHandler from './hooks/useRoomErrorHandler';
 import useMediaEventhander from './hooks/useMediaEventHandler';
-import { MEDIA_SOURCE_STORAGE_KEY } from './constants/tuiConstant';
+import { MEDIA_SOURCE_STORAGE_KEY, INVITATION_TIMEOUT } from './constants/tuiConstant';
 import logger from './utils/logger';
 
 
@@ -109,6 +115,7 @@ const chatStore = useChatStore();
 const mediaSourcesStore = useMediaSourcesStore();
 const audioEffectStore = useAudioEffectStore();
 const { userName, userId, avatarUrl } = storeToRefs(basicStore);
+const { connectionMode } = storeToRefs(roomStore);
 const { onError } = useErrorHandler();
 
 const mediaSourceInEdit: Ref<TUIMediaSourceViewModel | null> = ref(null);
@@ -315,7 +322,6 @@ const MAX_LOGIN_RETRY_COUNT = 10;
 let loginRetryCount = 0;
 // eslint-disable-next-line no-undef
 let loginRetryTimer: NodeJS.Timeout | null;
-let loginError:any;
 
 async function retryInit(options: RoomInitData) {
   logger.log(`${logPrefix}retryInit:`, options);
@@ -327,7 +333,7 @@ async function retryInit(options: RoomInitData) {
   if (loginRetryCount > MAX_LOGIN_RETRY_COUNT) {
     TUIMessageBox({
       title: t('Note'),
-      message: t('Login failed, please try again.'),
+      message: t('Login failed.'),
       confirmButtonText: t('Sure'),
     });
     onLogout();
@@ -345,7 +351,6 @@ async function retryInit(options: RoomInitData) {
     await TUIRoomEngine.login({ sdkAppId, userId, userSig, tim: chat });
   } catch (error) {
     logger.error(`${logPrefix}retryInit login() error:`, error);
-    loginError = error;
     loginRetryTimer = setTimeout(() => {
       retryInit(options);
     }, 200);
@@ -372,7 +377,14 @@ function onRemoteUserLeaveRoom (eventInfo: { userInfo: TUIUserInfo }) {
 function onRequestReceived (eventInfo: { request: TUIRequest }) {
   const { requestAction, requestId, userId, timestamp } = eventInfo.request;
   if (requestAction === TUIRequestAction.kRequestToTakeSeat) {
-    userId && roomStore.addApplyToAnchorUser({ userId, requestId, timestamp });
+    if (connectionMode.value === TUIConnectionMode.CoAnchor) {
+      roomEngine.instance?.responseRemoteRequest({
+        requestId,
+        agree: false,
+      });
+    } else {
+      userId && roomStore.addApplyToAnchorUser({ userId, requestId, timestamp });
+    }
   }
 }
 
@@ -398,34 +410,331 @@ function onSeatListChanged (eventInfo: {
   roomStore.updateOnSeatList(seatedList, leftList);
 }
 
+let countdownTimer: number | undefined = undefined;
+const countdownTime: Ref<number> = ref(INVITATION_TIMEOUT); // seconds
+const connectionRequestParams: { inviter: TUILiveConnectionUser | null; } = {
+  inviter: null
+};
+
+async function acceptConnectionRequest () {
+  if (connectionRequestParams.inviter) {
+    logger.log(`${logPrefix}acceptConnectionRequest accept:`, connectionRequestParams.inviter);
+    const { inviter } = connectionRequestParams;
+    const liveConnectionManager = roomEngine.instance?.getLiveConnectionManager();
+    if (liveConnectionManager) {
+      try {
+        roomStore.acceptConnectionRequest(inviter);
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = undefined;
+        }
+        countdownTime.value = INVITATION_TIMEOUT;
+        connectionRequestParams.inviter = null;
+      } catch (error) {
+        logger.error(`${logPrefix}acceptConnectionRequest accept failed:`, error);
+      }
+    } else {
+      logger.error(`${logPrefix}acceptConnectionRequest accept failed: no liveConnectionManager`);
+    }
+  } else {
+    logger.error(`${logPrefix}acceptConnectionRequest accept failed: no inviter`);
+  }
+}
+
+async function rejectConnectionRequest () {
+  if (connectionRequestParams.inviter) {
+    logger.log(`${logPrefix}rejectConnectionRequest reject:`, connectionRequestParams.inviter);
+    const { inviter } = connectionRequestParams;
+    const liveConnectionManager = roomEngine.instance?.getLiveConnectionManager();
+    if (liveConnectionManager) {
+      try {
+        roomStore.rejectConnectionRequest(inviter);
+      } catch (error) {
+        logger.error(`${logPrefix}rejectConnectionRequest reject failed:`, error);
+      }
+    } else {
+      logger.error(`${logPrefix}rejectConnectionRequest reject failed: no liveConnectionManager`);
+    }
+  } else {
+    logger.error(`${logPrefix}rejectConnectionRequest reject failed: no inviter`);
+  }
+
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = undefined;
+  }
+  countdownTime.value = INVITATION_TIMEOUT;
+  connectionRequestParams.inviter = null;
+}
+
+function onConnectionRequestReceived(eventInfo: {
+  inviter: TUILiveConnectionUser;
+  inviteeList: Array<TUILiveConnectionUser>;
+  extensionInfo: string;
+}) {
+  logger.log(`${logPrefix}onConnectionRequestReceived:`, eventInfo);
+  const { inviter, inviteeList, extensionInfo } = eventInfo;
+
+  connectionRequestParams.inviter = inviter;
+  if (connectionMode.value === TUIConnectionMode.CoAudience) {
+    const liveConnectionManager = roomEngine.instance?.getLiveConnectionManager();
+    if (liveConnectionManager) {
+      rejectConnectionRequest();
+    } else {
+      logger.error(`${logPrefix}onConnectionRequestReceived error: no liveConnectionManager`);
+    }
+    return;
+  } else {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = undefined;
+    }
+
+    TUIMessageBox({
+      message: t('is inviting you to connect', { userName: inviter.userName }),
+      confirmButtonText: t('Accept'),
+      cancelButtonText: `${t('Reject')}`,
+      callback: acceptConnectionRequest,
+      cancelCallback: rejectConnectionRequest,
+      timeout: INVITATION_TIMEOUT * 1000,
+    });
+    roomStore.onConnectionRequestReceived(inviter, inviteeList, extensionInfo);
+  }
+}
+
+function onConnectionUserListChanged(eventInfo: {
+  connectedList: Array<TUILiveConnectionUser>;
+  joinedList: Array<TUILiveConnectionUser>
+  leavedList: Array<TUILiveConnectionUser>
+}) {
+  logger.log(`${logPrefix}onConnectionUserListChanged:`, eventInfo);
+  const { connectedList, joinedList, leavedList } = eventInfo;
+  if (connectedList.find(user => user.roomId === basicStore.roomId)) {
+    const joinedUsers = joinedList.map(user => user.userName).join(',');
+    const leavedUsers = leavedList.map(user => user.userName).join(',');
+    let message = joinedList.length ? `${joinedUsers} ${t('joined connection')}.` : '';
+    message += leavedList.length ? `${leavedUsers} ${t('left connection')}.` : '';
+    TUIMessageBox({
+      message,
+      confirmButtonText: t('Sure'),
+      callback: () => Promise.resolve(),
+      timeout: 3000,
+    });
+  }
+  roomStore.onConnectionUserListChanged(connectedList, joinedList, leavedList);
+}
+
+function onConnectionRequestCancelled(eventInfo: { inviter: TUILiveConnectionUser; }) {
+  logger.log(`${logPrefix}onConnectionRequestCancelled:`, eventInfo);
+  const { inviter } = eventInfo;
+  TUIMessageBox({
+    message: t('canceled connection invitation', { userName: inviter.userName}),
+    confirmButtonText: t('Sure'),
+    callback: () => Promise.resolve(),
+    timeout: 3000,
+  });
+  roomStore.onConnectionRequestCancelled(inviter);
+}
+
+function onConnectionRequestAccept(eventInfo: { invitee: TUILiveConnectionUser; }) {
+  logger.log(`${logPrefix}onConnectionRequestAccept:`, eventInfo);
+  const { invitee } = eventInfo;
+  roomStore.onConnectionRequestAccept(invitee);
+}
+
+function onConnectionRequestReject(eventInfo: { invitee: TUILiveConnectionUser; }) {
+  logger.log(`${logPrefix}onConnectionRequestReject:`, eventInfo);
+  const { invitee } = eventInfo;
+  TUIMessageBox({
+    message: t('rejected connection invitation', { userName: invitee.userName }),
+    confirmButtonText: t('Sure'),
+    callback: () => Promise.resolve(),
+    timeout: 3000,
+  });
+  roomStore.onConnectionRequestReject(invitee);
+}
+
+function onConnectionRequestTimeout(eventInfo: { inviter: TUILiveConnectionUser; invitee: TUILiveConnectionUser; }) {
+  logger.log(`${logPrefix}onConnectionRequestTimeout:`, eventInfo);
+  const { inviter, invitee } = eventInfo;
+  if (inviter.userId === basicStore.userId) {
+    TUIMessageBox({
+      message: t('\'s connection invitation timeout', { userName: inviter.userName }),
+      confirmButtonText: t('Sure'),
+      callback: () => Promise.resolve(),
+      timeout: 3000,
+    });
+  }
+
+  roomStore.onConnectionRequestTimeout(inviter, invitee);
+}
+
+function onBattleStarted(options: { battleInfo: TUIBattleInfo}) {
+  logger.debug(`${logPrefix}onBattleStarted:`, options.battleInfo);
+  roomStore.onBattleStarted(options.battleInfo);
+}
+
+function onBattleEnded(options: { battleInfo: TUIBattleInfo; reason: TUIBattleStoppedReason; }) {
+  logger.debug(`${logPrefix}onBattleEnded:`, options.battleInfo, options.reason);
+  roomStore.onBattleEnded(options.battleInfo.battleId);
+}
+
+function onUserJoinBattle(options: { battleId: string; user: TUIBattleUser}) {
+  logger.debug(`${logPrefix}onUserJoinBattle:`, options.battleId, options.user);
+  roomStore.addBattleUser(options.battleId, options.user);
+}
+
+function onUserExitBattle(options: { battleId: string; user: TUIBattleUser}) {
+  logger.debug(`${logPrefix}onUserExitBattle:`, options.battleId, options.user);
+  roomStore.removeBattleUser(options.battleId, options.user);
+}
+
+function onBattleScoreChanged(options: {
+  battleId: string;
+  battleUserList: Array<TUIBattleUser>;
+}) {
+  logger.debug(`${logPrefix}onBattleScoreChanged:`, options.battleId, options.battleUserList);
+  roomStore.updateBattleScore(options.battleId, options.battleUserList);
+}
+
+function onBattleRequestReceived(options: {
+  battleInfo: TUIBattleInfo;
+  inviter: TUIBattleUser;
+  invitee: TUIBattleUser;
+}) {
+  logger.debug(`${logPrefix}onBattleRequestReceived:`, options.battleInfo, options.inviter, options.invitee);
+  roomStore.addBattleRequest(options.battleInfo, options.inviter, options.invitee);
+}
+
+function onBattleRequestCancelled(options: {
+  battleInfo: TUIBattleInfo;
+  inviter: TUIBattleUser;
+  invitee: TUIBattleUser;
+}) {
+  logger.debug(`${logPrefix}onBattleRequestCancelled:`, options.battleInfo, options.inviter, options.invitee);
+  roomStore.removeBattleRequest(options.battleInfo, options.inviter, options.invitee);
+}
+
+function onBattleRequestTimeout(options: {
+  battleInfo: TUIBattleInfo;
+  inviter: TUIBattleUser;
+  invitee: TUIBattleUser;
+}) {
+  logger.debug(`${logPrefix}onBattleRequestTimeout:`, options.battleInfo, options.inviter, options.invitee);
+  const { battleInfo, inviter, invitee } = options;
+  if (inviter.userId === basicStore.userId && inviter.roomId === basicStore.roomId) {
+    TUIMessageBox({
+      message: t('\'s battle invitation timeout', { userName: invitee.userName }),
+      confirmButtonText: t('Sure'),
+      callback: () => Promise.resolve(),
+      timeout: 3000,
+    });
+  }
+  roomStore.removeBattleRequest(battleInfo, inviter, invitee);
+}
+
+function onBattleRequestAccept(options: {
+  battleInfo: TUIBattleInfo;
+  inviter: TUIBattleUser;
+  invitee: TUIBattleUser;
+}) {
+  logger.debug(`${logPrefix}onBattleRequestAccept:`, options.battleInfo, options.inviter, options.invitee);
+  const { battleInfo, inviter, invitee } = options;
+  TUIMessageBox({
+    message: t('accepted battle invitation', { userName: invitee.userName }),
+    confirmButtonText: t('Sure'),
+    callback: () => Promise.resolve(),
+    timeout: 3000,
+  });
+  roomStore.addBattleRequest(battleInfo, inviter, invitee);
+}
+
+function onBattleRequestReject(options: {
+  battleInfo: TUIBattleInfo;
+  inviter: TUIBattleUser;
+  invitee: TUIBattleUser;
+}) {
+  logger.debug(`${logPrefix}onBattleRequestReject:`, options.battleInfo, options.inviter, options.invitee);
+  const { battleInfo, inviter, invitee } = options;
+  TUIMessageBox({
+    message: t('rejected battle invitation', { userName: invitee.userName }),
+    confirmButtonText: t('Sure'),
+    callback: () => Promise.resolve(),
+    timeout: 3000,
+  });
+  roomStore.removeBattleRequest(battleInfo, inviter, invitee);
+}
+
 TUIRoomEngine.once('ready', () => {
-  roomEngine.instance?.on(TUIRoomEvents.onError, onError);
-  roomEngine.instance?.on(
-    TUIRoomEvents.onRemoteUserEnterRoom,
-    onRemoteUserEnterRoom
-  );
-  roomEngine.instance?.on(
-    TUIRoomEvents.onRemoteUserLeaveRoom,
-    onRemoteUserLeaveRoom
-  );
-  roomEngine.instance?.on(TUIRoomEvents.onRequestReceived, onRequestReceived);
-  roomEngine.instance?.on(TUIRoomEvents.onRequestCancelled, onRequestCancelled);
-  roomEngine.instance?.on(TUIRoomEvents.onSeatListChanged, onSeatListChanged);
+  if (roomEngine.instance) {
+    roomEngine.instance.on(TUIRoomEvents.onError, onError);
+    roomEngine.instance.on(TUIRoomEvents.onRemoteUserEnterRoom, onRemoteUserEnterRoom);
+    roomEngine.instance.on(TUIRoomEvents.onRemoteUserLeaveRoom, onRemoteUserLeaveRoom);
+    roomEngine.instance.on(TUIRoomEvents.onRequestReceived, onRequestReceived);
+    roomEngine.instance.on(TUIRoomEvents.onRequestCancelled, onRequestCancelled);
+    roomEngine.instance.on(TUIRoomEvents.onSeatListChanged, onSeatListChanged);
+  } else {
+    logger.error(`${logPrefix}TUIRoomEngine ready but instance is null`);
+    return;
+  }
+
+  const liveConnectionManager = roomEngine.instance?.getLiveConnectionManager();
+  if (liveConnectionManager) {
+    liveConnectionManager.on(TUILiveConnectionManagerEvents.onConnectionRequestReceived, onConnectionRequestReceived);
+    liveConnectionManager.on(TUILiveConnectionManagerEvents.onConnectionUserListChanged, onConnectionUserListChanged);
+    liveConnectionManager.on(TUILiveConnectionManagerEvents.onConnectionRequestCancelled, onConnectionRequestCancelled);
+    liveConnectionManager.on(TUILiveConnectionManagerEvents.onConnectionRequestAccept, onConnectionRequestAccept);
+    liveConnectionManager.on(TUILiveConnectionManagerEvents.onConnectionRequestReject, onConnectionRequestReject);
+    liveConnectionManager.on(TUILiveConnectionManagerEvents.onConnectionRequestTimeout, onConnectionRequestTimeout);
+  } else {
+    logger.warn(`${logPrefix}getLiveConnectionManager failed`);
+  }
+
+  const liveBattleManager = roomEngine.instance?.getLiveBattleManager();
+  if (liveBattleManager) {
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleStarted, onBattleStarted);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleEnded, onBattleEnded);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onUserJoinBattle, onUserJoinBattle);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onUserExitBattle, onUserExitBattle);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleScoreChanged, onBattleScoreChanged);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleRequestReceived, onBattleRequestReceived);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleRequestCancelled, onBattleRequestCancelled);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleRequestTimeout, onBattleRequestTimeout);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleRequestAccept, onBattleRequestAccept);
+    liveBattleManager.on(TUILiveBattleManagerEvents.onBattleRequestReject, onBattleRequestReject);
+  } else {
+    logger.warn(`${logPrefix}getLiveBattleManager failed`);
+  }
+
 });
 
 onUnmounted(() => {
   roomEngine.instance?.off(TUIRoomEvents.onError, onError);
-  roomEngine.instance?.off(
-    TUIRoomEvents.onRemoteUserEnterRoom,
-    onRemoteUserEnterRoom
-  );
-  roomEngine.instance?.off(
-    TUIRoomEvents.onRemoteUserLeaveRoom,
-    onRemoteUserLeaveRoom
-  );
+  roomEngine.instance?.off(TUIRoomEvents.onRemoteUserEnterRoom, onRemoteUserEnterRoom);
+  roomEngine.instance?.off(TUIRoomEvents.onRemoteUserLeaveRoom, onRemoteUserLeaveRoom);
   roomEngine.instance?.off(TUIRoomEvents.onRequestReceived, onRequestReceived);
   roomEngine.instance?.off(TUIRoomEvents.onRequestCancelled, onRequestCancelled);
   roomEngine.instance?.off(TUIRoomEvents.onSeatListChanged, onSeatListChanged);
+
+  const liveConnectionManager = roomEngine.instance?.getLiveConnectionManager();
+  liveConnectionManager?.off(TUILiveConnectionManagerEvents.onConnectionRequestReceived, onConnectionRequestReceived);
+  liveConnectionManager?.off(TUILiveConnectionManagerEvents.onConnectionUserListChanged, onConnectionUserListChanged);
+  liveConnectionManager?.off(TUILiveConnectionManagerEvents.onConnectionRequestCancelled, onConnectionRequestCancelled);
+  liveConnectionManager?.off(TUILiveConnectionManagerEvents.onConnectionRequestAccept, onConnectionRequestAccept);
+  liveConnectionManager?.off(TUILiveConnectionManagerEvents.onConnectionRequestReject, onConnectionRequestReject);
+  liveConnectionManager?.off(TUILiveConnectionManagerEvents.onConnectionRequestTimeout, onConnectionRequestTimeout);
+
+  const liveBattleManager = roomEngine.instance?.getLiveBattleManager();
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleStarted, onBattleStarted);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleEnded, onBattleEnded);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onUserJoinBattle, onUserJoinBattle);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onUserExitBattle, onUserExitBattle);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleScoreChanged, onBattleScoreChanged);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleRequestReceived, onBattleRequestReceived);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleRequestCancelled, onBattleRequestCancelled);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleRequestTimeout, onBattleRequestTimeout);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleRequestAccept, onBattleRequestAccept);
+  liveBattleManager?.off(TUILiveBattleManagerEvents.onBattleRequestReject, onBattleRequestReject);
 });
 // ***************** Room Engine event listener end *****************
 

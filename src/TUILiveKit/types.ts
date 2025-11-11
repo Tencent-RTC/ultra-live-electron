@@ -83,3 +83,21 @@ export enum TUISeatLayoutTemplate {
   PortraitFixed_1v6 = 801,
   PortraitFixed_6v6 = 802,
 }
+
+export enum TUIConnectionState {
+  Disconnected = 0,
+  Connecting = 1,
+  Connected = 2,
+}
+
+export enum TUIBattleState {
+  Disconnected = 0,
+  Connecting = 1,
+  Connected = 2,
+}
+
+export enum TUIConnectionMode {
+  None = 0,
+  CoAudience = 1,
+  CoAnchor = 2,
+}

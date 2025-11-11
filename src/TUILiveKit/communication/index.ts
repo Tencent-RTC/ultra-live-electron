@@ -334,7 +334,7 @@ export async function updateMediaSource(data: Record<string, any>) {
 }
 
 async function handleUserApply(data: Record<string, any>) {
-  const {agree} = data;
+  const { agree } = data;
   const user = JSON.parse(data.user);
   if (user.userId) {
     roomStore.handleApplyToAnchorUser(user.userId, agree);
@@ -510,6 +510,33 @@ async function handleChildWindowMessage(event: MessageEvent<any>) {
     break;
   case 'setStreamLayoutAutoAdjust':
     roomStore.setStreamLayoutAutoAdjust(data.isAutoAdjusting);
+    break;
+  case 'fetchLiveList':
+    roomStore.fetchLiveList();
+    break;
+  case 'fetchMoreLiveList':
+    roomStore.fetchMoreLiveList();
+    break;
+  case 'requestAnchorConnection':
+    roomStore.requestAnchorConnection(data);
+    break;
+  case 'cancelAnchorConnection':
+    roomStore.cancelAnchorConnection(data);
+    break;
+  case 'stopAnchorConnection':
+    roomStore.stopAnchorConnection();
+    break;
+  case 'startAnchorBattle':
+    roomStore.startAnchorBattle();
+    break;
+  case 'requestAnchorBattle':
+    roomStore.requestAnchorBattle(data);
+    break;
+  case 'cancelAnchorBattle':
+    roomStore.cancelAnchorBattle(data);
+    break;
+  case 'stopAnchorBattle':
+    roomStore.stopAnchorBattle();
     break;
   default:
     logger.warn(

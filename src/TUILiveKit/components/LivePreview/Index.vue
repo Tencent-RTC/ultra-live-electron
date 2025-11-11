@@ -113,7 +113,7 @@ const startMediaMixingPreview = async () => {
   if (!isNativeWindowCreated.value) {
     if (!!window.nativeWindowHandle && nativeWindowsRef.value && isServerStarted.value) {
       try {
-        mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
+        await mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
         isNativeWindowCreated.value = true;
         const { mixingVideoEncodeParam, backgroundColor, selectedBorderColor } = mediaSourcesStore;
         await mediaMixingManager.startPublish();
@@ -171,7 +171,7 @@ const onMediaMixingServerLost = async () => {
     try {
       await mediaMixingService?.startMediaMixingServer();
       isServerStarted.value = true;
-      mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
+      await mediaMixingManager.bindPreviewArea(window.nativeWindowHandle, nativeWindowsRef.value);
       const { mixingVideoEncodeParam, backgroundColor, selectedBorderColor } = mediaSourcesStore;
       await mediaMixingManager.startPublish();
       await mediaMixingManager.updatePublishParams({

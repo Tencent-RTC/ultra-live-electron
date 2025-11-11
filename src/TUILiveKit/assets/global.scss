@@ -2,16 +2,18 @@
 
 * {
   box-sizing: border-box;
+}
 
-  &::-webkit-scrollbar {
-    width: 0.125rem;
-    height: 0.125rem;
-    background-color: var(--color-background-scrollbar);
-  }
+::-webkit-scrollbar {
+  width: 0.1875rem;
+  height: 0.1875rem;
+  background-color: var(--color-background-scrollbar);
+}
 
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--color-background-scrollbar-thumb);
-  }
+::-webkit-scrollbar-thumb {
+  width: 0.1875rem;
+  height: 0.1875rem;
+  background-color: var(--color-background-scrollbar-thumb);
 }
 
 html,
@@ -69,7 +71,6 @@ button {
   font-size: 0.875rem;
   background-color: var(--bg-color-dialog);
   color: var(--text-color-primary);
-  border-bottom: 1px solid var(--stroke-color-module);
   button {
     -webkit-app-region: no-drag;
     border: none;

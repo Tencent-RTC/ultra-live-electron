@@ -1,5 +1,5 @@
 import { onBeforeMount, onUnmounted } from 'vue';
-import { TUIErrorCode } from '@tencentcloud/tuiroom-engine-electron';
+import { TUIConnectionCode, TUIErrorCode } from '@tencentcloud/tuiroom-engine-electron';
 import TUIMessageBox from '../common/base/MessageBox';
 import { useI18n } from '../locales/index';
 import logger from '../utils/logger';
@@ -342,6 +342,36 @@ const RoomErrorInfo: { [key: number]: {
   },
 }
 
+const AnchorConnectionErrorInfo: { [key: number]: {
+  code: number;
+  messageI18n: string;
+}} = {
+  [TUIConnectionCode.TUIConnectionCodeUnknown]: {
+    code: TUIConnectionCode.TUIConnectionCodeUnknown,
+    messageI18n: t('Connection with room across unknown error'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeRoomNotExist]: {
+    code: TUIConnectionCode.TUIConnectionCodeRoomNotExist,
+    messageI18n: t('Live room does not exist'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeConnecting]: {
+    code: TUIConnectionCode.TUIConnectionCodeConnecting,
+    messageI18n: t('Live room is connecting'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeConnectingOtherRoom]: {
+    code: TUIConnectionCode.TUIConnectionCodeConnectingOtherRoom,
+    messageI18n: t('Live room is connecting with other room'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeFull]: {
+    code: TUIConnectionCode.TUIConnectionCodeFull,
+    messageI18n: t('Live rooms in connecting reaches maximum limitation'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeRetry]: {
+    code: TUIConnectionCode.TUIConnectionCodeRetry,
+    messageI18n: t('Connection with live room failed, please retry.'),
+  },
+};
+
 export function onError(error: any) {
   if (error.code !== null && error.code !== undefined) {
     const { code } = error;
@@ -363,6 +393,20 @@ export function onError(error: any) {
     }
   } else {
     logger.warn(`${logPrefix}onError:`, error);
+  }
+}
+
+export function onAnchorConnectionError(error: {code: number, message: string}) {
+  const { code, message } = error;
+  if (code !== TUIConnectionCode.TUIConnectionCodeSuccess) {
+    logger.warn(`${logPrefix}onAnchorConnectionError:`, error);
+    if (AnchorConnectionErrorInfo[code]) {
+      TUIMessageBox({
+        title: t('Note'),
+        message: `${message} ${AnchorConnectionErrorInfo[code].messageI18n}`,
+        confirmButtonText: t('Sure'),
+      });
+    }
   }
 }
 
