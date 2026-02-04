@@ -1,8 +1,7 @@
-import { TRTCMediaMixingManager, TRTCMediaMixingService, Rect, TRTCVideoRotation, TRTCMediaMixingEvent } from 'trtc-electron-sdk';
+import { TRTCMediaMixingManager, Rect, TRTCVideoRotation, TRTCMediaMixingEvent } from 'trtc-electron-sdk';
 import trtcCloud from './trtcCloud';
 import { onError } from '../hooks/useMediaMixingErrorHandler';
 
-export const mediaMixingService: TRTCMediaMixingService | null = trtcCloud.getMediaMixingService();
 const mediaMixingManager: TRTCMediaMixingManager | null = trtcCloud.getMediaMixingManager();
 
 mediaMixingManager?.on(TRTCMediaMixingEvent.onError, onError);

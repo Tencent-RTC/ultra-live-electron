@@ -57,12 +57,6 @@ export enum TUIMusicPlayMode {
   SequentialPlay = 'SequentialPlay'
 }
 
-export enum TUIStreamLayoutMode {
-  Float = 'Float',
-  Grid = 'Grid',
-  None = 'None',
-}
-
 export type TUIMediaMixingError = {
   code: number;
   message: string;
@@ -76,10 +70,47 @@ export type TUIUserSeatStreamRegion = TRTCUserStream & TUISeatRegion & {
 }
 
 export enum TUISeatLayoutTemplate {
+  None = 0,
   LandscapeDynamic_1v3 = 200,
   PortraitDynamic_Grid9 = 600,
   PortraitDynamic_1v6 = 601,
   PortraitFixed_Grid9 = 800,
   PortraitFixed_1v6 = 801,
   PortraitFixed_6v6 = 802,
+}
+
+export enum TUICoHostLayoutTemplate {
+  HostDynamicGrid = 600,
+  HostDynamic1v6 = 601,
+}
+
+
+export enum TUIConnectionState {
+  Disconnected = 0,
+  Connecting = 1,
+  Connected = 2,
+}
+
+export enum TUIBattleState {
+  Disconnected = 0,
+  Connecting = 1,
+  Connected = 2,
+}
+
+export enum TUIConnectionMode {
+  None = 0,
+  CoGuest = 1,
+  CoHost = 2,
+}
+
+export enum TUIButtonActionType {
+  Normal = 'normal',
+  Dangerous = 'dangerous',
+  MoreDangerous = 'more-dangerous',
+}
+
+export type TUIButtonAction = {
+  text: string;
+  value: string;
+  type: TUIButtonActionType;
 }

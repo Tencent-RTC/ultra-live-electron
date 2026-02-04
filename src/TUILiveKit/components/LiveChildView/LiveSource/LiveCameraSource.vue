@@ -1,20 +1,15 @@
 <template>
-    <div class="tui-camera-source">
-        <div class="tui-camera-title tui-window-header" >
-            <span>{{ t('Add Camera') }}</span>
-            <button class="tui-icon" @click="handleCloseSetting">
-              <svg-icon class="tui-secondary-icon" :icon="CloseIcon"></svg-icon>
-            </button>
-        </div>
-        <div class="tui-camera-middle" >
-            <video-setting-tab v-if="isPreviewing" :with-beauty="true" :data="props.data"></video-setting-tab>
-        </div>
-        <div class="tui-camera-footer" >
-            <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" @click="handleAddCamera">{{ t('Add Camera') }}</button>
-            <button v-else class="tui-button-confirm" @click="handleEditCamera">{{ t('Edit Camera') }}</button>
-            <button class="tui-button-cancel" @click="handleCloseSetting">{{ t('Cancel') }}</button>
-        </div>
+  <div class="tui-camera-source">
+    <LiveChildHeader :title="t('Add Camera')"></LiveChildHeader>
+    <div class="tui-camera-middle" >
+      <video-setting-tab v-if="isPreviewing" :with-beauty="true" :data="props.data"></video-setting-tab>
     </div>
+    <div class="tui-camera-footer" >
+      <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" @click="handleAddCamera">{{ t('Add Camera') }}</button>
+      <button v-else class="tui-button-confirm" @click="handleEditCamera">{{ t('Edit Camera') }}</button>
+      <button class="tui-button-cancel" @click="handleCloseSetting">{{ t('Cancel') }}</button>
+    </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { ref, Ref, defineProps, computed, onMounted, onBeforeUnmount } from 'vue';
@@ -22,11 +17,11 @@ import { storeToRefs } from 'pinia';
 import { TRTCDeviceInfo, TRTCMediaSourceType, TRTCVideoMirrorType } from 'trtc-electron-sdk';
 import { useI18n } from '../../../locales';
 import { useCurrentSourceStore } from '../../../store/child/currentSource';
-import SvgIcon from '../../../common/base/SvgIcon.vue';
-import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import LiveChildHeader from '../LiveChildHeader.vue';
 import VideoSettingTab from '../../../common/VideoSettingTab.vue';
 import { TUIMediaSourceEditMode } from '../../../constants/tuiConstant';
 import logger from '../../../utils/logger';
+
 
 interface TUIMediaSourceEditProps {
   data?: Record<string, any>;
@@ -121,7 +116,7 @@ const handleEditCamera = () => {
 const resetCurrentView = () => {
   isPreviewing.value = false;
   currentSourceStore.setCurrentViewName('');
-  currentSourceStore.reset();
+  currentSourceStore.resetCurrentCamera();
 }
 
 const onShow = () => {
@@ -151,14 +146,6 @@ onBeforeUnmount(() => {
     height: 100%;
     overflow-y: auto;
     color: var(--text-color-primary);
-}
-.tui-camera-title{
-    font-weight: 500;
-    color: var(--text-color-primary);
-    padding: 0 1.5rem 0 1.375rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 }
 .tui-camera-middle{
     padding: 0 1.5rem;

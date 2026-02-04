@@ -1,6 +1,8 @@
 import { TRTCAudioMusicParam } from 'trtc-electron-sdk';
 import { TUIMusicPlayMode } from '../types';
+import { TUIBattleInfo, TUIBattleUser } from '@tencentcloud/tuiroom-engine-electron';
 
+type OverrideProps<T, R> = Omit<T, keyof R> & R;
 
 export type VoiceEffectState = {
   selectId : number;
@@ -41,3 +43,17 @@ export const isAudioEffectData = (audioEffect: AudioEffect):boolean => {
     typeof audioEffect.voiceReverb === 'object'
   )
 };
+
+export enum BattleStatus {
+  None = 0,
+  Preparing = 1,
+  Started = 2,
+  Ended = 3
+}
+
+export type TUIBattleInfoEx = OverrideProps<TUIBattleInfo, {
+  fromUser: TUIBattleUser | null; // need override
+  status: BattleStatus;
+  isBattleWithoutConnection: boolean;
+  isSelfExited: boolean;
+}>;

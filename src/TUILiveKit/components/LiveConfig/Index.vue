@@ -8,7 +8,7 @@
       <span class="tui-config-notice">
         {{ t('Support diverse types of media sources')}}
       </span>
-      <span v-for="item in mediaSourceMenuList" :key="item.text" class="btn-add-source" @click="item.fun()">
+      <span v-for="item in mediaSourceMenuList" :key="item.text" class="btn-add-source" :class="{'disabled':item.id === 'Add Camera' && cameraList.length === 0}" @click="item.fun()">
         <svg-icon :icon="item.icon" class="icon-container"></svg-icon>
         <i class=tui-menu-item-text>
           {{item.text}}
@@ -25,7 +25,7 @@
       </div>
       <div v-if="isShowAddMedia" class="tui-add-source-menu-popup">
         <template v-for="item in mediaSourceMenuList" :key="item.id">
-          <span v-if="item.id !== 'Add Phone' || !isPhoneSourceExisted" class="tui-add-source-menu-item" @click="item.fun()">
+          <span v-if="item.id !== 'Add Phone' || !isPhoneSourceExisted" class="tui-add-source-menu-item" :class="{'disabled':item.id === 'Add Camera' && cameraList.length === 0}" @click="item.fun()">
             <svg-icon :icon="item.icon" class="icon-container"></svg-icon>
             <i class=tui-menu-item-text>
               {{item.text}}
@@ -202,6 +202,7 @@ import TUIOption from '../../common/base/Option.vue'
 import MediaSourceMute from '../../common/icons/MediaSourceMute.vue';
 import MediaSourceUnmute from '../../common/icons/MediaSourceUnmute.vue';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
+import { useDeviceStore } from '../../store/main/device';
 import LiveImageSource from '../LiveSource/LiveImageSource.vue';
 import { generateUniqueId } from '../../utils/utils';
 import onMediaMixingError from '../../hooks/useMediaMixingErrorHandler';
@@ -213,7 +214,9 @@ const logPrefix = '[LiveConfig]';
 const emits = defineEmits(['edit-media-source']);
 
 const mediaSourcesStore = useMediaSourcesStore();
+const deviceStore = useDeviceStore();
 const { backgroundColor, selectedBorderColor, selectedMediaKey, mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
+const { cameraList } = storeToRefs(deviceStore);
 
 const { t } = useI18n();
 const { isSourceExisted, isPhoneSourceExisted, mediaList, isHevcEncodeEnabled } = storeToRefs(mediaSourcesStore);
@@ -601,6 +604,12 @@ const onChangeEncodeGear = (value: number) => {
     cursor: pointer;
     background: var(--bg-color-input);
     border-radius: 6.25rem;
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
   }
 }
 
@@ -649,6 +658,12 @@ const onChangeEncodeGear = (value: number) => {
 
     &:hover {
       background-color: var(--dropdown-color-hover);
+    }
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
     }
   }
 }

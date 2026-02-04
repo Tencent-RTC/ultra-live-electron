@@ -9,6 +9,8 @@ interface BasicState {
   userSig: string;
   userName: string;
   avatarUrl: string;
+  isUserSigExpired: boolean;
+  phone: string;
   useStringRoomId: boolean;
   roomId: string;
   isLiving: boolean;
@@ -23,6 +25,8 @@ export const useBasicStore = defineStore('basic', {
     userSig: '',
     userName: '',
     avatarUrl: '',
+    isUserSigExpired: false,
+    phone: '',
     useStringRoomId: false,
     roomId: '',
     isLiving: false,
@@ -61,6 +65,7 @@ export const useBasicStore = defineStore('basic', {
     },
     setUserSig(userSig: string) {
       this.userSig = userSig;
+      this.isUserSigExpired = false;
     },
     setUserName(userName: string) {
       this.userName = userName;
@@ -76,16 +81,20 @@ export const useBasicStore = defineStore('basic', {
       if (!info) {
         return;
       }
-      const { sdkAppId, userId, userSig, userName, avatarUrl, roomId } = info;
+      const { sdkAppId, userId, userSig, userName, avatarUrl, roomId, phone } = info;
       sdkAppId && this.setSdkAppId(sdkAppId);
       userId && this.setUserId(userId);
       userSig && this.setUserSig(userSig);
       userName && this.setUserName(userName);
       avatarUrl && this.setAvatarUrl(avatarUrl);
       roomId && this.setRoomId(roomId);
+      phone && this.setPhone(phone);
     },
     setIsOpenMic(isOpen: boolean) {
       this.isOpenMic = isOpen;
+    },
+    setPhone(phone: string) {
+      this.phone = phone;
     },
     setIsLiving(flag: boolean) {
       this.isLiving = flag;
@@ -93,12 +102,17 @@ export const useBasicStore = defineStore('basic', {
     setStatistics(statistics: Record<string, any>) {
       this.statistics = statistics;
     },
+    setIsUserSigExpired(flag: boolean) {
+      this.isUserSigExpired = flag;
+    },
     reset() {
       this.sdkAppId = 0;
       this.userId = '';
       this.userSig = '';
       this.userName = '';
       this.avatarUrl = '';
+      this.isUserSigExpired = false;
+      this.phone = '';
       this.useStringRoomId = false;
       this.roomId = '0';
       this.isLiving = false;

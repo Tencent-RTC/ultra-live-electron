@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
+import { TUIGiftInfo, TUIUserInfo } from '@tencentcloud/tuiroom-engine-electron';
 
-interface MessageItem {
+type MessageItem = {
   ID: string;
   type: string;
   payload: {
@@ -12,33 +13,35 @@ interface MessageItem {
   sequence: number;
 }
 
-interface GiftItem {
-  ID: string;
-  type: string;
-  gift: {
-    giftId: string;
-    imageUrl: string;
-    animationUrl: string;
-    price: number
-    giftName: string;
-    type: number;
-    giftCount: number;
+type GiftItem = {
+  id: string;
+  liveId: string;
+  gift: TUIGiftInfo;
+  sender: {
+    userId: string;
+    userName: string;
+    nameCard: string;
+    avatarUrl: string;
+    level: number;
   };
-  nick: string;
-  from: string;
-  flow: string;
-  sequence: number;
+  count: number;
 }
 
-interface ChatState {
+type ChatState = {
   messageList: MessageItem[];
   giftList: GiftItem[];
+  totalGiftCoins: number;
+  totalGiftsSent: number;
+  totalUniqueSenders: number;
 }
 
 export const useChatStore = defineStore('chat', {
   state: (): ChatState => ({
     messageList: [],
     giftList: [],
+    totalGiftCoins: 0,
+    totalGiftsSent: 0,
+    totalUniqueSenders: 0,
   }),
   getters: {
   },
@@ -52,18 +55,35 @@ export const useChatStore = defineStore('chat', {
         this.messageList.push(message);
       }
     },
-    updateGiftList(gift: GiftItem) {
-      const giftIndex = this.giftList.findIndex(item => item.ID === gift.ID);
-      if (giftIndex === -1) {
-        if (this.giftList.length >= 200) {
-          this.giftList.shift();
-        }
-        this.giftList.push(gift);
+    addReceivedGift(liveId: string, gift: TUIGiftInfo, sender: TUIUserInfo, count: number) {
+      if (this.giftList.length >= 200) {
+        this.giftList.shift();
       }
+      this.giftList.push({
+        id: `${gift.giftID}_${sender.userId}_${Date.now()}`,
+        liveId,
+        gift,
+        sender : {
+          userId: sender.userId,
+          userName: sender.userName,
+          nameCard: sender.nameCard,
+          avatarUrl: sender.avatarUrl,
+          level: sender.level,
+        },
+        count,
+      });
+    },
+    updateGiftStatistics(totalGiftCoins: number, totalGiftsSent: number, totalUniqueSenders: number) {
+      this.totalGiftCoins = totalGiftCoins;
+      this.totalGiftsSent = totalGiftsSent;
+      this.totalUniqueSenders = totalUniqueSenders;
     },
     reset() {
       this.messageList = [];
       this.giftList = [];
+      this.totalGiftCoins = 0;
+      this.totalGiftsSent = 0;
+      this.totalUniqueSenders = 0;
     },
   },
 });

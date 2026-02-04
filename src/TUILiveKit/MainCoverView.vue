@@ -1,7 +1,7 @@
 <template>
   <div class="tui-live-kit-main-cover dark-theme"  ref="mainCoverRef">
     <template v-for="region in userSeatStreamRegions" :key="region.userId">
-      <StreamCover v-if="region.userId !== roomOwner" :region="region" />
+      <StreamCover v-if="region.userId !== roomOwner" :region="region" :mode="connectionMode"/>
     </template>
   </div>
 </template>
@@ -9,8 +9,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue';
 import type { Ref } from 'vue';
-import { TUIUserSeatStreamRegion } from '../TUILiveKit/types';
 import StreamCover from './components/LiveCoverView/StreamCover.vue';
+import { TUIConnectionMode, TUIUserSeatStreamRegion } from './types';
 import { changeTheme } from './utils/utils';
 import logger from './utils/logger';
 
@@ -22,6 +22,7 @@ const roomId: Ref<string> = ref('');
 const roomOwner: Ref<string> = ref('');
 
 const userSeatStreamRegions: Ref<Array<TUIUserSeatStreamRegion>> = ref([]);
+const connectionMode: Ref<TUIConnectionMode> = ref(TUIConnectionMode.None);
 
 const onStreamLayout = (layout: { roomId: string; roomOwner: string; regions: Array<TUIUserSeatStreamRegion>; }) => {
   logger.log(`${logPrefix}onStreamLayout`, layout);
@@ -52,13 +53,16 @@ function onMessage(event: Record<string, any>) {
   logger.log(`${logPrefix}message from main window:`, event.data, event);
   const { key, data } = event.data;
   switch (key) {
-  case 'stream-layout':
-    onStreamLayout(data);
-    break;
   case 'change-theme':
     if (mainCoverRef.value) {
       changeTheme(mainCoverRef.value, data);
     }
+    break;
+  case 'stream-layout':
+    onStreamLayout(data);
+    break;
+  case 'set-connection-mode':
+    connectionMode.value = data;
     break;
   default:
     logger.warn(`${logPrefix}message unknown:`, key, data);

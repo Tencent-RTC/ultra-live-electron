@@ -7,7 +7,7 @@
 -->
 <template>
   <Select
-    v-model="currentDeviceId"
+    v-model="content"
     placeholder="placeholder"
     class="select"
     :disabled="disabled"
@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, Ref, defineProps } from 'vue';
+import { ref, Ref, defineProps, computed } from 'vue';
 import { TUIDeviceInfo } from '@tencentcloud/tuiroom-engine-electron';
 import Select from './base/Select.vue';
 import Option from './base/Option.vue';
@@ -53,6 +53,9 @@ const {
 
 const deviceList: Ref<TUIDeviceInfo[]> = ref(getDeviceList() as TUIDeviceInfo[]);
 const currentDeviceId = ref(getInitDeviceId());
+const content = computed(() => {
+  return disabled ? '' : currentDeviceId.value;
+});
 
 function getInitDeviceId() {
   if (deviceType === 'camera') {

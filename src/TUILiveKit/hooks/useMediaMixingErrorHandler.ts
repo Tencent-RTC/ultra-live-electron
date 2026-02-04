@@ -25,7 +25,7 @@ const TRTCMediaMixingErrorMessage: { [key: string]: string; } = {
 export function onMediaMixingError(error: TUIMediaMixingError) {
   const { code, message } = error;
 
-  if (TRTCMediaMixingErrorMessage[code.toString()]) {
+  if (code !== undefined && code !== null && TRTCMediaMixingErrorMessage[code.toString()]) {
     const errorMessage = TRTCMediaMixingErrorMessage[code.toString()];
     TUIMessageBox({
       title: t('Note'),
@@ -35,7 +35,7 @@ export function onMediaMixingError(error: TUIMediaMixingError) {
   } else {
     TUIMessageBox({
       title: t('Note'),
-      message: `Unknown TRTCMediaMixingManager error: ${code} ${message}`,
+      message: message,
       confirmButtonText: t('Sure'),
     });
   }

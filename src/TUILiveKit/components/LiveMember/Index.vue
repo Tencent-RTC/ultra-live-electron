@@ -6,7 +6,7 @@
     <div class="tui-member-list">
       <template v-if="first200RemoteUserList.length">
         <div v-for="item in first200RemoteUserList" :key="item.userId" class="tui-member-item">
-          <img class="tui-user-avatar" :src="item.avatarUrl || defaultAvatarURL" alt="">
+          <img class="tui-user-avatar" :src="item.avatarUrl || DEFAULT_USER_AVATAR_URL" alt="">
           <span class="tui-user-name">{{item.userName || item.userId}}</span>
           <span class="tui-user-level">{{ 0 }}</span>
         </div>
@@ -21,7 +21,7 @@
 import { storeToRefs } from 'pinia';
 import { useI18n } from '../../locales';
 import { useRoomStore } from '../../store/main/room';
-import { defaultAvatarURL } from '../../utils/common';
+import { DEFAULT_USER_AVATAR_URL } from '../../constants/tuiConstant';
 
 const { t } = useI18n();
 const roomStore = useRoomStore()

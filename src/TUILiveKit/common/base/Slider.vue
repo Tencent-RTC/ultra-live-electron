@@ -1,7 +1,7 @@
 <template>
-  <div class="tui-slider" ref="sliderRef" @mousedown="onMouseDown">
-    <div class="tui-slider-line" ref="liveRef"></div>
-    <div class="tui-slider-thumb" ref="thumbRef" :style="{ left: pointPosition + '%' }" @mousedown="$event.stopPropagation()">
+  <div class="tui-live-slider" ref="sliderRef" @mousedown="onMouseDown">
+    <div class="tui-live-slider-line" ref="liveRef"></div>
+    <div class="tui-live-slider-thumb" ref="thumbRef" :style="{ left: pointPosition + '%' }" @mousedown="$event.stopPropagation()">
       <svg-icon :icon="PointIcon" ></svg-icon>
     </div>
   </div>
@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 @import "../../assets/variable.scss";
 
-.tui-slider {
+.tui-live-slider {
   position: relative;
   width: 100%;
   height: 1rem;
@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.tui-slider-line {
+.tui-live-slider-line {
   position: absolute;
   height: 0.125rem;
   top: 50%;
@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
 
 
 
-.tui-slider-thumb {
+.tui-live-slider-thumb {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(1.5);

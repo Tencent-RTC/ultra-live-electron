@@ -2,17 +2,16 @@
   <div ref="streamCoverRef" class="tui-live-cover-stream" :style="positonStyle">
     <template v-if="region.userId">
       <div class="tui-stream-avatar" v-if="region.userCameraStatus !== TUIDeviceStatus.TUIDeviceStatusOpened">
-        <img :src="region.userAvatar || defaultAvatarURL" width="3rem" height="3rem" />
+        <img :src="region.userAvatar || DEFAULT_USER_AVATAR_URL" width="3rem" height="3rem" />
       </div>
-      <div class="tui-menu-icon" ref="moreIconRef">
+      <div v-if="mode === TUIConnectionMode.CoGuest" class="tui-menu-icon" ref="moreIconRef">
         <MoreIcon @click="openMoreMenu" class="tui-more-icon"/>
       </div>
       <div class="tui-stream-state">
         <span class="tui-mic-state">
           <MicOffIcon v-if="region.userMicrophoneStatus !== TUIDeviceStatus.TUIDeviceStatusOpened" />
         </span>
-        <span class="tui-stream-name" :title="props.region.userName || props.region.userId">{{ props.region.userName ||
-          props.region.userId }}</span>
+        <span class="tui-stream-name">{{ props.region.userName || props.region.userId }}</span>
       </div>
       <LiveMemberControl v-if="isMoreMenuVisible" class="tui-stream-cover-pop-menu" :user-id="region.userId"
           @on-close="closeMoreMenu" @on-kick-off-seat="onKickOffSeat" @on-kick-out-room="onKickOutRoom" />
@@ -27,15 +26,16 @@
 import { ref, computed, defineProps, onMounted, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
 import { TUIDeviceStatus } from '@tencentcloud/tuiroom-engine-electron';
-import { TUIUserSeatStreamRegion } from '../../types';
+import { TUIConnectionMode, TUIUserSeatStreamRegion } from '../../types';
 import MicOffIcon from '../../common/icons/MicOffIcon.vue';
 import MoreIcon from '../../common/icons/MoreIcon.vue';
 import LiveMemberControl from '../LiveChildView/LiveMemberControl.vue';
-import { defaultAvatarURL } from '../../utils/common';
+import { DEFAULT_USER_AVATAR_URL } from '../../constants/tuiConstant';
 import logger from '../../utils/logger';
 
 type Props = {
   region: TUIUserSeatStreamRegion;
+  mode: TUIConnectionMode;
 };
 
 const logPrefix = '[TUILiveKitStreamCover]';

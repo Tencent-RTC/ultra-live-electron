@@ -49,51 +49,6 @@ export default function useMessageHook() {
     if (message.type !== TencentCloudChat.TYPES.MSG_CUSTOM) {
       return;
     }
-
-    const giftData = message.payload.data;
-    if (!giftData) {
-      logger.error(`${logPrefix}handleCustomMessage, giftData not find`);
-      return;
-    }
-
-    const giftInfo = JSON.parse(giftData);
-    if (!giftInfo.businessID){
-      logger.error(`${logPrefix}handleCustomMessage, giftInfo.businessID not find`);
-      return;
-    }
-
-    if (giftInfo.businessID != 'TUIGift') {
-      logger.error(`${logPrefix}handleCustomMessage, giftInfo.businessID not is TUIGift, businessID is `, giftInfo.businessID);
-      return;
-    }
-
-    const giftId = giftInfo.data.gift.giftId;
-    const imageUrl = giftInfo.data.gift.imageUrl;
-    const animationUrl = giftInfo.data.gift.animationUrl;
-    const price = giftInfo.data.gift.price;
-    const giftName = giftInfo.data.gift.giftName;
-    const type = giftInfo.data.gift.type;
-    const giftCount = giftInfo.data.giftCount;
-
-    const { ID: ID, nick: userName, from: userId } = message;
-
-    chatStore.updateGiftList({
-      ID,
-      type: 'TIMCustomElem',
-      gift: {
-        giftId,
-        imageUrl,
-        animationUrl,
-        price,
-        giftName,
-        type,
-        giftCount,
-      },
-      nick: userName || userId,
-      from: userId,
-      flow: 'in',
-      sequence: Math.random(),
-    });
   }
 
   TUIRoomEngine.once('ready', () => {

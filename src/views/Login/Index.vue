@@ -2,14 +2,14 @@
   <div class="tui-login-page">
     <div class="tui-login-header">
       <div class="window-tool tui-window-header">
-        <button class="tui-icon" @click="onMinimize">
+        <button class="tui-live-icon" @click="onMinimize">
           <svg-icon :icon=MinimizeIcon></svg-icon>
         </button>
-        <button class="tui-icon" @click="onToggleMaximize">
+        <button class="tui-live-icon" @click="onToggleMaximize">
           <svg-icon v-if="!isMaximized" :icon=MaximizeIcon></svg-icon>
           <svg-icon v-else :icon=MiniIcon></svg-icon>
         </button>
-        <button class="tui-icon" @click="onClose">
+        <button class="tui-live-icon" @click="onClose">
           <svg-icon :icon=CloseIcon ></svg-icon>
         </button>
       </div>
@@ -131,7 +131,7 @@ function validateLoginForm(): boolean {
     if (loginState.sdkAppId.trim() === '') {
       TUIMessageBox({
         title: t('Note'),
-        message: t('Please enter your SDKAPPID number!'),
+        message: t('Please enter valid SDKAPPID number.'),
         confirmButtonText: t('Sure'),
       });
       result = false;
@@ -209,7 +209,7 @@ async function doPasswordLogin() {
       logger.warn('Login failed:', response);
       TUIMessageBox({
         title: t('Note'),
-        message: t('Login failed, please try again.'),
+        message: t('Login failed.'),
         confirmButtonText: t('Sure'),
       });
     }
@@ -217,7 +217,7 @@ async function doPasswordLogin() {
     logger.warn('Login failed:', error);
     TUIMessageBox({
       title: t('Note'),
-      message: t('Login failed, please try again.'),
+      message: t('Login failed.'),
       confirmButtonText: t('Sure'),
     });
   }
@@ -227,9 +227,9 @@ async function doUserSigLogin() {
   window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
     sdkAppId: Number(loginState.sdkAppId),
     userId: loginState.userId.trim(),
-    userName: loginState.userId.trim(),
+    userName: '',
     userSig: loginState.userSig.trim(),
-    avatarUrl: './avatar.png',
+    avatarUrl: '',
     loginType: loginType.value
   }));
   await gotoNextPage();

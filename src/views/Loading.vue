@@ -1,19 +1,17 @@
 <template>
-  <div class="tui-loading">
-    {{ t("Loading...") }}
+  <div class="tui-loading" v-tui-loading="{ visible: true, background: 'transparent' }">
   </div>
 </template>
 <script setup lang="ts">
 import { onMounted } from 'vue';
+import { vTuiLoading } from '@tencentcloud/uikit-base-component-vue3';
 import router from '../router';
 import { isMainWindow } from '../TUILiveKit/utils/envUtils';
-import { useI18n } from '../TUILiveKit/locales';
 import { getBasicInfo } from '../debug/basic-info-config.js';
 import { LoginType } from './Login/types';
 import logger from '../TUILiveKit/utils/logger';
 
 const logPrefix = '[Loading.vue]';
-const { t } = useI18n();
 
 const gotoLogin = () => {
   window.localStorage.removeItem('TUILiveKit-userInfo');
@@ -62,3 +60,13 @@ onMounted(() => {
   init(userInfo);
 });
 </script>
+
+<style lang="scss" scoped>
+.tui-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+}
+</style>
