@@ -217,6 +217,15 @@ const liveParams = computed(() => ({
   seatMode: props.seatMode || TUISeatMode.kApplyToTake,
 }));
 
+TUIRoomEngine.once('ready', () => {
+  TUIRoomEngine.callExperimentalAPI(JSON.stringify({
+    api: 'enableMultiPlaybackQuality',
+    params: {
+      enable: true,
+    },
+  }));
+});
+
 const showEndLiveDialog = async () => {
   if (loading.value) {
     return;

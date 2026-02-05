@@ -22,6 +22,7 @@
 import { ref, Ref, watch, defineEmits, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { Rect, TRTCMediaSource, TRTCMediaMixingEvent } from 'trtc-electron-sdk';
+import { TUIResolutionMode, TUIVideoStreamType } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIToast, TOAST_TYPE } from '@tencentcloud/uikit-base-component-vue3';
 import useRoomEngine from '../../utils/useRoomEngine';
 import { TUIMediaSourceViewModel } from '../../types';
@@ -36,6 +37,7 @@ import { TUIMediaSourcesState, useMediaSourcesStore } from '../../store/main/med
 import useContextMenu from './useContextMenu';
 import streamLayoutService from '../../service/StreamLayoutService';
 import { MEDIA_SOURCE_STORAGE_KEY } from '../../constants/tuiConstant';
+import { convertTRTCVideoResolutionToTUIVideoQuality } from '../../utils/typeTransfer';
 import logger from '../../utils/logger';
 
 const logPrefix = '[LivePreview]';
@@ -46,6 +48,7 @@ const { t } = useI18n();
 const basicStore = useBasicStore();
 const roomStore = useRoomStore();
 const mediaSourcesStore = useMediaSourcesStore();
+const roomEngine = useRoomEngine();
 
 const { roomName, roomId, phone, sdkAppId } = storeToRefs(basicStore);
 const { remoteUserList } = storeToRefs(roomStore);
@@ -161,6 +164,15 @@ const startMediaMixingPreview = async () => {
           videoEncoderParams: mixingVideoEncodeParam,
           canvasColor: parseInt(backgroundColor.substring(1), 16),
           selectedBorderColor: parseInt(selectedBorderColor.substring(1), 16)
+        });
+        await roomEngine.instance?.updateVideoQualityEx({
+          streamType: TUIVideoStreamType.kCameraStream,
+          encoderParams: {
+            videoResolution: convertTRTCVideoResolutionToTUIVideoQuality(mixingVideoEncodeParam.videoResolution),
+            fps: mixingVideoEncodeParam.videoFps,
+            bitrate: mixingVideoEncodeParam.videoBitrate,
+            resolutionMode: mixingVideoEncodeParam.resMode as unknown as TUIResolutionMode,
+          }
         });
         streamLayoutService.setContainer(nativeWindowsRef.value);
         recoverMediaSourceFromLocalStorage();

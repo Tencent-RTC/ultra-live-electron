@@ -1,14 +1,17 @@
 import { defineStore } from 'pinia';
 import { TRTCMediaSourceType, TRTCMediaSource, TRTCVideoEncParam, TRTCVideoResolutionMode, TRTCCameraCaptureMode, TRTCVideoRotation, TRTCVideoResolution, TRTCVideoMirrorType, TRTCVideoColorRange, TRTCVideoColorSpace, TRTCVideoEncodeComplexity } from 'trtc-electron-sdk';
 import trtcCloud from '../../utils/trtcCloud';
+import { TUIResolutionMode, TUIVideoStreamType } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIMediaMixingError, TUIMediaSourceViewModel } from '../../types';
 import { defaultCameraCaptureHeight, defaultCameraCaptureWidth } from '../../constants/tuiConstant';
 import useMediaMixingManager, { fitMediaSourceToResolution } from '../../utils/useMediaMixingManager';
 import useVideoEffectManager from '../../utils/useVideoEffectManager';
+import useRoomEngine from '../../utils/useRoomEngine';
 import streamLayoutService from '../../service/StreamLayoutService';
 import onMediaMixingError from '../../hooks/useMediaMixingErrorHandler';
 import { useI18n } from '../../locales/index';
 import { resolutionMap, MEDIA_SOURCE_STORAGE_KEY } from '../../constants/tuiConstant';
+import { convertTRTCVideoResolutionToTUIVideoQuality } from '../../utils/typeTransfer';
 import logger from '../../utils/logger';
 
 const logPrefix = '[MediaSourceStore]';
@@ -20,6 +23,7 @@ const defaultSelectedBorderColor = '#FFFF00';
 
 const mediaMixingManager = useMediaMixingManager();
 const videoEffectManager = useVideoEffectManager();
+const roomEngine = useRoomEngine();
 
 type TUISelectedMediaKey = {
   sourceType: TRTCMediaSourceType | null;
@@ -149,6 +153,15 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         videoEncoderParams: this.mixingVideoEncodeParam,
         canvasColor: parseInt(this.backgroundColor.substring(1), 16),
         selectedBorderColor: parseInt(this.selectedBorderColor.substring(1), 16),
+      });
+      roomEngine.instance?.updateVideoQualityEx({
+        streamType: TUIVideoStreamType.kCameraStream,
+        encoderParams: {
+          videoResolution: convertTRTCVideoResolutionToTUIVideoQuality(this.mixingVideoEncodeParam.videoResolution),
+          fps: this.mixingVideoEncodeParam.videoFps,
+          bitrate: this.mixingVideoEncodeParam.videoBitrate,
+          resolutionMode: this.mixingVideoEncodeParam.resMode as unknown as TUIResolutionMode,
+        }
       });
       this.saveState();
     },
@@ -788,6 +801,15 @@ export const useMediaSourcesStore = defineStore('mediaSources', {
         videoEncoderParams: this.mixingVideoEncodeParam,
         canvasColor: parseInt(this.backgroundColor.substring(1), 16),
         selectedBorderColor: parseInt(this.selectedBorderColor.substring(1), 16),
+      });
+      roomEngine.instance?.updateVideoQualityEx({
+        streamType: TUIVideoStreamType.kCameraStream,
+        encoderParams: {
+          videoResolution: convertTRTCVideoResolutionToTUIVideoQuality(this.mixingVideoEncodeParam.videoResolution),
+          fps: this.mixingVideoEncodeParam.videoFps,
+          bitrate: this.mixingVideoEncodeParam.videoBitrate,
+          resolutionMode: this.mixingVideoEncodeParam.resMode as unknown as TUIResolutionMode,
+        }
       });
 
       this.mediaList = storeState.mediaList;
