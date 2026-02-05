@@ -1,45 +1,40 @@
 <template>
-    <div class="tui-screen-share-source">
-        <div class="tui-screen-title tui-window-header" >
-            <span>{{ t('Add Capture') }}</span>
-            <button class="tui-icon"  @click="handleCloseWindow">
-              <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
-            </button>
+  <div class="tui-screen-share-source">
+    <LiveChildHeader :title="t('Add Capture')"></LiveChildHeader>
+    <div class="tui-screen-middle">
+        <div>
+            <span>{{ t('Screen') }}</span>
+            <ul class="screen-list">
+                <screen-window-previewer
+                  v-for="item in screenList"
+                  :key="item.sourceId"
+                  :data="item"
+                  :class="{ selected: item.sourceId === selected?.sourceId }"
+                  :title="item.sourceName"
+                  @click="onSelect(item)"
+                ></screen-window-previewer>
+            </ul>
         </div>
-        <div class="tui-screen-middle">
-            <div>
-                <span>{{ t('Screen') }}</span>
-                <ul class="screen-list">
-                    <screen-window-previewer
-                      v-for="item in screenList"
-                      :key="item.sourceId"
-                      :data="item"
-                      :class="{ selected: item.sourceId === selected?.sourceId }"
-                      :title="item.sourceName"
-                      @click="onSelect(item)"
-                    ></screen-window-previewer>
-                </ul>
-            </div>
-            <div>
-                <span>{{ t('Window') }}</span>
-                <ul class="window-list">
-                    <screen-window-previewer
-                      v-for="item in windowList"
-                      :key="item.sourceId"
-                      :data="item"
-                      :class="{ selected: item.sourceId === selected?.sourceId }"
-                      :title="item.sourceName"
-                      @click="onSelect(item)"
-                    ></screen-window-previewer>
-                </ul>
-            </div>
-        </div>
-        <div class="tui-screen-footer" >
-            <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" :disabled="!selected" @click="handleAddScreen">{{ t('Add Capture') }}</button>
-            <button v-else class="tui-button-confirm" :disabled="!selected || isSameScreen" @click="handleEditScreen">{{ t('Edit Capture') }}</button>
-            <button class="tui-button-cancel" @click="handleCloseWindow">{{ t('Cancel') }}</button>
+        <div>
+            <span>{{ t('Window') }}</span>
+            <ul class="window-list">
+                <screen-window-previewer
+                  v-for="item in windowList"
+                  :key="item.sourceId"
+                  :data="item"
+                  :class="{ selected: item.sourceId === selected?.sourceId }"
+                  :title="item.sourceName"
+                  @click="onSelect(item)"
+                ></screen-window-previewer>
+            </ul>
         </div>
     </div>
+    <div class="tui-screen-footer" >
+        <button v-if="mode === TUIMediaSourceEditMode.Add" class="tui-button-confirm" :disabled="!selected" @click="handleAddScreen">{{ t('Add Capture') }}</button>
+        <button v-else class="tui-button-confirm" :disabled="!selected || isSameScreen" @click="handleEditScreen">{{ t('Edit Capture') }}</button>
+        <button class="tui-button-cancel" @click="handleCloseWindow">{{ t('Cancel') }}</button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -47,8 +42,7 @@ import { Ref, ref, defineProps, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCMediaSourceType } from 'trtc-electron-sdk';
 import { useI18n } from '../../../locales';
-import SvgIcon from '../../../common/base/SvgIcon.vue';
-import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import LiveChildHeader from '../LiveChildHeader.vue';
 import { useCurrentSourceStore } from '../../../store/child/currentSource';
 import ScreenWindowPreviewer from './ScreenWindowPreviewer.vue';
 import { TUIMediaSourceEditMode } from '../../../constants/tuiConstant';
@@ -164,14 +158,6 @@ watch(props, (val) => {
 .tui-screen-share-source {
   height: 100%;
   color: $font-live-screen-share-source-color;
-}
-
-.tui-screen-title{
-    font-weight: $font-live-screen-share-title-weight;
-    padding: 0 1.5rem 0 1.375rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 }
 
 .tui-screen-middle{

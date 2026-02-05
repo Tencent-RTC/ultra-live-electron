@@ -15,6 +15,9 @@ module.exports = {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'vue/multi-word-component-names': 'off',
+    'vue/no-undef-components': ['error', {
+      'ignorePatterns': ['router-link', 'router-view']
+    }],
     'indent': ['error', 2],
     'quotes': ['error', 'single', { 'avoidEscape': true }]
   },

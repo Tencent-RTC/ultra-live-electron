@@ -2,7 +2,7 @@
   <div class="tui-online-video">
     <div class="tui-video-title tui-window-header">
       <span>{{ t('Add Online Video') }}</span>
-      <button class="tui-icon" @click="handleCloseSetting">
+      <button class="tui-live-icon" @click="handleCloseSetting">
         <svg-icon class="tui-secondary-icon" :icon="CloseIcon"></svg-icon>
       </button>
     </div>
@@ -19,15 +19,15 @@
         <span>{{ t('Video Setting') }}</span>
         <div class="tui-setting-item">
           <span class="setting-item-title"> {{ t('Volume') }}</span>
-          <div class="tui-slider">
-            <TuiSlider :value="volumeRate" @update:value="handleVolumeChange" />
+          <div class="tui-slider-online-video">
+            <TUISlider :value="volumeRate" @update:value="handleVolumeChange" />
           </div>
           <span>{{ videoVolume }}</span>
         </div>
         <div class="tui-setting-item">
           <span class="setting-item-title">{{ t('Network Cache') }}</span>
-          <div class="tui-slider">
-            <TuiSlider :value="networkCacheRate" @update:value="handleNetworkCacheChange" />
+          <div class="tui-slider-online-video">
+            <TUISlider :value="networkCacheRate" @update:value="handleNetworkCacheChange" />
           </div>
           <span>{{ networkCacheSize }} KB</span>
         </div>
@@ -49,7 +49,7 @@ import { TUIMediaSourceEditMode } from '../../../constants/tuiConstant';
 import { TUIMediaSourceViewModel } from '../../../types';
 import { useCurrentSourceStore } from '../../../store/child/currentSource';
 import CloseIcon from '../../../common/icons/CloseIcon.vue';
-import TuiSlider from '../../../common/base/Slider.vue';
+import TUISlider from '../../../common/base/Slider.vue';
 import SvgIcon from '../../../common/base/SvgIcon.vue';
 import TUIMessageBox from '../../../common/base/MessageBox';
 import logger from '../../../utils/logger';
@@ -131,8 +131,6 @@ function handleAddVideo() {
     type: TRTCMediaSourceType.kOnlineVideo,
     id: onlineVideoUrl.value,
     name: onlineVideoUrl.value,
-    width: 640,
-    height: 360,
     volume: videoVolume.value,
     networkCacheSize: networkCacheSize.value,
     predata: null
@@ -243,7 +241,7 @@ function isVideoFileSupport(url: string) {
     font-weight: 400;
   }
 
-  .tui-slider {
+  .tui-slider-online-video {
     display: flex;
     flex: 1;
   }

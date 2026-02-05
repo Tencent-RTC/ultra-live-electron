@@ -3,6 +3,7 @@ $color-black: #000000;
 
 $color-primary: #1890FF;
 $color-error: #F23C5B;
+$color-warning: #FAAD14;
 
 $color-divider-line:#383F4D;
 $color-icon-default:#ADB6CC;
@@ -23,20 +24,22 @@ $color-badge-background: #1C66E5;
 $color-badge-count-background: #F23C5B;
 
 $color-button-shadow: rgba(28, 102, 229, 0.20);
-$color-button-border: #1C66E5;
-$color-button-background: #1C66E5;
-$color-button-hover-background: #144FB6;
-$color-button-hover-border: #144FB6;
-$color-button-active-background: #5C9DFF;
-$color-button-active-border: #5C9DFF;
-$color-button-primary-border: #4791FF;
-$color-button-primary-background: rgba(0, 0, 0, 0);
+$color-button-border:  #4791FF;
+$color-button-background:  rgba(0, 0, 0, 0);
+$color-button-hover-background: #C2DEFF;
+$color-button-hover-border: #C2DEFF;
+$color-button-active-background: #78B0FF;
+$color-button-active-border: #78B0FF;
+$color-button-primary-border: #1C66E5;
+$color-button-primary-background: #1C66E5;
+$color-button-primary-hover-background: #144FB6;
+$color-button-primary-hover-border: #144FB6;
 $color-button-text-background: rgba(0, 0, 0, 0);
 $color-button-text-hover-background: rgba(0, 0, 0, 0);
 $color-button-text-border: rgba(0, 0, 0, 0);
 $color-button-text-hover-border: rgba(0, 0, 0, 0);
-$font-button-color: #FFFFFF;
-$font-button-primary-color: #4791FF;
+$font-button-color: #4791FF;
+$font-button-primary-color: #FFFFFF;
 $font-button-text-color: #4F586B;
 $font-button-text-hover-color: #3A3C42;
 $font-button-text-active-color: #54565C;
@@ -159,7 +162,7 @@ $color-live-header-user-control-container-before-border-other: rgba(0, 0, 0, 0);
 $color-live-header-user-control-container-after-background: rgba(0, 0, 0, 0);
 $color-live-header-user-control-container-hover-background: #000000;
 $font-live-header-size: 0.75rem;
-$font-live-header-left-tui-icon-size: 1.5rem;
+$font-live-header-left-tui-live-icon-size: 1.5rem;
 $font-live-header-left-title-size: 1rem;
 $font-live-header-left-title-weight: 500;
 $font-live-header-statistics-text-color: #FFFFFF;
@@ -196,7 +199,6 @@ $font-message-text-list-nick-style: normal;
 $font-message-text-list-nick-weight: 500;
 $font-message-text-box-color: #D5E0F2;
 
-$color-live-message-item-level-background: #1890FF;
 $font-live-message-tui-title-size: 0.75rem;
 $font-live-message-title-color: #8F9AB2;
 $font-live-message-title-size: 0.75rem;
@@ -222,7 +224,6 @@ $font-live-image-source-text-style: normal;
 $font-live-image-source-text-weight: 400;
 
 $font-live-screen-share-source-color: #D5E0F2;
-$font-live-screen-share-title-weight: 500;
 $font-live-screen-share-selected-color: #FFFFFF;
 $color-live-screen-share-middle-background: #22262E;
 $color-live-screen-share-footer-background: #22262E;
@@ -319,3 +320,5 @@ $font-app-external-family: Avenir, Helvetica, Arial, sans-serif;
 
 $color-cover-pendant-background: rgba(15,16,20,0.4);
 $color-cover-pendant-font: #E7ECF6;
+
+$font-color-login-trial-hover: #067AF1;

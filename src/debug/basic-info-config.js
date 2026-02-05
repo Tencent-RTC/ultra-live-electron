@@ -46,7 +46,7 @@ export const userInfo = {
   // User Name
   userName: userId,
   // User Avatar
-  avatarUrl: './avatar.png',
+  avatarUrl: '',
 };
 
 export function getBasicInfo(userId, sdkAppId, sdkSecretKey) {
@@ -64,7 +64,7 @@ export function getBasicInfo(userId, sdkAppId, sdkSecretKey) {
     sdkAppId: realSDKAppID,
     userId: realUserId,
     userSig,
-    userName: userId || userInfo.userName,
+    userName: '',
     avatarUrl: userInfo.avatarUrl,
   };
 }

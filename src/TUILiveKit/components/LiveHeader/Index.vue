@@ -15,9 +15,9 @@
           </div>
         </div>
         <div class="user-info-content" @click="handleUserControl" v-click-outside="handleHideUserControl">
-          <img class="avatar" :src="props.user.avatarUrl || defaultAvatarURL" alt="">
-          <div class="name">{{ props.user.name || props.user.userId }}</div>
-          <button class="tui-icon">
+          <img class="avatar" :src="props.user.avatarUrl || DEFAULT_USER_AVATAR_URL" alt="">
+          <div class="name">{{ props.user.userName || props.user.userId }}</div>
+          <button class="tui-live-icon">
             <svg-icon
               :class="[showUserControl ? 'up-icon' : 'down-icon']"
               :icon="ArrowStrokeSelectDownIcon"
@@ -25,20 +25,21 @@
           </button>
         </div>
         <div v-if="showUserControl" class="user-control-container">
+          <div class="user-control-item-foot" @click="openProfile">{{ t('User Profile') }}</div>
           <div class="user-control-item-foot" @click="handleLogOut">{{ t('Log out') }}</div>
         </div>
-        <div class="change-theme"  @click="handleChangeTheme">
+        <!-- <div class="change-theme"  @click="handleChangeTheme">
           <svg-icon :icon="SwitchThemeIcon"></svg-icon>
-        </div>
+        </div> -->
         <div class="window-tool">
-          <button class="tui-icon" @click="onMinimize">
+          <button class="tui-live-icon" @click="onMinimize">
             <svg-icon :icon=MinimizeIcon ></svg-icon>
           </button>
-          <button class="tui-icon" @click="onToggleMaximize">
+          <button class="tui-live-icon" @click="onToggleMaximize">
             <svg-icon v-if="!isMaximized" :icon=MaximizeIcon></svg-icon>
             <svg-icon v-else :icon=MiniIcon></svg-icon>
           </button>
-          <button class="tui-icon" @click="onClose">
+          <button class="tui-live-icon" @click="onClose">
             <svg-icon :icon=CloseIcon ></svg-icon>
           </button>
         </div>
@@ -62,13 +63,18 @@ import vClickOutside from '../../utils/vClickOutside';
 import { useBasicStore } from '../../store/main/basic';
 import { messageChannels } from '../../communication'
 import { changeTheme, ThemeColor } from '../../utils/utils';
-import { defaultAvatarURL } from '../../utils/common';
+import { DEFAULT_USER_AVATAR_URL } from '../../constants/tuiConstant';
+import logger from '../../utils/logger';
 
 interface Props {
   user: {
-    name: string;
+    userName: string;
     userId: string;
     avatarUrl: string;
+    sdkAppId: number;
+    userSig: string;
+    phone: string;
+    isUserSigExpired: boolean;
   };
 }
 
@@ -98,10 +104,10 @@ const statisticsInfoList = ref([
   }
 ])
 
-watch(() => statistics.value, (val) => {
+watch(() => statistics.value, (val: any) => {
   statisticsInfoList.value[0].value = val.appCpu + '%';
   statisticsInfoList.value[1].value = val.appMemoryUsageInMB + 'MB';
-})
+});
 
 function handleUserControl() {
   showUserControl.value = !showUserControl.value;
@@ -137,14 +143,28 @@ const handleChangeTheme = () => {
     key: 'change-theme',
     data: currentTheme.value
   });
+  messageChannels.messagePortToConfirm?.postMessage({
+    key: 'change-theme',
+    data: currentTheme.value
+  });
   const mainWindowElement = document.querySelector('.tui-live-kit-main');
   changeTheme(mainWindowElement,currentTheme.value);
 }
 
+const openProfile = () => {
+  logger.debug('[LiveHeader] openProfile');
+  window.ipcRenderer.send('open-child', {
+    command: 'user-profile',
+    data: {
+      ...props.user
+    }
+  });
+};
+
 const handleLogOut = () => {
   showUserControl.value = false;
   emits('logout')
-}
+};
 </script>
 
 <style scoped lang="scss">
@@ -182,15 +202,16 @@ const handleLogOut = () => {
   .left {
     display: inline-flex;
     align-items: center;
-    .tui-icon {
+    .tui-live-icon {
       margin-left: 0;
       margin-right: 0.25rem;
-      font-size: $font-live-header-left-tui-icon-size;
+      font-size: $font-live-header-left-tui-live-icon-size;
     }
     .title {
       font-weight: $font-live-header-left-title-weight;
       font-size: $font-live-header-left-title-size;
       padding-left: 0.6rem;
+      font-weight: bold;
     }
   }
   .statistics{
@@ -251,18 +272,26 @@ const handleLogOut = () => {
   }
   .user-control-container {
     position: absolute;
-    top: 3rem;
+    top: 2.5rem;
     right: 7rem;
-    padding: 0.35rem;
+    z-index: 999;
+    font-weight: normal;
+
+    width: auto;
     min-width: 6.25rem;
+    height: auto;
+    max-height: 10rem;
+    overflow-y: auto;
+    border-radius: 0.5rem;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
     background-color: var(--dropdown-color-default);
     box-shadow: 0px 1px 5px var(--shadow-color),0px 8px 12px var(--shadow-color),0px 12px 26px var(--shadow-color);
     color: var(--text-color-primary);
-    border-radius: 0.5rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     &::before {
       content: '';
       position: absolute;
@@ -285,18 +314,24 @@ const handleLogOut = () => {
     }
 
     .user-control-item-foot{
-      display: flex;
-      align-items: center;
-      justify-content: center;
       width: 100%;
       height: 100%;
+      padding: 0 0.5rem 0 1rem;
       border-radius: 0.25rem;
       color: var(--text-color-primary);
       font-size: $font-live-header-user-control-container-item-foot-size;
+      text-align: left;
       cursor: pointer;
       z-index: 999;
       &:hover {
         background-color: var(--dropdown-color-hover);
+      }
+
+      &:first-child {
+        border-radius: 0.25rem 0.25rem 0 0;
+      }
+      &:last-child {
+        border-radius: 0 0 0.25rem 0.25rem;
       }
     }
   }

@@ -17,7 +17,7 @@ import { computed, StyleValue, withDefaults, defineProps, defineEmits } from 'vu
 
 interface Props {
   size?: 'large' | 'default';
-  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'text';
+  type?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'text';
   customStyle?: StyleValue;
   loading?: boolean;
   disabled?: boolean;
@@ -42,12 +42,12 @@ function handleClick(event: MouseEvent) {
 }
 
 const buttonClassList = computed(() => [
-  'tui-button',
-  `tui-button-${props.type}`,
-  `tui-button-${props.size}`,
-  { 'tui-button-round': props.round },
-  { 'tui-button-loading': props.loading },
-  { 'tui-button-disabled': props.disabled },
+  'tui-live-button',
+  `tui-live-button-${props.type || 'default'}`,
+  `tui-live-button-${props.size}`,
+  { 'tui-live-button-round': props.round },
+  { 'tui-live-button-loading': props.loading },
+  { 'tui-live-button-disabled': props.disabled },
 ]);
 </script>
 
@@ -57,7 +57,7 @@ const buttonClassList = computed(() => [
 .button-primary {
   --shadow-color: $color-button-shadow;
 }
-.tui-button {
+.tui-live-button {
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -72,12 +72,12 @@ const buttonClassList = computed(() => [
   outline: none;
   color: $font-button-color;
   &:hover {
-    background: $color-button-hover-background;
-    border: 1px solid $color-button-hover-border;
-    outline: none;
+    opacity: 0.8;
   }
 }
-.tui-button-primary {
+.tui-live-button-primary {
+  padding:0.25rem 1.75rem;
+  font-size:0.875rem;
   background-color: $color-button-primary-background;
   border: 1px solid $color-button-primary-border;
   color: $font-button-primary-color;
@@ -85,40 +85,38 @@ const buttonClassList = computed(() => [
   font-weight:500;
   line-height:1.375rem;
   &:hover {
-    background-color: var(--shadow-color);
+    opacity: 0.8;
   }
 }
 
-.tui-button-large {
+.tui-live-button-large {
   padding:1.1875rem 3rem;
   font-size:1.25rem;
 }
-.tui-button-default {
-  padding:0.3125rem 1.875rem;
+.tui-live-button-default {
+  padding:0.25rem 1.75rem;
   font-size:0.875rem;
 }
-.tui-button-round {
+.tui-live-button-round {
   border-radius:62499.9375rem;
 }
 
-.tui-button-disabled {
+.tui-live-button-disabled {
   cursor: not-allowed;
   opacity: 0.3;
 }
 
-.tui-button-icon {
+.tui-live-button-icon {
   margin-right:0.3125rem;
   display: flex;
 }
 
-.tui-button-text {
+.tui-live-button-text {
   border: 0 solid $color-button-text-border;
   background-color: $color-button-text-background;
   color: $font-button-text-color;
   &:hover {
-    border: 0 solid $color-button-text-hover-border;
-    background-color: $color-button-text-hover-background;
-    color: $font-button-text-hover-color;
+    opacity: 0.8;
   }
   &::after {
     border: none;

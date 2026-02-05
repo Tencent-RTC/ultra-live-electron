@@ -4,8 +4,7 @@
     <input
       :value="props.loginState.userId"
       class="tui-login-input"
-      :placeholder="t('User ID')" auto-complete="true"
-      enterkeyhint="complete"
+      :placeholder="t('Enter user ID')"
       @input="emit('update:userId', ($event.target  as HTMLInputElement)?.value)"
     >
   </div>
@@ -15,7 +14,6 @@
       :value="props.loginState.password"
       class="tui-login-input"
       :placeholder="t('Password')"
-      enterkeyhint="complete"
       @input="emit('update:password', ($event.target as HTMLInputElement)?.value)"
     >
   </div>

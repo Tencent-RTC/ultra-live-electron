@@ -1,6 +1,6 @@
 import { onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
-import { TRTCMediaMixingEvent, TRTCMediaSource, TRTCPhoneMirrorParam, Rect } from 'trtc-electron-sdk';
+import { TRTCMediaMixingEvent, TRTCMediaSource, TRTCPhoneMirrorParam } from 'trtc-electron-sdk';
 import { useMediaSourcesStore } from '../store/main/mediaSources';
 import useMediaMixingManager, { fitMediaSourceToNewSize } from '../utils/useMediaMixingManager';
 import { TUIMediaSourceViewModel } from '../types';

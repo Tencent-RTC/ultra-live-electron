@@ -1,0 +1,7 @@
+const OVERSEA_MSG_APPID = '2068686199';
+const HOME_MSG_APPID = '2079625916';
+
+export const MSG_APPID = {
+  oversea: OVERSEA_MSG_APPID,
+  home: HOME_MSG_APPID,
+};

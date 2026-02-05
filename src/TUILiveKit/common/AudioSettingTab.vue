@@ -6,9 +6,11 @@
         <device-select
           class="select"
           device-type="microphone"
+          :disabled="microphoneListLength === 0"
         ></device-select>
         <span
           class="test"
+          :class="{'disabled': microphoneListLength === 0}"
           v-if="isDetailMode"
           @click="handleMicrophoneTest"
         >
@@ -27,15 +29,17 @@
         </div>
       </div>
     </div>
-    <div v-if="(speakerList.length > 0)" class="item-setting">
+    <div class="item-setting">
       <span class="title">{{ t('Speaker') }}</span>
       <div class="flex">
         <device-select
           class="select"
           device-type="speaker"
+          :disabled="speakerListLength === 0"
         ></device-select>
         <span
           class="test"
+          :class="{'disabled': speakerListLength === 0}"
           v-if="isDetailMode"
           @click="handleSpeakerTest"
         >
@@ -58,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineProps, onBeforeUnmount } from 'vue';
+import { ref, computed, defineProps, onBeforeUnmount, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import DeviceSelect from './DeviceSelect.vue';
 import { useCurrentSourceStore } from '../store/child/currentSource';
@@ -76,7 +80,7 @@ const isDetailMode = computed(() => settingMode === SettingMode.Detail);
 
 const currentSourceStore = useCurrentSourceStore();
 const { t } = useI18n();
-const { speakerList, micVolume, speakerVolume } = storeToRefs(currentSourceStore);
+const { microphoneList, speakerList, micVolume, speakerVolume } = storeToRefs(currentSourceStore);
 
 const volumeTotalNum = computed(() => (isDetailMode.value ? 36 : 28));
 
@@ -96,10 +100,35 @@ const showMicVolume = computed(() => isSampleMode.value || (isDetailMode.value &
 const isTestingMicrophone = ref(false);
 
 const isTestingSpeaker = ref(false);
+
+const microphoneListLength = computed(() => microphoneList.value.length);
+const speakerListLength = computed(() => speakerList.value.length);
+
+watch(microphoneListLength, () => {
+  if (microphoneListLength.value === 0 && isTestingMicrophone.value) {
+    isTestingMicrophone.value = false;
+    window.mainWindowPortInChild?.postMessage({
+      key: 'stopTestMic',
+    });
+  }
+});
+
+watch(speakerListLength, () => {
+  if (speakerListLength.value === 0 && isTestingSpeaker.value) {
+    isTestingSpeaker.value = false;
+    window.mainWindowPortInChild?.postMessage({
+      key: 'stopTestSpeaker',
+    });
+  }
+});
+
 /**
  * Click on the microphone [Test] button
 */
 function handleMicrophoneTest() {
+  if (microphoneList.value.length === 0) {
+    return;
+  }
   isTestingMicrophone.value = !isTestingMicrophone.value;
   const isStartMicrophoneTest = isTestingMicrophone.value;
   if (isStartMicrophoneTest) {
@@ -121,6 +150,9 @@ function handleMicrophoneTest() {
  * Click on the speaker [Test] button
  */
 async function handleSpeakerTest() {
+  if (speakerList.value.length === 0) {
+    return;
+  }
   isTestingSpeaker.value = !isTestingSpeaker.value;
   const isStartSpeakerTest = isTestingSpeaker.value;
   if (isStartSpeakerTest) {
@@ -219,13 +251,18 @@ onBeforeUnmount(() => {
 }
 .test{
   padding:0.375rem 1.375rem;
-	border-radius:2.25rem;
-	margin-left:0.625rem;
-	font-size:$font-audio-setting-tab-test-size;
-	font-style:normal;
-	font-weight:$font-audio-setting-tab-test-weight;
-	line-height:1.375rem;
-  margin-top: 0.75rem;
+  border-radius:2.25rem;
+  margin-left:0.625rem;
+  font-size:$font-audio-setting-tab-test-size;
+  font-style:normal;
+  font-weight:$font-audio-setting-tab-test-weight;
+  line-height:1.375rem;
   background-color: var(--button-color-primary-default);
+
+  &.disabled {
+    opacity:0.5;
+    pointer-events:none;
+    background-color: var(--button-color-primary-disabled);
+  }
 }
 </style>

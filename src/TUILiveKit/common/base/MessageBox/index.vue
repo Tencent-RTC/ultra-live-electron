@@ -9,17 +9,18 @@
       @click="handleOverlayClick"
     >
       <div class="tui-message-box">
-        <div class="tui-message-box-header">
+        <div v-if="title && title !== ''" class="tui-message-box-header">
           <div class="tui-message-box-title">{{ title }}</div>
           <div class="close">
-            <svg-icon :size="16" :icon="CloseIcon" @click="handleClose"></svg-icon>
+            <svg-icon :size="16" :icon="CloseIcon" @click="handleCancel"></svg-icon>
           </div>
         </div>
         <div class="tui-message-box-body">
           <div>{{ message }}</div>
         </div>
         <div class="tui-message-box-footer">
-          <tui-button class="tui-message-confirm-button" @click="handleClose">{{ confirmButtonText }}</tui-button>
+          <TUILiveButton v-if="cancelButtonText" class="tui-message-cancel-button" @click="handleCancel">{{ cancelButtonText }}</TUILiveButton>
+          <TUILiveButton class="tui-message-confirm-button" type="primary" @click="handleConfirm">{{ confirmButtonText }}</TUILiveButton>
         </div>
       </div>
     </div>
@@ -29,7 +30,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed, defineEmits, withDefaults, defineProps} from 'vue';
 import SvgIcon from '../SvgIcon.vue';
-import TuiButton from '../Button.vue';
+import TUILiveButton from '../Button.vue';
 import CloseIcon from '../../icons/CloseIcon.vue';
 import useZIndex from '../../../utils/useZIndex';
 
@@ -38,17 +39,21 @@ const overlayContentStyle = ref({});
 const { nextZIndex } = useZIndex();
 const messageRef = ref();
 const teleportDisable = computed(() => !props.appendToBody);
+let timer: number | undefined = undefined;
 
 type BeforeCloseFn = () => void;
 
 interface Props {
-  title: string;
+  title?: string;
   message: string;
   callback?: BeforeCloseFn | null;
   confirmButtonText: string;
+  cancelButtonText?: string;
+  cancelCallback?: BeforeCloseFn | null;
   // eslint-disable-next-line @typescript-eslint/ban-types
   remove: Function;
   appendToBody?: boolean;
+  timeout?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -59,6 +64,7 @@ const props = withDefaults(defineProps<Props>(), {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   remove: () => {},
   appendToBody: false,
+  timeout: 0,
 });
 
 watch(visible, (val) => {
@@ -67,16 +73,37 @@ watch(visible, (val) => {
   }
 });
 
+watch(
+  () => props.timeout,
+  (newVal) => {
+    if (newVal && newVal > 0) {
+      timer = setTimeout(() => {
+        doClose();
+      }, newVal) as unknown as number;
+    }
+  },
+  { immediate: true },
+);
+
 const emit = defineEmits(['close']);
 
-function handleClose() {
+function handleConfirm() {
   props.callback && props.callback();
+  doClose();
+}
+
+function handleCancel() {
+  props.cancelCallback && props.cancelCallback();
   doClose();
 }
 
 function doClose() {
   visible.value = false;
   props.remove();
+  if (timer) {
+    clearTimeout(timer);
+    timer = undefined;
+  }
   emit('close');
 }
 
@@ -84,7 +111,12 @@ function handleOverlayClick(event: any) {
   if (event.target !== event.currentTarget) {
     return;
   }
-  handleClose();
+
+  if (props.cancelButtonText) {
+    handleCancel();
+  } else {
+    handleConfirm();
+  }
 }
 
 function onOpen() {
@@ -166,9 +198,12 @@ onMounted(async () => {
   padding: 0.5rem 1rem;
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
 
-  .tui-message-confirm-button {
-    width: 5rem;
+  .tui-message-confirm-button,
+  .tui-message-cancel-button {
+    width: auto;
+    min-width: 5rem;
   }
 }
 </style>

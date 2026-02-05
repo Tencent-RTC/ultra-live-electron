@@ -6,35 +6,35 @@
         <speaker-control></speaker-control>
       </div>
       <div class="tui-streaming-toolbar-middle">
-        <tui-badge
-          :hidden="applyToAnchorListNumber === 0 || mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape"
+        <TUIBadge
+          :hidden="applyToAnchorListNumber === 0 || isCoGuestDisabled"
           :value="applyToAnchorListNumber"
           :max="8"
           type="danger">
-          <tui-button class="tui-toolbar-button"  @click="handleConnection" :disabled="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape">
+          <TUILiveButton class="tui-toolbar-button"  @click="handleConnection" :disabled="isCoGuestDisabled">
             <svg-icon :icon=VoiceChatIcon :size="1.5"></svg-icon>
-          </tui-button>
-        </tui-badge>
-        <tui-button class="tui-toolbar-button" v-for="(item, index) in streamingTooBarList" :key="index" @click="item.fun()">
-          <svg-icon :icon=item.icon :size="1.5"></svg-icon>
-        </tui-button>
-        <tui-button class="tui-toolbar-button" @click="toggleVideoResolutionMode" :disabled="isLiving">
+          </TUILiveButton>
+        </TUIBadge>
+        <TUILiveButton class="tui-toolbar-button" @click="handleSetting">
+          <svg-icon :icon=SetIcon :size="1.5"></svg-icon>
+        </TUILiveButton>
+        <TUILiveButton class="tui-toolbar-button" @click="toggleVideoResolutionMode" :disabled="isLiving">
           <svg-icon :icon="mixingVideoEncodeParam.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape ? HorizontalScreenIcon : VerticalScreenIcon" :size="1.5" />
-        </tui-button>
+        </TUILiveButton>
       </div>
       <div class="tui-streaming-toolbar-right">
-        <tui-button @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled || !userId">
+        <TUILiveButton @click="handleChangeLivingStatus" :class="['tui-btn-live-switch', isLiving ? 'is-living' :'']" :disabled="isLiveSwitchDisabled || !userId">
           <svg-icon :icon="liveStatusIcon" class="live-status"></svg-icon>
           <span :class="[isLiving ? 'text-living': ' text-living-start']">
             {{liveStatus}}
           </span>
-        </tui-button>
+        </TUILiveButton>
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, computed, defineEmits, nextTick, shallowRef, watch, onUnmounted } from 'vue';
+import { ref, Ref, computed, defineEmits, nextTick, watch, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCVideoResolutionMode } from 'trtc-electron-sdk';
 import AudioControl from '../../common/AudioControl.vue';
@@ -46,14 +46,15 @@ import EndLivingIcon from '../../common/icons/EndLivingIcon.vue';
 import VerticalScreenIcon from '../../common/icons/VerticalScreenIcon.vue';
 import HorizontalScreenIcon from '../../common/icons/HorizontalScreenIcon.vue';
 import SvgIcon from '../../common/base/SvgIcon.vue';
-import TuiButton from '../../common/base/Button.vue';
+import TUILiveButton from '../../common/base/Button.vue';
+import TUIBadge from '../../common/base/Badge.vue';
 import { useI18n } from '../../locales';
 import { useBasicStore } from '../../store/main/basic';
 import { useMediaSourcesStore } from '../../store/main/mediaSources';
 import { useRoomStore } from '../../store/main/room';
 import { useAudioEffectStore } from '../../store/main/audioEffect';
 import { messageChannels } from '../../communication';
-import TuiBadge from '../../common/base/Badge.vue';
+import { TUIButtonAction, TUIButtonActionType, TUIConnectionMode } from '../../types';
 import logger from '../../utils/logger';
 
 const { t } = useI18n();
@@ -69,42 +70,34 @@ const { mixingVideoEncodeParam } = storeToRefs(mediaSourcesStore);
 const roomStore = useRoomStore();
 const { isLiving, userId } = storeToRefs(basicStore);
 
-const { applyToAnchorList, anchorList } = storeToRefs(roomStore);
+const { applyToAnchorList, anchorList, connectionMode, connectedHostList, battleId } = storeToRefs(roomStore);
 
-const applyToAnchorListNumber = computed(()=> applyToAnchorList.value.length );
-const streamingTooBarList = shallowRef([
-  // {
-  //   icon: BeautyIcon,
-  //   text: t('Beauty'),
-  //   fun: handleBeauty
-  // },
-  // {
-  //   icon: PKIcon,
-  //   text: t('PK'),
-  //   fun: handlePK
-  // },
-  {
-    icon: SetIcon,
-    text: t('Setting'),
-    fun: handleSetting
-  }
-]);
-
-const liveStatus = computed (()=>
-  isLiving.value ? t('End Live'): t('Go Live')
-);
-
-const liveStatusIcon = computed (()=>
-  isLiving.value ? EndLivingIcon: StartLivingIcon
-);
+const applyToAnchorListNumber = computed(()=> applyToAnchorList.value.length);
+const liveStatus = computed (()=> isLiving.value ? t('End Live'): t('Go Live'));
+const liveStatusIcon = computed (()=> isLiving.value ? EndLivingIcon: StartLivingIcon);
 
 const isLiveSwitchDisabled: Ref<boolean> = ref(false);
 
-function onStopLivingResult(event:any, result: Record<string, any>) {
+const isCoGuestDisabled = computed(() => {
+  return !isLiving.value
+  || mixingVideoEncodeParam.value.resMode === TRTCVideoResolutionMode.TRTCVideoResolutionModeLandscape
+  || connectionMode.value === TUIConnectionMode.CoHost;
+});
+
+function onStopLivingResult(event:any, result: {
+  value: string;
+}) {
   logger.log(`${logPrefix}stop-living-result:`, result);
-  if (result.confirm) {
-    stopLiving();
+  if (result.value === 'end-live') {
+    emits('onStopLiving');
+  } else if (result.value === 'end-battle') {
+    roomStore.stopAnchorBattle();
+    isLiveSwitchDisabled.value = false;
+  } else if (result.value === 'exit-connection') {
+    roomStore.stopAnchorConnection();
+    isLiveSwitchDisabled.value = false;
   } else {
+    // cancel
     isLiveSwitchDisabled.value = false;
   }
 }
@@ -112,17 +105,16 @@ window.ipcRenderer.on('stop-living-result', onStopLivingResult);
 
 function handleConnection() {
   messageChannels.messagePortToChild?.postMessage({
-    key: 'set-apply-and-anchor-list',
+    key: 'set-apply-and-seated-list',
     data: JSON.stringify({
       applyList: applyToAnchorList.value,
       anchorList: anchorList.value
     })
   });
   window.ipcRenderer.send('open-child', {
-    'command': 'connection',
+    'command': 'co-guest-connection',
     data: {
-      layoutMode: roomStore.streamLayout.layoutMode,
-      isAutoAdjusting: roomStore.streamLayout.isAutoAdjusting,
+      layoutTemplate: roomStore.currentLive.seatLayoutTemplateId,
     }
   });
 }
@@ -142,14 +134,33 @@ function toggleVideoResolutionMode() {
 }
 
 async function preStopLiving() {
-  window.ipcRenderer.send('stop-living', {
-    title: t('End the live streaming?'),
-    content: anchorList.value.length > 0 ? t('Live guest active.') : '',
-  });
-}
+  let title = '';
+  let content = '';
+  let actions: Array<TUIButtonAction> = [
+    { text: t('Cancel'), value: 'cancel', type: TUIButtonActionType.Normal },
+    { text: t('End Live'), value: 'end-live', type: TUIButtonActionType.Dangerous },
+  ];
+  if (anchorList.value.length >= 2) { // ignore self
+    title = t('You are currently live streaming. Are you sure you want to end it?');
+    content = t('Live guest active.');
+  } else if (battleId.value) {
+    title = t('End Live');
+    content = t('Currently in PK state, do you need to "End PK" or "End Live".');
+    actions.push({ text: t('End Battle'), value: 'end-battle', type: TUIButtonActionType.MoreDangerous });
+  } else if (connectedHostList.value.length > 0) {
+    title = t('End Live');
+    content = t('Currently connected, do you need to "Exit Connection" or "End Live".');
+    actions.push({ text: t('Exit Connection'), value: 'exit-connection', type: TUIButtonActionType.MoreDangerous });
+  } else {
+    title = t('You are currently live streaming. Are you sure you want to end it?');
+    content = '';
+  }
 
-function stopLiving() {
-  emits('onStopLiving');
+  window.ipcRenderer.send('stop-living', {
+    title,
+    content,
+    actions
+  });
 }
 
 async function handleChangeLivingStatus() {
@@ -271,7 +282,8 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: center;
     width: 2rem;
-    margin: 0 1rem;
+    margin: 0 0.5rem;
+    padding: 0;
     border: none;
     background: none;
   }

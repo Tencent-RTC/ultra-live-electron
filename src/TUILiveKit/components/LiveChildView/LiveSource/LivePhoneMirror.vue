@@ -1,11 +1,6 @@
 <template>
   <div class="tui-phone-mirror-source">
-    <div class="tui-child-win-title tui-window-header">
-      <span>{{ t('Add Phone') }}</span>
-      <button class="tui-icon" @click="handleCloseWindow">
-        <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
-      </button>
-    </div>
+    <LiveChildHeader :title="t('Add Phone')"></LiveChildHeader>
     <div class="tui-child-win-middle">
       <div class="form-line">
         <div class="form-label">
@@ -74,8 +69,7 @@ import { storeToRefs } from 'pinia';
 import { TRTCMediaSourceType, TRTCPhoneMirrorParam } from 'trtc-electron-sdk';
 import { TUIMediaSourceViewModel } from '../../../types';
 import { useI18n } from '../../../locales';
-import SvgIcon from '../../../common/base/SvgIcon.vue';
-import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import LiveChildHeader from '../LiveChildHeader.vue';
 import TUISelect from '../../../common/base/Select.vue';
 import TUIOption from '../../../common/base/Option.vue';
 import { useCurrentSourceStore } from '../../../store/child/currentSource';
@@ -241,14 +235,6 @@ watch(props, async (val) => {
 .tui-phone-mirror-source {
   height: 100%;
   color: $font-live-screen-share-source-color;
-}
-
-.tui-child-win-title {
-  font-weight: $font-live-screen-share-title-weight;
-  padding: 0 1.5rem 0 1.375rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 }
 
 .tui-child-win-middle {

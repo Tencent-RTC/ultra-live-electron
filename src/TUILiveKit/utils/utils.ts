@@ -53,3 +53,26 @@ export const debounce = <F extends (...args: any[]) => void>(
   return debounced as (...args: Parameters<F>) => ReturnType<F>;
 };
 
+export async function copyToClipboard(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
+}
+
+export function isNetworkOffline(): boolean {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  return navigator.onLine === false;
+}
+
+export function isNetworkTimeoutError(error: any): boolean {
+  if (!error) {
+    return false;
+  }
+  const message = String(error.message || error.errorMessage || '');
+  if (message.includes('NETWORK_TIMEOUT') || message.includes('Network error')) {
+    return true;
+  }
+  return false;
+}
+
+

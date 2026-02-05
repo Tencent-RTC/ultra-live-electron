@@ -49,6 +49,11 @@ ipcRenderer.on('port-to-cover', (event) => {
   console.log(`${logPrefix} port-to-cover window:`, window.mainWindowPortInCover, Date.now());
 });
 
+ipcRenderer.on('port-to-confirm', (event) => {
+  window.mainWindowPortInConfirm = event.ports[0];
+  console.log(`${logPrefix} port-to-confirm window:`, window.mainWindowPortInConfirm, Date.now());
+});
+
 window.ipcRenderer = ipcRenderer;
 
 window.path = path;

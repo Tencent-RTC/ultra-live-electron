@@ -20,14 +20,19 @@
       v-if="currentViewName === 'video-file'"
       :data="dataInEdit"
     ></live-video-file>
-    <live-connection
-      v-if="currentViewName === 'connection'"
+    <live-co-guest
+      v-if="currentViewName === 'co-guest-connection'"
       :data="dataInEdit"
-    ></live-connection>
+    ></live-co-guest>
+    <live-anchor-connection
+      v-if="currentViewName === 'co-host-connection'"
+      :data="dataInEdit"
+    ></live-anchor-connection>
     <live-setting v-if="currentViewName === 'setting'"></live-setting>
     <live-add-bgm v-if="currentViewName === 'add-bgm'"></live-add-bgm>
     <live-reverb-voice v-if="currentViewName === 'reverb-voice'"></live-reverb-voice>
     <live-change-voice v-if="currentViewName === 'change-voice'"></live-change-voice>
+    <live-user-profile v-if="currentViewName === 'user-profile'" :data="dataInEdit" :isLiving="!!roomId"></live-user-profile>
   </div>
 </template>
 
@@ -38,7 +43,8 @@ import trtcCloud from './utils/trtcCloud';
 import { TRTCScreenCaptureSourceInfo, TRTCScreenCaptureSourceType, TRTCDeviceType, TRTCDeviceState } from 'trtc-electron-sdk';
 import LiveCameraSource from './components/LiveChildView/LiveSource/LiveCameraSource.vue';
 import LiveScreenShareSource from './components/LiveChildView/LiveSource/LiveScreenShareSource.vue';
-import LiveConnection from './components/LiveChildView/LiveConnection.vue';
+import LiveCoGuest from './components/LiveChildView/LiveCoGuest/Index.vue';
+import LiveAnchorConnection from './components/LiveChildView/LiveMoreTool/LiveCoHost/Index.vue';
 import LiveSetting from './components/LiveChildView/LiveSetting.vue';
 import LiveAddBgm from './components/LiveChildView/LiveMoreTool/LiveAddBgm.vue';
 import LiveReverbVoice from './components/LiveChildView/LiveMoreTool/LiveReverbVoice.vue';
@@ -46,9 +52,8 @@ import LiveChangeVoice from './components/LiveChildView/LiveMoreTool/LiveChangeV
 import LivePhoneMirror from './components/LiveChildView/LiveSource/LivePhoneMirror.vue';
 import LiveOnlineVideo from './components/LiveChildView/LiveSource/LiveOnlineVideo.vue';
 import LiveVideoFile from './components/LiveChildView/LiveSource/LiveVideoFile.vue';
-import TUIMessageBox from './common/base/MessageBox';
+import LiveUserProfile from './components/LiveChildView/LiveUserProfile.vue';
 import { useCurrentSourceStore } from './store/child/currentSource';
-import useDeviceManager from './utils/useDeviceManager';
 import { useI18n } from './locales/index';
 import { useAudioEffectStore } from './store/child/audioEffect';
 import { changeTheme } from './utils/utils';
@@ -59,8 +64,7 @@ const logPrefix = '[ChildView]';
 const audioEffectStore = useAudioEffectStore();
 const { t } = useI18n();
 const currentSourceStore = useCurrentSourceStore();
-const { currentViewName } = storeToRefs(currentSourceStore);
-const deviceManager = useDeviceManager();
+const { currentViewName, roomId } = storeToRefs(currentSourceStore);
 
 const screenList: Ref<TRTCScreenCaptureSourceInfo[]> = ref([]);
 const windowList: Ref<TRTCScreenCaptureSourceInfo[]> = ref([]);
@@ -77,14 +81,26 @@ function initMainWindowMessageListener() {
       logger.log(`${logPrefix}message from main window:`, event.data, event);
       const { key, data } = event.data;
       switch (key) {
+      case 'set-room-info':
+        currentSourceStore.setRoomInfo(JSON.parse(data));
+        break;
       case 'set-apply-list':
-        currentSourceStore.setApplyToAnchorList(JSON.parse(data));
+        currentSourceStore.setApplyOnSeatList(JSON.parse(data));
         break;
-      case 'set-anchor-list':
-        currentSourceStore.setAnchorList(JSON.parse(data));
+      case 'set-apply-and-seated-list':
+        currentSourceStore.setApplyAndSeatedList(JSON.parse(data));
         break;
-      case 'set-apply-and-anchor-list':
-        currentSourceStore.setApplyAndAnchorList(JSON.parse(data));
+      case 'set-live-list':
+        currentSourceStore.setLiveList(JSON.parse(data));
+        break;
+      case 'append-live-list':
+        currentSourceStore.appendLiveList(JSON.parse(data));
+        break;
+      case 'set-host-connection':
+        currentSourceStore.setHostConnection(JSON.parse(data));
+        break;
+      case 'set-host-battle':
+        currentSourceStore.setHostBattle(JSON.parse(data));
         break;
       case 'reset':
         currentSourceStore.reset();
@@ -95,8 +111,11 @@ function initMainWindowMessageListener() {
       case 'update-speaker-volume':
         currentSourceStore.updateSpeakerVolume(data);
         break;
-      case 'on-device-changed':
-        onDeviceChanged(data);
+      case 'update-device-list':
+        updateDeviceList(data);
+        break;
+      case 'update-current-device':
+        updateCurrentDevice(data);
         break;
       case 'update-playing-music-id':
         if(data !== audioEffectStore.playingMusicId){
@@ -138,99 +157,22 @@ function initMainWindowMessageListener() {
   }
 }
 
-function onDeviceChanged(data: { deviceId: string; type: TRTCDeviceType; state: TRTCDeviceState; }) {
-  logger.log(`${logPrefix}onDeviceChanged:`, data);
-  let deviceList = null;
-  if (data.type === TRTCDeviceType.TRTCDeviceTypeCamera) {
-    deviceList = deviceManager.getCameraDevicesList();
-    if (deviceList) {
-      currentSourceStore.setCameraList(deviceList);
-      if (data.state === TRTCDeviceState.TRTCDeviceStateRemove && data.deviceId === currentSourceStore.currentCameraId) {
-        currentSourceStore.setCurrentCameraId(deviceList[0].deviceId);
-      }
-    }
-  } else if (data.type === TRTCDeviceType.TRTCDeviceTypeMic) {
-    if (data.state === TRTCDeviceState.TRTCDeviceStateRemove || data.state === TRTCDeviceState.TRTCDeviceStateAdd) {
-      deviceList = deviceManager.getMicDevicesList();
-      deviceList && currentSourceStore.setMicrophoneList(deviceList);
-    } else if (data.state === TRTCDeviceState.TRTCDeviceStateActive) {
-      currentSourceStore.setCurrentMicrophoneId(data.deviceId)
-    }
-  } else if (data.type === TRTCDeviceType.TRTCDeviceTypeSpeaker) {
-    if (data.state === TRTCDeviceState.TRTCDeviceStateRemove || data.state === TRTCDeviceState.TRTCDeviceStateAdd) {
-      deviceList = deviceManager.getSpeakerDevicesList();
-      deviceList && currentSourceStore.setSpeakerList(deviceList);
-    } else if (data.state === TRTCDeviceState.TRTCDeviceStateActive) {
-      currentSourceStore.setCurrentSpeakerId(data.deviceId)
-    }
-  } else {
-    logger.warn(`${logPrefix}onDeviceChanged un-supported device type:`, data);
+function updateDeviceList(data: { cameraList: string, microphoneList: string, speakerList: string}) {
+  logger.log(`${logPrefix}updateDeviceList:`, data);
+  try {
+    currentSourceStore.setCameraList(JSON.parse(data.cameraList));
+    currentSourceStore.setMicrophoneList(JSON.parse(data.microphoneList));
+    currentSourceStore.setSpeakerList(JSON.parse(data.speakerList));
+  } catch (error: any) {
+    logger.error(`${logPrefix}updateDeviceList failed:`, error);
   }
 }
 
-function refreshCameraDeviceList() {
-  if (deviceManager) {
-    const cameraList = deviceManager.getCameraDevicesList();
-    logger.debug(`${logPrefix}camera device list:`, cameraList);
-    if (cameraList && cameraList.length > 0) {
-      currentSourceStore.setCameraList(cameraList);
-    } else {
-      currentSourceStore.setCameraList([]);
-      TUIMessageBox({
-        title: t('Note'),
-        message: t('No camera'),
-        confirmButtonText: t('Sure'),
-      });
-    }
-  }
-}
-
-function refreshMicrophoneDeviceList() {
-  if (deviceManager) {
-    const microphoneList = deviceManager.getMicDevicesList();
-    logger.debug(`${logPrefix}microphone device list:`, microphoneList);
-
-    if (microphoneList && microphoneList.length > 0) {
-      currentSourceStore.setMicrophoneList(microphoneList);
-    } else {
-      currentSourceStore.setMicrophoneList([]);
-      TUIMessageBox({
-        title: t('Note'),
-        message: t('No microphone'),
-        confirmButtonText: t('Sure'),
-      });
-    }
-  }
-}
-
-function refreshSpeakerDeviceList() {
-  if (deviceManager) {
-    const speakerList = deviceManager.getSpeakerDevicesList();
-    logger.debug(`${logPrefix}speaker device list:`, speakerList);
-
-    if (speakerList && speakerList.length > 0) {
-      currentSourceStore.setSpeakerList(speakerList);
-    } else {
-      currentSourceStore.setSpeakerList([]);
-      TUIMessageBox({
-        title: t('Note'),
-        message: t('No speaker'),
-        confirmButtonText: t('Sure'),
-      });
-    }
-  }
-}
-
-function refreshMediaDeviceList() {
-  if (deviceManager) {
-    refreshCameraDeviceList();
-    refreshMicrophoneDeviceList();
-    refreshSpeakerDeviceList();
-  } else {
-    logger.warn(
-      `${logPrefix}init device list failed, deviceManager is not existed`
-    );
-  }
+function updateCurrentDevice(data: { cameraId: string, microphoneId: string, speakerId: string }) {
+  logger.log(`${logPrefix}updateCurrentDevice:`, data);
+  data.cameraId && currentSourceStore.setCurrentCameraId(data.cameraId);
+  data.microphoneId && currentSourceStore.setCurrentMicrophoneId(data.microphoneId);
+  data.speakerId && currentSourceStore.setCurrentSpeakerId(data.speakerId);
 }
 
 async function refreshScreenList() {
@@ -267,7 +209,6 @@ const commandHandlers = new Map([
   [
     'camera',
     () => {
-      refreshMediaDeviceList();
       currentViewName.value = 'camera';
     },
   ],
@@ -279,15 +220,20 @@ const commandHandlers = new Map([
     },
   ],
   [
-    'connection',
+    'co-guest-connection',
     () => {
-      currentViewName.value = 'connection';
+      currentViewName.value = 'co-guest-connection';
+    },
+  ],
+  [
+    'co-host-connection',
+    () => {
+      currentViewName.value = 'co-host-connection';
     },
   ],
   [
     'setting',
     () => {
-      refreshMediaDeviceList();
       currentViewName.value = 'setting';
     },
   ],
@@ -327,6 +273,12 @@ const commandHandlers = new Map([
       currentViewName.value = 'video-file';
     },
   ],
+  [
+    'user-profile',
+    () => {
+      currentViewName.value = 'user-profile';
+    },
+  ],
 ]);
 
 window.ipcRenderer.on('logout', () => {
@@ -355,5 +307,6 @@ window.ipcRenderer.on('show', (event: any, args: Record<string, any>) => {
 .tui-live-kit-child {
   height: 100%;
   color: $font-sub-window-color;
+  font-size: 0.875rem;
 }
 </style>

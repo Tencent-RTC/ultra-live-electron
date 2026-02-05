@@ -35,6 +35,7 @@ const coverWindowRelativeBounds = {
 };
 
 const liveKitEmitter = new EventEmitter();
+let isQuitting = false;
 
 // 开启crash捕获
 crashReporter.start({
@@ -109,7 +110,7 @@ async function createWindow(width = 1366, height = 668) {
 
   windowMap.main = new BrowserWindow({
     width: 1200 || width,
-    height: 650 || height,
+    height: 750 || height,
     minWidth: 1200,
     minHeight: 650,
     frame: false,
@@ -155,8 +156,8 @@ async function createWindow(width = 1366, height = 668) {
   });
   windowMap.confirm = new BrowserWindow({
     show: false,
-    width: 360,
-    height: 180,
+    width: 480,
+    height: 160,
     frame: false,
     transparent: false,
     resizable: false,
@@ -228,14 +229,9 @@ function bindIPCEvent() {
 
   ipcMain.on('on-close-window', () => {
     console.log(`${logPrefix}on-close-window event`);
-    windowMap.mainCover?.close();
-    windowMap.mainCover = null;
-    windowMap.confirm?.close();
-    windowMap.confirm = null;
+    // Delegate close behavior to the main window 'close' handler so that
+    // the renderer can decide whether the application should actually quit.
     windowMap.main?.close();
-    windowMap.main = null;
-    windowMap.child?.close();
-    windowMap.child = null;
   });
 
   ipcMain.on('open-child', (event, args) => {
@@ -248,6 +244,7 @@ function bindIPCEvent() {
     const [width, height] = windowMap.main?.getSize();
     switch (args.command) {
     case 'camera':
+    case 'user-profile':
       windowMap.child?.setSize(600, 650, true);
       windowMap.child?.setContentSize(600, 650, true);
       break;
@@ -259,7 +256,11 @@ function bindIPCEvent() {
       windowMap.child?.setSize(width - 150, height - 80, true);
       windowMap.child?.setContentSize(width -150, height - 80, true);
       break;
-    case 'connection':
+    case 'co-guest-connection':
+    case 'co-host-connection':
+      windowMap.child?.setSize(520, 560, true);
+      windowMap.child?.setContentSize(520, 560, true);
+      break;
     case 'add-bgm':
     case 'reverb-voice':
     case 'change-voice':
@@ -328,6 +329,12 @@ function bindIPCEvent() {
     const port = event.ports[0];
     console.log('port-to-cover', port);
     windowMap.mainCover?.webContents.postMessage('port-to-cover', null, [port]);
+  });
+
+  ipcMain.on('port-to-confirm', (event) => {
+    const port = event.ports[0];
+    console.log('port-to-confirm', port);
+    windowMap.confirm?.webContents.postMessage('port-to-confirm', null, [port]);
   });
 
   ipcMain.on('set-language', (event, args) => {
@@ -421,7 +428,7 @@ function bindIPCEvent() {
     if (args?.layoutMode === 'Custom') {
       if (windowMap.main.isVisible() && !windowMap.mainCover.isVisible()) {
         windowMap.mainCover?.show();
-        if (lastChildWindowCommand === 'connection') {
+        if (lastChildWindowCommand === 'co-guest-connection' || lastChildWindowCommand === 'co-host-connection') {
           windowMap.child.show();
         }
       }
@@ -438,6 +445,34 @@ function bindIPCEvent() {
     windowMap.confirm?.hide();
     windowMap.main?.webContents.send('stop-living-result', args);
   });
+
+  ipcMain.on('app-quit-confirmed', () => {
+    console.log(`${logPrefix}app-quit-confirmed`);
+    isQuitting = true;
+    if (windowMap.mainCover && !windowMap.mainCover.isDestroyed()) {
+      windowMap.mainCover.close();
+    }
+    windowMap.mainCover = null;
+
+    if (windowMap.confirm && !windowMap.confirm.isDestroyed()) {
+      windowMap.confirm.close();
+    }
+    windowMap.confirm = null;
+
+    if (windowMap.main && !windowMap.main.isDestroyed()) {
+      windowMap.main.close();
+    }
+
+    if (windowMap.child && !windowMap.child.isDestroyed()) {
+      windowMap.child.close();
+    }
+    windowMap.child = null;
+  });
+
+  ipcMain.on('app-quit-cancel', () => {
+    console.log(`${logPrefix}app-quit-cancel`);
+    isQuitting = false;
+  });
 }
 
 function unbindIPCMainEvent() {
@@ -453,6 +488,8 @@ function unbindIPCMainEvent() {
   ipcMain.removeAllListeners('set-language');
   ipcMain.removeAllListeners('show-context-menu');
   ipcMain.removeAllListeners('start-use-driver-installer');
+  ipcMain.removeAllListeners('app-quit-confirmed');
+  ipcMain.removeAllListeners('app-quit-cancel');
 }
 
 let initMainWindowTimer = null;
@@ -488,6 +525,17 @@ function bindMainWindowEvent() {
     windowMap.main?.webContents.send('crash-file-path',`${crashFilePath}|${crashDumpsDir}`);
     windowMap.main?.webContents.send('native-window-handle', windowMap.main?.getNativeWindowHandle());
     initMainWindowPage();
+  });
+
+  windowMap.main?.on('close', (event) => {
+    // Let renderer decide whether the app can quit (e.g. stop live before exit)
+    console.log(`${logPrefix} windowMap.main close`);
+    if (!isQuitting) {
+      event.preventDefault();
+      if (windowMap.main?.webContents) {
+        windowMap.main.webContents.send('app-request-quit');
+      }
+    }
   });
 
   windowMap.main?.on('closed', () => {
@@ -550,10 +598,10 @@ function bindChildWindowEvent() {
 
   windowMap.child?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.child?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-child\';');
     windowMap.child?.webContents.send('app-path', app.getAppPath());
     windowMap.child?.webContents.send('native-window-handle', windowMap.child?.getNativeWindowHandle());
     windowMap.child?.webContents.send('window-type', 'child');
+    windowMap.child?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-child\';');
   });
 
   windowMap.child?.on('close', (event) => {
@@ -594,10 +642,10 @@ function bindCoverWindowEvent() {
 
   windowMap.mainCover?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.mainCover?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-cover\';');
     windowMap.mainCover?.webContents.send('app-path', app.getAppPath());
     windowMap.mainCover?.webContents.send('native-window-handle', windowMap.mainCover?.getNativeWindowHandle());
     windowMap.mainCover?.webContents.send('window-type', 'cover');
+    windowMap.mainCover?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-cover\';');
   });
 
   windowMap.mainCover?.on('focus', () => {
@@ -617,10 +665,10 @@ function bindConfirmWindowEvent() {
 
   windowMap.confirm?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.confirm?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-confirm\';');
     windowMap.confirm?.webContents.send('app-path', app.getAppPath());
     windowMap.confirm?.webContents.send('native-window-handle', windowMap.confirm?.getNativeWindowHandle());
     windowMap.confirm?.webContents.send('window-type', 'confirm');
+    windowMap.confirm?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-confirm\';');
   });
 }
 

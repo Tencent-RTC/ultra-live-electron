@@ -1,65 +1,133 @@
 <template>
-  <div class="tui-live-kit-confirm dark-theme">
+  <div class="tui-live-kit-confirm dark-theme" ref="confirmViewRef">
     <div class="tui-confirm-header">
       <div class="tui-confirm-title">{{ title }}</div>
       <div class="tui-confirm-close">
-        <tui-button class="tui-confirm-header-button" @click="onCancel">
+        <TUILiveButton class="tui-confirm-header-button" @click="onCancel">
           <CloseIcon />
-        </tui-button>
+        </TUILiveButton>
       </div>
     </div>
     <div class="tui-confirm-content">
       {{ content }}
     </div>
     <div class="tui-confirm-footer">
-      <tui-button class="tui-confirm-button tui-confirm-cancel" @click="onCancel">{{ t('Cancel') }}</tui-button>
-      <tui-button class="tui-confirm-button" @click="onConfirm">{{ t('Confirm') }}</tui-button>
+      <TUILiveButton
+        v-for="(action, index) in actions"
+        :key="index"
+        class="tui-confirm-window-button"
+        :class="`tui-live-button-${action.type}`"
+        @click="handleAction(action.value)"
+      >
+        {{ action.text }}
+      </TUILiveButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import type { Ref } from 'vue';
-import TuiButton from './common/base/Button.vue';
+import TUILiveButton from './common/base/Button.vue';
 import CloseIcon from './common/icons/CloseIcon.vue';
-import { useI18n } from './locales';
 import logger from './utils/logger';
+import { changeTheme } from './utils/utils';
+import { TUIButtonAction } from './types';
+
+const logPrefix = '[ConfirmView]';
+
+const confirmViewRef: Ref<HTMLElement | null> = ref(null);
 
 const title: Ref<string> = ref('');
 const content: Ref<string> = ref('');
-
-const { t } = useI18n();
+const actions: Ref<Array<TUIButtonAction>> = ref([]);
 
 function clear() {
   title.value = '';
   content.value = '';
-}
-
-function onConfirm() {
-  logger.log('onConfirm');
-  window.ipcRenderer.send('stop-living-result', {
-    confirm: true,
-  });
-  clear();
+  actions.value = [];
 }
 
 function onCancel() {
   logger.log('onCancel');
   window.ipcRenderer.send('stop-living-result', {
-    confirm: false,
+    value: 'cancel',
   });
   clear();
 }
 
-window.ipcRenderer.on('stop-living', (event: any, args: Record<string, string>) => {
+function handleAction(value: string) {
+  logger.log('handleAction', value);
+  window.ipcRenderer.send('stop-living-result', {
+    value: value,
+  });
+  clear();
+}
+
+window.ipcRenderer.on('stop-living', (event: any, args: {
+  title: string;
+  content: string;
+  actions: Array<TUIButtonAction>;
+}) => {
   title.value = args.title || '';
   content.value = args.content || '';
+  actions.value = args.actions || [];
+});
+
+function onMessage(event: Record<string, any>) {
+  logger.log(`${logPrefix}message from main window:`, event.data, event);
+  const { key, data } = event.data;
+  switch (key) {
+  case 'change-theme':
+    if (confirmViewRef.value) {
+      changeTheme(confirmViewRef.value, data);
+    }
+    break;
+  default:
+    logger.warn(`${logPrefix}message unknown:`, key, data);
+    break;
+  }
+}
+
+// eslint-disable-next-line no-undef
+let messageEventTimerId: string | number | NodeJS.Timeout | undefined;
+function initMainWindowMessageListener() {
+  logger.log(`${logPrefix}initMainWindowMessageListener`);
+  if (window.mainWindowPortInConfirm) {
+    window.mainWindowPortInConfirm.addEventListener('message', onMessage);
+    window.mainWindowPortInConfirm.start();
+    window.mainWindowPortInConfirm.postMessage({
+      key: 'notice-from-confirm',
+      data: 'confirm window port started',
+    });
+  } else {
+    logger.warn(`${logPrefix}initMainWindowMessageListener port not ready, will retry in 1s`);
+    messageEventTimerId = setTimeout(()=>{
+      messageEventTimerId = 0;
+      initMainWindowMessageListener();
+    }, 1000);
+  }
+}
+
+onMounted(() => {
+  logger.log('ConfirmView mounted');
+  initMainWindowMessageListener();
+});
+
+onUnmounted(() => {
+  logger.log('ConfirmView unmounted');
+  if (messageEventTimerId) {
+    clearTimeout(messageEventTimerId);
+  }
+  if (window.mainWindowPortInConfirm) {
+    window.mainWindowPortInConfirm.removeEventListener('message', onMessage);
+  }
 });
 </script>
 
 <style lang="scss" scoped>
 @import './assets/global.scss';
+
 .tui-live-kit-confirm {
   width: 100%;
   height: 100%;
@@ -68,7 +136,7 @@ window.ipcRenderer.on('stop-living', (event: any, args: Record<string, string>) 
   justify-content: space-between;
   padding: 0.5rem 1rem;
   color: $font-sub-window-color;
-  background-color: $color-black;
+  background-color: var(--bg-color-dialog);
 
   .tui-confirm-header {
     display: flex;
@@ -79,6 +147,7 @@ window.ipcRenderer.on('stop-living', (event: any, args: Record<string, string>) 
     font-weight: bold;
 
     .tui-confirm-header-button {
+      padding: 0;
       background: none;
       border: none;
     }
@@ -89,19 +158,35 @@ window.ipcRenderer.on('stop-living', (event: any, args: Record<string, string>) 
     font-size: 0.8rem;
   }
 
-
   .tui-confirm-footer {
     height: 2.5rem;
     line-height: 2.5rem;
-    text-align: center;
+    text-align: right;
     font-size: 1rem;
 
-    .tui-confirm-button {
-      width: 5rem;
-      margin: 0 1rem;
+    .tui-confirm-window-button {
+      width: auto;
+      min-width: 5rem;
+      margin-right: 1rem;
+      padding: 0.3125rem 0.75rem;
 
-      &.tui-confirm-cancel {
+      &:hover {
         background: none;
+      }
+
+      &.tui-live-button-normal {
+        background: none;
+      }
+
+      &.tui-live-button-dangerous {
+        color: $color-error;
+        border-color: $color-error;
+      }
+
+      &.tui-live-button-more-dangerous {
+        background-color: $color-error;
+        color: $color-white;
+        border-color: $color-error;
       }
     }
   }

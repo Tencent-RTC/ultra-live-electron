@@ -49,7 +49,7 @@
       },
       {
         "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/${arch}/platforms/",
-        "to": "./platforms",
+        "to": "./resources/platforms",
         "filter": ["**/*"],
       },
       {

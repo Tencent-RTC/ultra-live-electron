@@ -60,6 +60,9 @@ export const colorRangeOptions = [
 ];
 
 export const MEDIA_SOURCE_STORAGE_KEY = 'TRTC_LIVE_MEDIA_SOURCES';
+export const INVITATION_TIMEOUT = 10; // seconds
+export const DEFAULT_USER_AVATAR_URL =  'https://web.sdk.qcloud.com/component/TUIKit/assets/avatar_16.png';
+export const MAX_SDK_APP_ID = 4294967295;
 
 export enum TUIMediaSourceEditMode {
   Add = 'Add',

@@ -8,37 +8,53 @@
       </div>
     </div>
     <div v-show="!isCollapse " class="tui-live-tool-container">
-      <div
-        v-for="(toolButton, index) in liveToolButtonList"
-        :key="index"
-        class="tui-live-tool-button-container"
-        :class="{'tui-live-tool-disable-button' : !toolButton.func}"
-      >
-        <div class="tui-live-tool-button" @click="toolButton.func">
-          <div class="tui-live-tool-button-icon">
-            <svg-icon :class="{'tui-live-tool-disable-button' : !toolButton.func}" :icon="toolButton.icon"></svg-icon>
-          </div>
-          <div class="tui-live-tool-button-desc">{{ t(`${toolButton.text}`) }}</div>
-        </div>
-      </div>
+      <TUILiveButton class="tui-toolbar-button" @click="handlerAudioEffect">
+        <svg-icon :icon=AudioEffIcon :size="1.5"></svg-icon>
+        <span class="tui-toolbar-button-desc">{{ t('Reverb Voice') }}</span>
+      </TUILiveButton>
+      <TUILiveButton class="tui-toolbar-button" @click="handlerAlterVoice">
+        <svg-icon :icon=ChangeVoiceIcon :size="1.5"></svg-icon>
+        <span class="tui-toolbar-button-desc">{{ t('Change Voice') }}</span>
+      </TUILiveButton>
+      <TUILiveButton class="tui-toolbar-button" @click="handlerAddBgm">
+        <svg-icon :icon=BGMIcon :size="1.5"></svg-icon>
+        <span class="tui-toolbar-button-desc">{{ t('BGM') }}</span>
+      </TUILiveButton>
+      <!-- <TUILiveButton class="tui-toolbar-button" @click="handlerPK" :disabled="isPKDisable">
+        <svg-icon :icon=PKIcon :size="1.5"></svg-icon>
+        <span class="tui-toolbar-button-desc">{{ t('PK') }}</span>
+      </TUILiveButton> -->
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { storeToRefs } from 'pinia';
+import TUILiveButton from '../../common/base/Button.vue';
 import BGMIcon from '../../common/icons/BGMIcon.vue';
 import PKIcon from '../../common/icons/PKIcon.vue';
 import AudioEffIcon from '../../common/icons/AudioEffIcon.vue';
-import RecordIcon from '../../common/icons/RecordIcon.vue';
 import ChangeVoiceIcon from '../../common/icons/ChangeVoiceIcon.vue';
 import ArrowDownIcon from '../../common/icons/ArrowDownIcon.vue';
 import ArrowDownRotateIcon from '../../common/icons/ArrowDownRotateIcon.vue';
 import SvgIcon from '../../common/base/SvgIcon.vue';
+import { useBasicStore } from '../../store/main/basic';
+import { useRoomStore } from '../../store/main/room';
 import { useI18n } from '../../locales';
+import { TUIConnectionMode } from '../../types';
 
 const {t} = useI18n();
 const isCollapse  = ref(false);
+
+const basicStore = useBasicStore();
+const roomStore = useRoomStore();
+const { isLiving } = storeToRefs(basicStore);
+const { connectionMode } = storeToRefs(roomStore);
+
+const isPKDisable = computed(() => {
+  return !isLiving.value || connectionMode.value === TUIConnectionMode.CoGuest;
+});
 
 const switchLiveTool = () => {
   isCollapse.value = !isCollapse.value;
@@ -51,7 +67,13 @@ const handlerAddBgm = () => {
 };
 
 const handlerPK = () => {
-  window.ipcRenderer.send('open-pk');
+  window.ipcRenderer.send('open-child', {
+    command: 'co-host-connection',
+    data: {
+      layoutTemplate: roomStore.coHostLayoutTemplate,
+      duration: roomStore.anchorBattleInfo.duration,
+    }
+  });
 };
 
 const handlerAudioEffect = () => {
@@ -65,33 +87,6 @@ const handlerAlterVoice = () => {
     command: 'change-voice',
   });
 }
-
-const liveToolButtonList = [
-  {
-    icon: AudioEffIcon,
-    text: 'Reverb Voice',
-    func: handlerAudioEffect,
-  },
-  {
-    icon: BGMIcon,
-    text: 'BGM',
-    func: handlerAddBgm,
-  },
-  {
-    icon: PKIcon,
-    text: 'PK',
-    // func: handlerPK, // To do
-  },
-  {
-    icon: RecordIcon,
-    text: 'Record',
-  },
-  {
-    icon: ChangeVoiceIcon,
-    text: 'Change Voice',
-    func:handlerAlterVoice,
-  },
-];
 </script>
 
 <style scoped lang="scss">
@@ -124,45 +119,27 @@ const liveToolButtonList = [
     padding: 0.3rem 1rem;
     color: var(--bg-color-operate);
 
-    .tui-live-tool-button-container {
-      box-sizing: border-box;
+    .tui-toolbar-button {
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
+      gap: 0.25rem;
       width: 4rem;
-      height: 4rem;
+      height: 3.5rem;
+      padding: 0;
+      border: none;
+
+      background: none;
       word-wrap: break-word;
       white-space: normal;
-      cursor: pointer;
+      text-align: center;
+      font-size: 0.75rem;
 
-      .tui-live-tool-button {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        position: relative;
-        align-items: center;
-        height: 3.5rem;
-        width: 100%;
-
-        .tui-live-tool-button-icon {
-          position: absolute;
-          top: 0.5rem;
-        }
-
-        .tui-live-tool-button-desc {
-          position: absolute;
-          bottom: 0;
-          width: 120%;
-          text-align: center;
-          color: var(--text-color-secondary);
-        }
+      .tui-toolbar-button-desc {
+        line-height: 1rem;
+        color: var(--text-color-secondary);
       }
-    }
-
-    .tui-live-tool-disable-button,
-    .tui-live-tool-disable-button:hover{
-      color: $font-live-config-tool-disable-button-hover-color;
-      cursor: not-allowed;
     }
   }
 }

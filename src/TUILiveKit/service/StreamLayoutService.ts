@@ -1,6 +1,6 @@
 import { TRTCStreamLayout, TRTCStreamLayoutMode, TRTCVideoFillMode, TRTCVideoResolution, TRTCVideoResolutionMode } from 'trtc-electron-sdk';
 import { TUILiveLayoutManagerEvents, TUISeatLayout, TUISeatRegion, TUIDeviceStatus } from '@tencentcloud/tuiroom-engine-electron';
-import { TUIStreamLayoutMode, TUIUserSeatStreamRegion, TUISeatLayoutTemplate } from '../types';
+import { TUIUserSeatStreamRegion, TUISeatLayoutTemplate, TUICoHostLayoutTemplate } from '../types';
 import { resolutionMap } from '../constants/tuiConstant';
 import useMediaMixingManager from '../utils/useMediaMixingManager';
 import useRoomEngine from '../utils/useRoomEngine';
@@ -15,8 +15,7 @@ export class StreamLayoutService {
   private roomId: string;
   private roomOwner: string;
   private container: HTMLElement | null;
-  private layoutMode: TUIStreamLayoutMode;
-  private isAutoAdjusting: boolean;
+  private layoutTemplateId: TUISeatLayoutTemplate | TUICoHostLayoutTemplate | null;
 
   private seatLayout: TUISeatLayout | null;
   private streamLayout: TRTCStreamLayout;
@@ -49,10 +48,9 @@ export class StreamLayoutService {
 
   constructor() {
     this.roomId = '';
-    this.roomOwner = '',
+    this.roomOwner = '';
     this.container = null;
-    this.layoutMode = TUIStreamLayoutMode.None;
-    this.isAutoAdjusting = true;
+    this.layoutTemplateId = null;
     this.seatLayout = null;
     this.streamLayout = {
       layoutMode: TRTCStreamLayoutMode.None,
@@ -72,14 +70,11 @@ export class StreamLayoutService {
     this.userSeatStreamRegions = [];
   }
 
-  setLayoutMode(layoutMode: TUIStreamLayoutMode): void {
-    this.layoutMode = layoutMode;
-    this.setStreamLayout();
-  }
-
-  setIsAutoAdjusting(isAutoAdjusting: boolean): void {
-    this.isAutoAdjusting = isAutoAdjusting;
-    this.setStreamLayout();
+  setLayoutTemplate(template: TUISeatLayoutTemplate | TUICoHostLayoutTemplate): void {
+    if (template) {
+      this.layoutTemplateId = template;
+      this.setStreamLayout();
+    }
   }
 
   setRoomInfo(options: { roomId: string; roomOwner: string; }): void {
@@ -137,7 +132,7 @@ export class StreamLayoutService {
 
   reset(): void {
     logger.debug(`${this.logPrefix}reset`);
-    this.layoutMode = TUIStreamLayoutMode.None;
+    this.layoutTemplateId = null;
     this.seatLayout = null;
     this.roomId = '';
     this.roomOwner = '';
@@ -203,7 +198,7 @@ export class StreamLayoutService {
       return;
     }
 
-    if (this.layoutMode !== TUIStreamLayoutMode.None) {
+    if (this.layoutTemplateId !== null) {
       this.streamLayout.layoutMode = TRTCStreamLayoutMode.Custom;
       if (this.seatLayout) {
         this.calcDisplayLayout();
@@ -285,7 +280,7 @@ export class StreamLayoutService {
           bottom: Math.round(rect.y + rect.h),
         },
         zOrder: i,
-        fillMode: (seatRegion.userId === this.roomOwner && this.isAutoAdjusting && this.layoutMode === TUIStreamLayoutMode.Float) ? TRTCVideoFillMode.TRTCVideoFillMode_Fit : TRTCVideoFillMode.TRTCVideoFillMode_Fill,
+        fillMode: (seatRegion.userId === this.roomOwner && this.layoutTemplateId === TUISeatLayoutTemplate.PortraitDynamic_1v6) ? TRTCVideoFillMode.TRTCVideoFillMode_Fit : TRTCVideoFillMode.TRTCVideoFillMode_Fill,
       };
       if (seatRegion.userId && (seatRegion.userId === this.roomOwner || seatRegion.userCameraStatus === TUIDeviceStatus.TUIDeviceStatusOpened)) {
         this.streamLayout.userList.push(userStreamLayout);

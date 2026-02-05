@@ -1,11 +1,6 @@
 <template>
   <div class="tui-change-voice-window">
-    <div class="tui-change-voice-title tui-window-header">
-      <span>{{ t("Change Voice") }}</span>
-      <button class="tui-icon" @click="handleCloseSetting">
-        <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
-      </button>
-    </div>
+    <LiveChildHeader :title="t('Change Voice')"></LiveChildHeader>
     <div class="tui-change-voice-container">
     <div class="tui-change-voice-item" v-for="item in changeVoiceList" :key="item.id">
       <div class="tui-change-voice-icon">
@@ -24,8 +19,8 @@
 import { onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCVoiceChangerType } from 'trtc-electron-sdk';
+import LiveChildHeader from '../LiveChildHeader.vue';
 import SvgIcon from '../../../common/base/SvgIcon.vue';
-import CloseIcon from '../../../common/icons/CloseIcon.vue';
 import OriginVoiceIcon from '../../../common/icons/ChangeVoiceIcons/OriginVoiceIcon.vue';
 import NaughtyKidIcon from '../../../common/icons/ChangeVoiceIcons/NaughtyKidIcon.vue';
 import LolitaIcon from '../../../common/icons/ChangeVoiceIcons/LolitaIcon.vue';
@@ -146,20 +141,7 @@ function handleCloseSetting(){
 .tui-change-voice-window {
   display: flex;
   flex-direction: column;
-  align-items: center;
   height: 100%;
-
-  .tui-change-voice-title {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-
-    .close-icon {
-      cursor: pointer;
-    }
-  }
 
   .tui-change-voice-container{
     width: 100%;

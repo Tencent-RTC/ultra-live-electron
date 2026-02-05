@@ -1,11 +1,6 @@
 <template>
   <div class="tui-reverb-voice-window">
-    <div class="tui-reverb-voice-title tui-window-header">
-      <span>{{ t("Reverb Voice") }}</span>
-      <button @click="handleCloseSetting">
-        <svg-icon :icon="CloseIcon" class="tui-secondary-icon"></svg-icon>
-      </button>
-    </div>
+    <LiveChildHeader :title="t('Reverb Voice')"></LiveChildHeader>
     <div class="tui-reverb-voice-container">
     <div class="tui-reverb-voice-item" v-for="item in reverbVoiceList" :key="item.id">
       <div class="tui-reverb-voice-icon">
@@ -24,8 +19,8 @@
 import { onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia'
 import { TRTCVoiceReverbType } from 'trtc-electron-sdk';
+import LiveChildHeader from '../LiveChildHeader.vue';
 import SvgIcon from '../../../common/base/SvgIcon.vue';
-import CloseIcon from '../../../common/icons/CloseIcon.vue';
 import NoEffectIcon from '../../../common/icons/ReverbVoiceIcons/NoEffectIcon.vue';
 import KTVIcon from '../../../common/icons/ReverbVoiceIcons/KTVIcon.vue';
 import MetallicAudioIcon from '../../../common/icons/ReverbVoiceIcons/MetallicAudioIcon.vue';
@@ -149,20 +144,7 @@ function handleCloseSetting(){
 .tui-reverb-voice-window {
   display: flex;
   flex-direction: column;
-  align-items: center;
   height: 100%;
-
-  .tui-reverb-voice-title {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-
-    .close-icon {
-      cursor: pointer;
-    }
-  }
 
   .tui-reverb-voice-container{
     width: 100%;

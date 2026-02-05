@@ -1,10 +1,9 @@
-import { onBeforeMount, onUnmounted } from 'vue';
-import { TUIErrorCode } from '@tencentcloud/tuiroom-engine-electron';
+import { TUIConnectionCode, TUIErrorCode } from '@tencentcloud/tuiroom-engine-electron';
 import TUIMessageBox from '../common/base/MessageBox';
 import { useI18n } from '../locales/index';
 import logger from '../utils/logger';
 
-const logPrefix = '[useErrorHandler]';
+const logPrefix = '[useRoomErrorHandler]';
 
 const { t } = useI18n();
 
@@ -342,13 +341,67 @@ const RoomErrorInfo: { [key: number]: {
   },
 }
 
-export function onError(error: any) {
+const AnchorConnectionErrorInfo: { [key: number]: {
+  code: number;
+  messageI18n: string;
+}} = {
+  [TUIConnectionCode.TUIConnectionCodeUnknown]: {
+    code: TUIConnectionCode.TUIConnectionCodeUnknown,
+    messageI18n: t('Connection with room across unknown error'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeRoomNotExist]: {
+    code: TUIConnectionCode.TUIConnectionCodeRoomNotExist,
+    messageI18n: t('Live room does not exist'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeConnecting]: {
+    code: TUIConnectionCode.TUIConnectionCodeConnecting,
+    messageI18n: t('Live room is connecting'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeConnectingOtherRoom]: {
+    code: TUIConnectionCode.TUIConnectionCodeConnectingOtherRoom,
+    messageI18n: t('Live room is connecting with other room'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeFull]: {
+    code: TUIConnectionCode.TUIConnectionCodeFull,
+    messageI18n: t('Live rooms in connecting reaches maximum limitation'),
+  },
+  [TUIConnectionCode.TUIConnectionCodeRetry]: {
+    code: TUIConnectionCode.TUIConnectionCodeRetry,
+    messageI18n: t('Connection with live room failed, please retry.'),
+  },
+};
+
+function handleCode100002(message: string) {
+  if (message.indexOf('not support seat,  please upgrade your package on the console') !== -1) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: t('Your current package does not support live streaming.'),
+      confirmButtonText: t('Sure'),
+    });
+  } else if (message.indexOf('the length of room name must be less than 100') !== -1) {
+    TUIMessageBox({
+      title: t('Note'),
+      message: t('The length of room name must be less than 100'),
+      confirmButtonText: t('Sure'),
+    });
+  } else {
+    TUIMessageBox({
+      title: t('Note'),
+      message: RoomErrorInfo[TUIErrorCode.ERR_SERVER_INVALID_PARAMETER].messageI18n,
+      confirmButtonText: t('Sure'),
+    });
+  }
+}
+
+export function onRoomError(error: { code?: number; message?: string}) {
   if (error.code !== null && error.code !== undefined) {
-    const { code } = error;
+    const { code, message } = error;
     if (RoomErrorInfo[code]) {
       if (code !== 0) {
         logger.warn(`${logPrefix}onError:`, error);
-        if (RoomErrorInfo[code].messageI18n) {
+        if (code === TUIErrorCode.ERR_SERVER_INVALID_PARAMETER && message) {
+          handleCode100002(message);
+        } else if (RoomErrorInfo[code].messageI18n) {
           TUIMessageBox({
             title: t('Note'),
             message: RoomErrorInfo[code].messageI18n,
@@ -366,18 +419,16 @@ export function onError(error: any) {
   }
 }
 
-function useErrorHandler() {
-  onBeforeMount(() => {
-    window.addEventListener('error', onError);
-  });
-
-  onUnmounted(() => {
-    window.removeEventListener('error', onError);
-  });
-
-  return {
-    onError,
+export function onAnchorConnectionError(error: {code: number, message: string}) {
+  const { code, message } = error;
+  if (code !== TUIConnectionCode.TUIConnectionCodeSuccess) {
+    logger.warn(`${logPrefix}onAnchorConnectionError:`, error);
+    if (AnchorConnectionErrorInfo[code]) {
+      TUIMessageBox({
+        title: t('Note'),
+        message: `${message} ${AnchorConnectionErrorInfo[code].messageI18n}`,
+        confirmButtonText: t('Sure'),
+      });
+    }
   }
 }
-
-export default useErrorHandler;

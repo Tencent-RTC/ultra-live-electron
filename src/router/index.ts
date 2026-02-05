@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory, RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
 import Loading from '../views/Loading.vue';
 import Login from '../views/Login/Index.vue';
+import { isMacPlatform } from '../TUILiveKit/utils/platform';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -12,6 +13,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/tui-live-kit-main',
     name: 'tui-live-kit-main',
     component: () => import(/* webpackChunkName: "TUILiveKitMain" */ '../views/TUILiveKitMain.vue')
+  },
+  {
+    path: '/tui-livekit-mac-v2',
+    name: 'tui-livekit-mac-v2',
+    component: () => import(/* webpackChunkName: "TUILiveKitMacV2" */ '../views/TUILiveKitMacV2.vue')
   },
   {
     path: '/tui-live-kit-child',
@@ -46,6 +52,9 @@ window.ipcRenderer.on('window-type', (event: any, type: string) => {
 });
 
 router.beforeEach((to: RouteLocationNormalized) => {
+  if (isMacPlatform() && to.name === 'tui-live-kit-main') {
+    return { name: 'tui-livekit-mac-v2' };
+  }
   if (to.name === 'tui-live-kit-main') {
     const storedUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
     if (!storedUserInfo) {
