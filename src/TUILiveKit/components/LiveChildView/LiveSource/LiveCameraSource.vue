@@ -12,7 +12,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, Ref, defineProps, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, Ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCDeviceInfo, TRTCMediaSourceType, TRTCVideoMirrorType } from 'trtc-electron-sdk';
 import { useI18n } from '../../../locales';
@@ -25,11 +25,14 @@ import logger from '../../../utils/logger';
 
 interface TUIMediaSourceEditProps {
   data?: Record<string, any>;
+  /** When 'emit', confirm uses emit instead of mainWindowPortInChild (for V2 child window) */
+  replyVia?: 'port' | 'emit';
 }
 
 const logPrefix = '[LiveCameraSource]';
 
-const props = defineProps<TUIMediaSourceEditProps>();
+const props = withDefaults(defineProps<TUIMediaSourceEditProps>(), { replyVia: 'port' });
+const emit = defineEmits<{ (e: 'addMediaSource', data: Record<string, any>): void; (e: 'updateMediaSource', data: Record<string, any>): void }>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
 
 const { t } = useI18n();
@@ -70,10 +73,14 @@ const handleAddCamera = () => {
     }
 
     resetCurrentView();
-    window.mainWindowPortInChild?.postMessage({
-      key: 'addMediaSource',
-      data: cameraSource
-    });
+    if (props.replyVia === 'emit') {
+      emit('addMediaSource', cameraSource);
+    } else {
+      window.mainWindowPortInChild?.postMessage({
+        key: 'addMediaSource',
+        data: cameraSource
+      });
+    }
     window.ipcRenderer.send('close-child');
   } else {
     // To do: Message('Please choose a camera')；
@@ -102,10 +109,14 @@ const handleEditCamera = () => {
     };
 
     resetCurrentView();
-    window.mainWindowPortInChild?.postMessage({
-      key: 'updateMediaSource',
-      data: newData,
-    });
+    if (props.replyVia === 'emit') {
+      emit('updateMediaSource', newData);
+    } else {
+      window.mainWindowPortInChild?.postMessage({
+        key: 'updateMediaSource',
+        data: newData,
+      });
+    }
     window.ipcRenderer.send('close-child');
   } else {
     // To do: Message('Please choose a camera')；

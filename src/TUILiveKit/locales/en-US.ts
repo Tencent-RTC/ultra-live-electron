@@ -137,6 +137,7 @@ export default {
   'Co-guest management': 'Co-guest management',
   'Application for live': 'Application for live',
   'No application for live': 'No application for live',
+  'Conn Wait': 'Conn Wait',
   'Seat is empty': 'Seat is empty',
   'Current seat': 'Current seat',
   'Me': 'Me',
@@ -389,7 +390,10 @@ export default {
   'User ID': 'User ID',
   'User Name': 'User Name',
   'Enter user name': 'Enter user name',
+  'Please enter username': 'Please enter username',
   'Avatar URL': 'Avatar URL',
+  'Please enter avatar URL (optional)': 'Please enter avatar URL (optional)',
+  'Please enter a valid avatar URL': 'Please enter a valid avatar URL',
   'Not set': 'Not set',
   'User Signature': 'User Signature',
   'SDKAPPID': 'SDKAPPID',
@@ -524,5 +528,6 @@ export default {
   'Car': 'Car',
   'Sports car': 'Sports car',
   'OnlyYou': 'Only You',
-  'RomanticSail': 'Romantic Sail'
+  'RomanticSail': 'Romantic Sail',
+  'Network Error': 'Network Error',
 }

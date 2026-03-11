@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, defineProps, computed, watch } from 'vue';
+import { Ref, ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { TRTCMediaSourceType } from 'trtc-electron-sdk';
 import { useI18n } from '../../../locales';
@@ -50,9 +50,12 @@ import logger from '../../../utils/logger';
 
 type TUIMediaSourceEditProps = {
   data?: Record<string, any>;
+  /** When 'emit', confirm uses emit instead of mainWindowPortInChild (for V2 child window) */
+  replyVia?: 'port' | 'emit';
 }
 
-const props = defineProps<TUIMediaSourceEditProps>();
+const props = withDefaults(defineProps<TUIMediaSourceEditProps>(), { replyVia: 'port' });
+const emit = defineEmits<{ (e: 'addMediaSource', data: Record<string, any>): void; (e: 'updateMediaSource', data: Record<string, any>): void }>();
 const mode = computed(() => props.data?.mediaSourceInfo ? TUIMediaSourceEditMode.Edit : TUIMediaSourceEditMode.Add);
 logger.log(`[LiveScreenShareSource]mode: ${mode.value}`);
 const currentSourceStore = useCurrentSourceStore();
@@ -84,10 +87,14 @@ const handleAddScreen = () => {
       screenType: selected.value.type,
     };
 
-    window.mainWindowPortInChild?.postMessage({
-      key: 'addMediaSource',
-      data: screenWindowInfo,
-    });
+    if (props.replyVia === 'emit') {
+      emit('addMediaSource', screenWindowInfo);
+    } else {
+      window.mainWindowPortInChild?.postMessage({
+        key: 'addMediaSource',
+        data: screenWindowInfo,
+      });
+    }
     window.ipcRenderer.send('close-child');
     resetCurrentView();
   } else {
@@ -108,11 +115,14 @@ const handleEditScreen = () => {
       predata: JSON.parse(JSON.stringify(props.data)),
     };
 
-    window.mainWindowPortInChild?.postMessage({
-      key: 'updateMediaSource',
-      data: newData,
-    })
-
+    if (props.replyVia === 'emit') {
+      emit('updateMediaSource', newData);
+    } else {
+      window.mainWindowPortInChild?.postMessage({
+        key: 'updateMediaSource',
+        data: newData,
+      });
+    }
     window.ipcRenderer.send('close-child');
     resetCurrentView();
   } else {

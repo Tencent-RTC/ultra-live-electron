@@ -1,28 +1,36 @@
+import type { DirectiveBinding, ObjectDirective } from 'vue';
 
-const nodeMap = new Map();
+type ClickOutsideHandler = (event: Event) => void;
 
-const vClickOutside = {
-  mounted(el: HTMLElement, binding: any) {
-    const listenerFunction = (event: any) => {
-      if (el.contains(event.target)) {
+const nodeMap = new WeakMap<HTMLElement, ClickOutsideHandler[]>();
+
+const vClickOutside: ObjectDirective<HTMLElement, ClickOutsideHandler> = {
+  mounted(el: HTMLElement, binding: DirectiveBinding<ClickOutsideHandler>) {
+    const listenerFunction: ClickOutsideHandler = (event: Event) => {
+      const eventTarget = event.target as Node | null;
+      if (eventTarget && el.contains(eventTarget)) {
         return;
       }
-      if (binding.value && typeof binding.value === 'function') {
+      if (typeof binding.value === 'function') {
         binding.value(event);
       }
     };
-    if (!nodeMap.has(el)) {
-      nodeMap.set(el, []);
-    }
-    const nodeCallbackList = nodeMap.get(el);
+    const nodeCallbackList = nodeMap.get(el) || [];
     nodeCallbackList.push(listenerFunction);
-    document.addEventListener('click', listenerFunction, false);
+    nodeMap.set(el, nodeCallbackList);
+    document.addEventListener('click', listenerFunction);
+    document.addEventListener('touchend', listenerFunction);
   },
   unmounted(el: HTMLElement) {
     const nodeCallbackList = nodeMap.get(el);
-    nodeCallbackList.forEach((callback: any) => {
-      document.removeEventListener('click', callback, false);
+    if (!nodeCallbackList?.length) {
+      return;
+    }
+    nodeCallbackList.forEach((callback: ClickOutsideHandler) => {
+      document.removeEventListener('click', callback);
+      document.removeEventListener('touchend', callback);
     });
+    nodeMap.delete(el);
   },
 };
 

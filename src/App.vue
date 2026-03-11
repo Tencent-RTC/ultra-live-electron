@@ -3,9 +3,17 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue';
+import packageConfig from '../package.json';
 import { useAppRequestQuit } from './TUILiveKit/hooks/useAppRequestQuit';
+import { setStableWindowTitle } from './TUILiveKit/utils/windowTitle';
 
 useAppRequestQuit();
+
+onMounted(() => {
+  const appVersion = packageConfig.version.replace('-build', '.');
+  void setStableWindowTitle(appVersion);
+});
 </script>
 
 <style lang="scss">

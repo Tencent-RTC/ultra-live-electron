@@ -68,6 +68,7 @@ import DeviceSelect from './DeviceSelect.vue';
 import { useCurrentSourceStore } from '../store/child/currentSource';
 import { SettingMode } from '../constants/render';
 import { useI18n } from '../locales';
+import { getSpeakerTestUrl } from '../utils/audio';
 
 interface Props {
   mode?: SettingMode,
@@ -164,14 +165,6 @@ async function handleSpeakerTest() {
     window.mainWindowPortInChild?.postMessage({
       key: 'stopTestSpeaker',
     });
-  }
-}
-
-function getSpeakerTestUrl() {
-  if (process.env.NODE_ENV === 'production') {
-    return window.APP_PATH + '/dist/TestSpeaker.mp3';
-  } else {
-    return window.APP_PATH + '/public/TestSpeaker.mp3';
   }
 }
 

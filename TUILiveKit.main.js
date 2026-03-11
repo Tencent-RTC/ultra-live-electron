@@ -37,6 +37,313 @@ const coverWindowRelativeBounds = {
 const liveKitEmitter = new EventEmitter();
 let isQuitting = false;
 
+// ============== App Quit Race Condition Fix ==============
+// Handles the race condition when user quickly closes the window before
+// renderer-side listeners (app-request-quit / confirm dialog) are mounted.
+//
+// Solution: 1) Main process timeout fallback
+//           2) Confirm window ready handshake
+//           3) Quit request retry mechanism
+const QUIT_TIMEOUT_MS = 5000; // Force quit if no response within 5 seconds
+const QUIT_RETRY_INTERVAL_MS = 200; // Retry interval when confirm window not ready
+let quitTimeoutTimer = null;
+let quitRetryTimer = null;
+let isConfirmWindowReady = false;
+let pendingQuitRequest = false;
+
+function clearQuitTimers() {
+  if (quitTimeoutTimer) {
+    clearTimeout(quitTimeoutTimer);
+    quitTimeoutTimer = null;
+  }
+  if (quitRetryTimer) {
+    clearInterval(quitRetryTimer);
+    quitRetryTimer = null;
+  }
+}
+
+/**
+ * Shared handler for quit-confirmed from both V2 IPC router and direct IPC channel.
+ * Clears timers, sets quit state, and closes all windows.
+ */
+function handleQuitConfirmed() {
+  clearQuitTimers();
+  pendingQuitRequest = false;
+  isQuitting = true;
+  if (windowMap.mainCover && !windowMap.mainCover.isDestroyed()) {
+    windowMap.mainCover.close();
+  }
+  windowMap.mainCover = null;
+
+  if (windowMap.confirm && !windowMap.confirm.isDestroyed()) {
+    windowMap.confirm.close();
+  }
+  windowMap.confirm = null;
+
+  if (windowMap.main && !windowMap.main.isDestroyed()) {
+    windowMap.main.close();
+  }
+
+  if (windowMap.child && !windowMap.child.isDestroyed()) {
+    windowMap.child.close();
+  }
+  windowMap.child = null;
+}
+
+/**
+ * Shared handler for quit-cancel from both V2 IPC router and direct IPC channel.
+ * Clears timers and resets quit state.
+ */
+function handleQuitCancel() {
+  clearQuitTimers();
+  pendingQuitRequest = false;
+  isQuitting = false;
+}
+
+function forceQuitApp() {
+  console.log(`${logPrefix} forceQuitApp: timeout reached, forcing quit`);
+  clearQuitTimers();
+  isQuitting = true;
+  pendingQuitRequest = false;
+
+  // Close all windows
+  if (windowMap.mainCover && !windowMap.mainCover.isDestroyed()) {
+    windowMap.mainCover.close();
+  }
+  windowMap.mainCover = null;
+
+  if (windowMap.confirm && !windowMap.confirm.isDestroyed()) {
+    windowMap.confirm.close();
+  }
+  windowMap.confirm = null;
+
+  if (windowMap.main && !windowMap.main.isDestroyed()) {
+    windowMap.main.close();
+  }
+
+  if (windowMap.child && !windowMap.child.isDestroyed()) {
+    windowMap.child.close();
+  }
+  windowMap.child = null;
+}
+
+function sendQuitRequestToRenderer() {
+  if (isWebContentsAlive(windowMap.main)) {
+    console.log(`${logPrefix} sendQuitRequestToRenderer: sending app-request-quit`);
+    sendToWindow(windowMap.main, 'app-request-quit');
+  }
+}
+
+function initiateQuitSequence() {
+  if (isQuitting) {
+    return;
+  }
+
+  console.log(`${logPrefix} initiateQuitSequence: isConfirmWindowReady=${isConfirmWindowReady}`);
+
+  // Start timeout fallback timer
+  if (!quitTimeoutTimer) {
+    quitTimeoutTimer = setTimeout(() => {
+      console.log(`${logPrefix} quit timeout reached, no response from renderer`);
+      forceQuitApp();
+    }, QUIT_TIMEOUT_MS);
+  }
+
+  if (isConfirmWindowReady) {
+    // Confirm window is ready, send quit request immediately
+    sendQuitRequestToRenderer();
+    pendingQuitRequest = false;
+  } else {
+    // Confirm window not ready yet, mark pending and start retry
+    pendingQuitRequest = true;
+    console.log(`${logPrefix} confirm window not ready, will retry when ready`);
+
+    if (!quitRetryTimer) {
+      quitRetryTimer = setInterval(() => {
+        if (isConfirmWindowReady && pendingQuitRequest) {
+          console.log(`${logPrefix} confirm window now ready, sending pending quit request`);
+          clearInterval(quitRetryTimer);
+          quitRetryTimer = null;
+          sendQuitRequestToRenderer();
+          pendingQuitRequest = false;
+        }
+      }, QUIT_RETRY_INTERVAL_MS);
+    }
+  }
+}
+// ============== End of App Quit Race Condition Fix ==============
+
+function isWindowAlive(win) {
+  return !!win && !win.isDestroyed();
+}
+
+function isWebContentsAlive(win) {
+  return isWindowAlive(win) && !!win.webContents && !win.webContents.isDestroyed();
+}
+
+function sendToWindow(win, channel, ...args) {
+  if (!isWebContentsAlive(win)) {
+    return false;
+  }
+  win.webContents.send(channel, ...args);
+  return true;
+}
+
+function postMessageToWindow(win, channel, message, transfer = []) {
+  if (!isWebContentsAlive(win)) {
+    return false;
+  }
+  win.webContents.postMessage(channel, message, transfer);
+  return true;
+}
+
+/**
+ * Get default window size for a given panel type.
+ * Used by SHOW_CHILD_PANEL message handler when no explicit windowSize is provided.
+ */
+function getDefaultPanelSize(panelType) {
+  const [mainW, mainH] = isWindowAlive(windowMap.main)
+    ? windowMap.main.getSize()
+    : [1200, 800];
+  const sizeMap = {
+    'Camera':              { width: 600, height: 400 },
+    'Screen':              { width: mainW - 150, height: mainH - 80 },
+    'Image':               { width: 600, height: 500 },
+    'Rename':              { width: 480, height: 176 },
+    'CoGuestConnection':   { width: 520, height: 560 },
+    'CoHostConnection':    { width: 520, height: 560 },
+    'Setting':             { width: 600, height: 560 },
+    'AddBgm':              { width: 600, height: 560 },
+    'ReverbVoice':         { width: 600, height: 560 },
+    'ChangeVoice':         { width: 600, height: 560 },
+    'PhoneMirror':         { width: 600, height: 560 },
+    'OnlineVideo':         { width: 600, height: 360 },
+    'VideoFile':           { width: 600, height: 360 },
+    'UserProfile':         { width: 600, height: 460 },
+    'LayoutConfig':        { width: 480, height: 320 },
+    'LiveTitleSetting':    { width: 600, height: 560 },
+  };
+  return sizeMap[panelType] || { width: 600, height: 400 };
+}
+
+// ============== Main Process Action Handlers ==============
+// Centralized handler registry for renderer-to-main-process actions.
+// Messages with `to: 'electron-main'` are consumed here and NOT forwarded to any renderer window.
+const mainProcessHandlers = {
+  'minimizeWindow': (_payload, _from) => {
+    if (isWindowAlive(windowMap.main)) {
+      windowMap.main.minimize();
+    }
+  },
+  'maximizeWindow': (payload, _from) => {
+    if (isWindowAlive(windowMap.main)) {
+      if (payload && payload.maximize) {
+        windowMap.main.maximize();
+      } else {
+        windowMap.main.unmaximize();
+      }
+    }
+  },
+  'closeWindow': (_payload, _from) => {
+    if (isWindowAlive(windowMap.main)) {
+      windowMap.main.close();
+    }
+  },
+  'setWindowSize': (payload, _from) => {
+    const { target, width, height } = payload || {};
+    const win = windowMap[target];
+    if (isWindowAlive(win)) {
+      win.setSize(width, height, true);
+      win.setContentSize(width, height, true);
+    }
+  },
+  'setCoverBounds': (payload, _from) => {
+    const { top, left, width, height } = payload || {};
+    coverWindowRelativeBounds.x = Math.round(left);
+    coverWindowRelativeBounds.y = Math.round(top);
+    coverWindowRelativeBounds.width = Math.round(width);
+    coverWindowRelativeBounds.height = Math.round(height);
+
+    const mainBounds = isWindowAlive(windowMap.main)
+      ? windowMap.main.getContentBounds()
+      : null;
+    if (mainBounds && isWindowAlive(windowMap.mainCover)) {
+      windowMap.mainCover.setBounds({
+        x: coverWindowRelativeBounds.x + mainBounds.x,
+        y: coverWindowRelativeBounds.y + mainBounds.y,
+        width: coverWindowRelativeBounds.width,
+        height: coverWindowRelativeBounds.height,
+      });
+    }
+  },
+  'showCoverWindow': (_payload, _from) => {
+    if (isWindowAlive(windowMap.mainCover)) {
+      windowMap.mainCover.show();
+    }
+  },
+  'hideCoverWindow': (_payload, _from) => {
+    if (isWindowAlive(windowMap.mainCover)) {
+      windowMap.mainCover.hide();
+    }
+  },
+  'setLanguage': (payload, _from) => {
+    language = payload;
+  },
+  'showContextMenu': (_payload, from) => {
+    const win = windowMap[from];
+    if (!isWindowAlive(win)) return;
+    const template = [
+      {
+        label: isZhCN() ? '排序' : 'Sort',
+        submenu: [
+          { 'label': isZhCN() ? '上移' : 'Move up', 'click': () => { sendToWindow(win, 'context-menu-command', 'move-up'); } },
+          { 'label': isZhCN() ? '下移' : 'Move down', 'click': () => { sendToWindow(win, 'context-menu-command', 'move-down'); } },
+          { 'label': isZhCN() ? '移至顶部' : 'Move to top', 'click': () => { sendToWindow(win, 'context-menu-command', 'move-top'); } },
+          { 'label': isZhCN() ? '移至底部' : 'Move to bottom', 'click': () => { sendToWindow(win, 'context-menu-command', 'move-bottom'); } },
+        ]
+      },
+      {
+        label: isZhCN() ? '变换' : 'Transform',
+        submenu: [
+          { 'label': isZhCN() ? '顺时针旋转90度' : 'Rotate 90 degrees CW', 'click': () => { sendToWindow(win, 'context-menu-command', 'transform-clockwise-90'); } },
+          { 'label': isZhCN() ? '逆时针旋转90度' : 'Rotate 90 degrees CCW', 'click': () => { sendToWindow(win, 'context-menu-command', 'transform-anti-clockwise-90'); } },
+          { 'label': isZhCN() ? '水平旋转' : 'Flip horizontal', 'click': () => { sendToWindow(win, 'context-menu-command', 'transform-mirror-horizontal'); } },
+        ]
+      },
+      { type: 'separator' },
+      { label: isZhCN() ? '隐藏' : 'Hide', click: () => { sendToWindow(win, 'context-menu-command', 'hide'); } },
+      { label: isZhCN() ? '编辑' : 'Edit', click: () => { sendToWindow(win, 'context-menu-command', 'edit'); } },
+      { type: 'separator' },
+      { label: isZhCN() ? '删除' : 'Remove', click: () => { sendToWindow(win, 'context-menu-command', 'remove'); } },
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    if (isWindowAlive(win)) {
+      menu.popup({ window: win });
+    }
+  },
+  'setIgnoreMouseEvents': (payload, from) => {
+    const { ignore, options } = payload || {};
+    const win = windowMap[from];
+    if (isWindowAlive(win)) {
+      win.setIgnoreMouseEvents(ignore, options);
+    }
+  },
+  'appQuitConfirmed': (_payload, _from) => {
+    handleQuitConfirmed();
+  },
+  'appQuitCancel': (_payload, _from) => {
+    handleQuitCancel();
+  },
+  'hideChildPanel': (_payload, _from) => {
+    if (isWindowAlive(windowMap.child)) {
+      if (windowMap.child.isVisible() && _payload && _payload.panelType === lastChildWindowCommand) {
+        lastChildWindowCommand = '';
+        windowMap.child.hide();
+      }
+    }
+  }
+};
+
 // 开启crash捕获
 crashReporter.start({
   productName: 'tui-live-kit-electron',
@@ -157,7 +464,9 @@ async function createWindow(width = 1366, height = 668) {
   windowMap.confirm = new BrowserWindow({
     show: false,
     width: 480,
-    height: 160,
+    // Match TUILiveKitMacV2 exitLiveDialog size (TUIDialog default width 480, height is content-adaptive).
+    // Use a taller fixed height here to fit header/content/footer in confirm BrowserWindow.
+    height: 220,
     frame: false,
     transparent: false,
     resizable: false,
@@ -208,22 +517,133 @@ function bindIPCEvent() {
       return 'child';
     } else if (event.sender === windowMap.mainCover?.webContents) {
       return 'cover'
+    } else if (event.sender === windowMap.confirm?.webContents) {
+      return 'confirm';
     } else {
       return '';
     }
   });
 
+  ipcMain.handle('window-id', (event) => {
+    if (event.sender === windowMap.main?.webContents) {
+      return  windowMap.main.getNativeWindowHandle();
+    } else if (event.sender === windowMap.child?.webContents) {
+      return  windowMap.child.getNativeWindowHandle();
+    } else if (event.sender === windowMap.mainCover?.webContents) {
+      return  windowMap.mainCover.getNativeWindowHandle();
+    } else if (event.sender === windowMap.confirm?.webContents) {
+      return  windowMap.confirm.getNativeWindowHandle();
+    } else {
+      return 0;
+    }
+  });
+
+  // ============== New IPC Message Router for V2 ==============
+  // Unified message routing for inter-window communication
+  // This replaces MessageChannel mechanism with IPC-based communication
+  ipcMain.on('window-message', (event, message) => {
+    const { type, payload, to } = message;
+
+    // Determine the source window
+    let from = 'unknown';
+    if (event.sender === windowMap.main?.webContents) {
+      from = 'main';
+    } else if (event.sender === windowMap.child?.webContents) {
+      from = 'child';
+    } else if (event.sender === windowMap.mainCover?.webContents) {
+      from = 'cover';
+    } else if (event.sender === windowMap.confirm?.webContents) {
+      from = 'confirm';
+    }
+
+    const messageWithFrom = { ...message, from };
+    console.log(`${logPrefix}window-message: type=${type}, from=${from}, to=${to}`);
+
+    // Handle messages targeting Electron main process itself (not forwarded to any renderer)
+    if (to === 'electron-main') {
+      const handler = mainProcessHandlers[type];
+      if (handler) {
+        handler(payload, from);
+      } else {
+        console.warn(`${logPrefix}window-message: no handler for electron-main action: ${type}`);
+      }
+      return;
+    }
+
+    // Route message based on target
+    if (to === 'broadcast') {
+      // Broadcast to all other windows
+      if (from !== 'main') {
+        sendToWindow(windowMap.main, 'window-message', messageWithFrom);
+      }
+      if (from !== 'child') {
+        sendToWindow(windowMap.child, 'window-message', messageWithFrom);
+      }
+      if (from !== 'cover') {
+        sendToWindow(windowMap.mainCover, 'window-message', messageWithFrom);
+      }
+      if (from !== 'confirm') {
+        sendToWindow(windowMap.confirm, 'window-message', messageWithFrom);
+      }
+    } else if (to === 'main') {
+      sendToWindow(windowMap.main, 'window-message', messageWithFrom);
+    } else if (to === 'child') {
+      if (type === 'showChildPanel') {
+        // SHOW_CHILD_PANEL: control window size/position + show, then forward message
+        const { panelType, windowSize } = message.payload || {};
+        const size = windowSize || getDefaultPanelSize(panelType);
+        if (isWindowAlive(windowMap.child)) {
+          windowMap.child.setSize(size.width, size.height, true);
+          windowMap.child.setContentSize(size.width, size.height, true);
+          windowMap.child.center();
+          windowMap.child.show();
+        }
+        lastChildWindowCommand = panelType || '';
+      }
+      // For UPDATE_CHILD_DATA and all other types: just forward, no window manipulation
+      sendToWindow(windowMap.child, 'window-message', messageWithFrom);
+    } else if (to === 'cover') {
+      sendToWindow(windowMap.mainCover, 'window-message', messageWithFrom);
+    } else if (to === 'confirm') {
+      if (type === 'showConfirmDialog') {
+        if (isWindowAlive(windowMap.confirm)) {
+          windowMap.confirm.center();
+        }
+      }
+      sendToWindow(windowMap.confirm, 'window-message', messageWithFrom);
+      if (type === 'showConfirmDialog') {
+        // Confirm dialog is now visible and the user can interact with it.
+        // Clear the force-quit timeout so the user has unlimited time to decide.
+        clearQuitTimers();
+        if (isWindowAlive(windowMap.confirm)) {
+          windowMap.confirm.show();
+        }
+      } else if (type === 'closeConfirmDialog') {
+        if (isWindowAlive(windowMap.confirm)) {
+          windowMap.confirm.hide();
+        }
+      }
+    } else {
+      console.warn(`${logPrefix}window-message: unknown target: ${to}`);
+    }
+  });
+  // ============== End of New IPC Message Router ==============
+
   ipcMain.on('on-minimize-window', () => {
     console.log(`${logPrefix}on-minimize-window event`);
-    windowMap.main?.minimize();
+    if (isWindowAlive(windowMap.main)) {
+      windowMap.main.minimize();
+    }
   });
 
   ipcMain.on('on-maximize-window', (evt, flag) => {
     console.log(`${logPrefix}on-maximize-window event:`, flag);
-    if (flag) {
-      windowMap.main?.maximize();
-    } else {
-      windowMap.main?.unmaximize();
+    if (isWindowAlive(windowMap.main)) {
+      if (flag) {
+        windowMap.main.maximize();
+      } else {
+        windowMap.main.unmaximize();
+      }
     }
   });
 
@@ -231,79 +651,112 @@ function bindIPCEvent() {
     console.log(`${logPrefix}on-close-window event`);
     // Delegate close behavior to the main window 'close' handler so that
     // the renderer can decide whether the application should actually quit.
-    windowMap.main?.close();
+    if (isWindowAlive(windowMap.main)) {
+      windowMap.main.close();
+    }
   });
 
   ipcMain.on('open-child', (event, args) => {
     console.log(`${logPrefix}on open-child`, args);
     if(lastChildWindowCommand === args.command) {
-      windowMap.child?.show();
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.show();
+      }
       return;
     }
     lastChildWindowCommand = args.command;
-    const [width, height] = windowMap.main?.getSize();
+    const [width, height] = isWindowAlive(windowMap.main)
+      ? windowMap.main.getSize()
+      : [1200, 800];
     switch (args.command) {
     case 'camera':
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(600, 400, true);
+        windowMap.child.setContentSize(600, 400, true);
+      }
+      break;
     case 'user-profile':
-      windowMap.child?.setSize(600, 650, true);
-      windowMap.child?.setContentSize(600, 650, true);
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(600, 460, true);
+        windowMap.child.setContentSize(600, 460, true);
+      }
       break;
     case 'image':
-      windowMap.child?.setSize(600, 500, true);
-      windowMap.child?.setContentSize(600, 500, true);
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(600, 500, true);
+        windowMap.child.setContentSize(600, 500, true);
+      }
       break;
     case 'screen':
-      windowMap.child?.setSize(width - 150, height - 80, true);
-      windowMap.child?.setContentSize(width -150, height - 80, true);
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(width - 150, height - 80, true);
+        windowMap.child.setContentSize(width -150, height - 80, true);
+      }
+      break;
+    case 'rename':
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(480, 176, true);
+        windowMap.child.setContentSize(480, 176, true);
+      }
       break;
     case 'co-guest-connection':
     case 'co-host-connection':
-      windowMap.child?.setSize(520, 560, true);
-      windowMap.child?.setContentSize(520, 560, true);
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(520, 560, true);
+        windowMap.child.setContentSize(520, 560, true);
+      }
       break;
     case 'add-bgm':
     case 'reverb-voice':
     case 'change-voice':
     case 'setting':
     case 'phone-mirror':
-      windowMap.child?.setSize(600, 560, true);
-      windowMap.child?.setContentSize(600, 560, true);
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(600, 560, true);
+        windowMap.child.setContentSize(600, 560, true);
+      }
       break;
     case 'online-video':
     case 'video-file':
-      windowMap.child?.setSize(600, 360, true);
-      windowMap.child?.setContentSize(600, 360, true);
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.setSize(600, 360, true);
+        windowMap.child.setContentSize(600, 360, true);
+      }
       break;
     default:
       break;
     }
-    windowMap.child?.center();
-    windowMap.child?.show();
-    windowMap.child?.webContents.send('show', args);
+    if (isWindowAlive(windowMap.child)) {
+      windowMap.child.center();
+      windowMap.child.show();
+    }
+    sendToWindow(windowMap.child, 'show', args);
   });
 
   ipcMain.on('close-child', () => {
     lastChildWindowCommand = '';
-    windowMap.child?.hide();
+    if (isWindowAlive(windowMap.child)) {
+      windowMap.child.hide();
+    }
   });
 
   ipcMain.on('user-login', (event) => {
     if (event.sender === windowMap.main?.webContents) {
-      windowMap.child?.webContents.send('user-login', { from: 'main', to: 'child' });
-      windowMap.mainCover?.webContents.send('user-login', { from: 'main', to: 'cover' });
-      windowMap.confirm?.webContents.send('user-login', { from: 'main', to: 'confirm' });
+      sendToWindow(windowMap.child, 'user-login', { from: 'main', to: 'child' });
+      sendToWindow(windowMap.mainCover, 'user-login', { from: 'main', to: 'cover' });
+      sendToWindow(windowMap.confirm, 'user-login', { from: 'main', to: 'confirm' });
     } else if (event.sender === windowMap.child?.webContents) {
-      windowMap.main?.webContents.send('user-login', { from: 'child', to: 'main' });
-      windowMap.mainCover?.webContents.send('user-login', { from: 'child', to: 'cover' });
-      windowMap.confirm?.webContents.send('user-login', { from: 'child', to: 'confirm' });
+      sendToWindow(windowMap.main, 'user-login', { from: 'child', to: 'main' });
+      sendToWindow(windowMap.mainCover, 'user-login', { from: 'child', to: 'cover' });
+      sendToWindow(windowMap.confirm, 'user-login', { from: 'child', to: 'confirm' });
     } else if (event.sender === windowMap.mainCover?.webContents)  {
-      windowMap.main?.webContents.send('user-login', { from: 'cover', to: 'main' });
-      windowMap.child?.webContents.send('user-login', { from: 'cover', to: 'child' });
-      windowMap.confirm?.webContents.send('user-login', { from: 'cover', to: 'confirm' });
+      sendToWindow(windowMap.main, 'user-login', { from: 'cover', to: 'main' });
+      sendToWindow(windowMap.child, 'user-login', { from: 'cover', to: 'child' });
+      sendToWindow(windowMap.confirm, 'user-login', { from: 'cover', to: 'confirm' });
     } else if (event.sender === windowMap.confirm?.webContents)  {
-      windowMap.main?.webContents.send('user-login', { from: 'confirm', to: 'main' });
-      windowMap.child?.webContents.send('user-login', { from: 'confirm', to: 'child' });
-      windowMap.mainCover?.webContents.send('user-login', { from: 'confirm', to: 'cover' });
+      sendToWindow(windowMap.main, 'user-login', { from: 'confirm', to: 'main' });
+      sendToWindow(windowMap.child, 'user-login', { from: 'confirm', to: 'child' });
+      sendToWindow(windowMap.mainCover, 'user-login', { from: 'confirm', to: 'cover' });
     } else {
       console.warn(`${logPrefix} unkonwn event source:`, event);
     }
@@ -311,30 +764,34 @@ function bindIPCEvent() {
 
   ipcMain.on('user-logout', (event) => {
     if (event.sender === windowMap.main?.webContents) {
-      windowMap.child?.webContents.send('user-logout', { from: 'main' });
+      sendToWindow(windowMap.child, 'user-logout', { from: 'main' });
     } else {
-      windowMap.main?.webContents.send('user-logout', { from: 'child' });
+      sendToWindow(windowMap.main, 'user-logout', { from: 'child' });
     }
-    windowMap.child?.hide();
-    windowMap.mainCover?.hide();
+    if (isWindowAlive(windowMap.child)) {
+      windowMap.child.hide();
+    }
+    if (isWindowAlive(windowMap.mainCover)) {
+      windowMap.mainCover.hide();
+    }
   });
 
   ipcMain.on('port-to-child', (event) => {
     const port = event.ports[0];
     console.log('port-to-child', port);
-    windowMap.child?.webContents.postMessage('port-to-child', null, [port]);
+    postMessageToWindow(windowMap.child, 'port-to-child', null, [port]);
   });
 
   ipcMain.on('port-to-cover', (event) => {
     const port = event.ports[0];
     console.log('port-to-cover', port);
-    windowMap.mainCover?.webContents.postMessage('port-to-cover', null, [port]);
+    postMessageToWindow(windowMap.mainCover, 'port-to-cover', null, [port]);
   });
 
   ipcMain.on('port-to-confirm', (event) => {
     const port = event.ports[0];
     console.log('port-to-confirm', port);
-    windowMap.confirm?.webContents.postMessage('port-to-confirm', null, [port]);
+    postMessageToWindow(windowMap.confirm, 'port-to-confirm', null, [port]);
   });
 
   ipcMain.on('set-language', (event, args) => {
@@ -400,8 +857,10 @@ function bindIPCEvent() {
 
   ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
     console.log(`${logPrefix}set-ignore-mouse-events`, ignore, options);
-    const win = BrowserWindow.fromWebContents(event.sender)
-    win.setIgnoreMouseEvents(ignore, options); // windowMap.mainCover
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (isWindowAlive(win)) {
+      win.setIgnoreMouseEvents(ignore, options); // windowMap.mainCover
+    }
   });
 
   ipcMain.on('stream-layout-area', (event, args) => {
@@ -412,72 +871,85 @@ function bindIPCEvent() {
     coverWindowRelativeBounds.width = Math.round(width);
     coverWindowRelativeBounds.height = Math.round(height);
 
-    const mainBounds = windowMap.main.getContentBounds();
-    console.log('stream-layout-area main window mainBounds', mainBounds, windowMap.main.getBounds());
-    windowMap.mainCover?.setBounds({
-      x: coverWindowRelativeBounds.x + mainBounds.x,
-      y: coverWindowRelativeBounds.y + mainBounds.y,
-      width: coverWindowRelativeBounds.width,
-      height: coverWindowRelativeBounds.height,
-    });
+    if (isWindowAlive(windowMap.main)) {
+      const mainBounds = windowMap.main.getContentBounds();
+      console.log('stream-layout-area main window mainBounds', mainBounds, windowMap.main.getBounds());
+      if (isWindowAlive(windowMap.mainCover)) {
+        windowMap.mainCover.setBounds({
+          x: coverWindowRelativeBounds.x + mainBounds.x,
+          y: coverWindowRelativeBounds.y + mainBounds.y,
+          width: coverWindowRelativeBounds.width,
+          height: coverWindowRelativeBounds.height,
+        });
+      }
+    }
     console.log('stream-layout-area finished');
   });
 
   ipcMain.on('stream-layout', (event, args) => {
     console.log('stream-layout', args);
     if (args?.layoutMode === 'Custom') {
-      if (windowMap.main.isVisible() && !windowMap.mainCover.isVisible()) {
-        windowMap.mainCover?.show();
+      if (isWindowAlive(windowMap.main) && isWindowAlive(windowMap.mainCover)
+        && windowMap.main.isVisible() && !windowMap.main.isMinimized() && !windowMap.mainCover.isVisible()) {
+        windowMap.mainCover.show();
         if (lastChildWindowCommand === 'co-guest-connection' || lastChildWindowCommand === 'co-host-connection') {
-          windowMap.child.show();
+          if (isWindowAlive(windowMap.child)) {
+            windowMap.child.show();
+          }
         }
       }
     } else {
-      windowMap.mainCover?.hide();
+      if (isWindowAlive(windowMap.mainCover)) {
+        windowMap.mainCover.hide();
+      }
     }
   });
 
   ipcMain.on('stop-living', (event, args) => {
-    windowMap.confirm?.webContents.send('stop-living', args);
-    windowMap.confirm?.show();
+    sendToWindow(windowMap.confirm, 'stop-living', args);
+    if (isWindowAlive(windowMap.confirm)) {
+      windowMap.confirm.show();
+    }
   });
   ipcMain.on('stop-living-result', (event, args) => {
-    windowMap.confirm?.hide();
-    windowMap.main?.webContents.send('stop-living-result', args);
+    if (isWindowAlive(windowMap.confirm)) {
+      windowMap.confirm.hide();
+    }
+    sendToWindow(windowMap.main, 'stop-living-result', args);
   });
 
   ipcMain.on('app-quit-confirmed', () => {
     console.log(`${logPrefix}app-quit-confirmed`);
-    isQuitting = true;
-    if (windowMap.mainCover && !windowMap.mainCover.isDestroyed()) {
-      windowMap.mainCover.close();
-    }
-    windowMap.mainCover = null;
-
-    if (windowMap.confirm && !windowMap.confirm.isDestroyed()) {
-      windowMap.confirm.close();
-    }
-    windowMap.confirm = null;
-
-    if (windowMap.main && !windowMap.main.isDestroyed()) {
-      windowMap.main.close();
-    }
-
-    if (windowMap.child && !windowMap.child.isDestroyed()) {
-      windowMap.child.close();
-    }
-    windowMap.child = null;
+    handleQuitConfirmed();
   });
 
   ipcMain.on('app-quit-cancel', () => {
     console.log(`${logPrefix}app-quit-cancel`);
-    isQuitting = false;
+    handleQuitCancel();
+  });
+
+  // Confirm window ready handshake - called when confirm window's Vue component is mounted
+  ipcMain.on('confirm-window-ready', () => {
+    console.log(`${logPrefix}confirm-window-ready`);
+    isConfirmWindowReady = true;
+
+    // If there's a pending quit request, send it now
+    if (pendingQuitRequest) {
+      console.log(`${logPrefix}confirm-window-ready: sending pending quit request`);
+      sendQuitRequestToRenderer();
+      pendingQuitRequest = false;
+      if (quitRetryTimer) {
+        clearInterval(quitRetryTimer);
+        quitRetryTimer = null;
+      }
+    }
   });
 }
 
 function unbindIPCMainEvent() {
   ipcMain.removeHandler('app-path');
   ipcMain.removeHandler('window-type');
+  ipcMain.removeAllListeners('window-message'); // V2 IPC message router
   ipcMain.removeAllListeners('on-minimize-window');
   ipcMain.removeAllListeners('on-maximize-window');
   ipcMain.removeAllListeners('on-close-window');
@@ -490,6 +962,7 @@ function unbindIPCMainEvent() {
   ipcMain.removeAllListeners('start-use-driver-installer');
   ipcMain.removeAllListeners('app-quit-confirmed');
   ipcMain.removeAllListeners('app-quit-cancel');
+  ipcMain.removeAllListeners('confirm-window-ready');
 }
 
 let initMainWindowTimer = null;
@@ -500,9 +973,9 @@ function initMainWindowPage() {
   }
   console.log(`${logPrefix}main window: initMainWindowPage`);
   if (basicInfo.userInfo) {
-    windowMap.main?.webContents.send('window-type', 'main');
+    sendToWindow(windowMap.main, 'window-type', 'main');
     setTimeout(() => {
-      windowMap.main?.webContents.send('openTUILiveKit', basicInfo.userInfo);
+      sendToWindow(windowMap.main, 'openTUILiveKit', basicInfo.userInfo);
     }, 3000);
   } else {
     initMainWindowTimer = setTimeout(() => {
@@ -515,15 +988,19 @@ function bindMainWindowEvent() {
   windowMap.main?.webContents.on('did-fail-load', () => {
     console.log(`${logPrefix}main window: did-fail-load, reload soon...`);
     setTimeout(() => {
-      windowMap.main?.reload();
+      if (isWindowAlive(windowMap.main)) {
+        windowMap.main.reload();
+      }
     }, 1000);
   });
 
   windowMap.main?.webContents.on('did-finish-load', () => {
     console.log(`${logPrefix}main window: did-finish-load`);
-    windowMap.main?.webContents.send('app-path', app.getAppPath());
-    windowMap.main?.webContents.send('crash-file-path',`${crashFilePath}|${crashDumpsDir}`);
-    windowMap.main?.webContents.send('native-window-handle', windowMap.main?.getNativeWindowHandle());
+    sendToWindow(windowMap.main, 'app-path', app.getAppPath());
+    sendToWindow(windowMap.main, 'crash-file-path',`${crashFilePath}|${crashDumpsDir}`);
+    if (isWindowAlive(windowMap.main)) {
+      sendToWindow(windowMap.main, 'native-window-handle', windowMap.main.getNativeWindowHandle());
+    }
     initMainWindowPage();
   });
 
@@ -532,9 +1009,8 @@ function bindMainWindowEvent() {
     console.log(`${logPrefix} windowMap.main close`);
     if (!isQuitting) {
       event.preventDefault();
-      if (windowMap.main?.webContents) {
-        windowMap.main.webContents.send('app-request-quit');
-      }
+      // Use the new quit sequence with timeout fallback and retry mechanism
+      initiateQuitSequence();
     }
   });
 
@@ -573,7 +1049,9 @@ function bindMainWindowEvent() {
       width: coverWindowRelativeBounds.width,
       height: coverWindowRelativeBounds.height,
     };
-    windowMap.mainCover?.setBounds(bounds);
+    if (isWindowAlive(windowMap.mainCover)) {
+      windowMap.mainCover.setBounds(bounds);
+    }
   });
 
   windowMap.main.on('will-resize', (event, newBounds, details) => {
@@ -584,7 +1062,9 @@ function bindMainWindowEvent() {
       width: coverWindowRelativeBounds.width,
       height: coverWindowRelativeBounds.height,
     };
-    windowMap.mainCover?.setBounds(bounds);
+    if (isWindowAlive(windowMap.mainCover)) {
+      windowMap.mainCover.setBounds(bounds);
+    }
   });
 }
 
@@ -592,22 +1072,29 @@ function bindChildWindowEvent() {
   windowMap.child?.webContents.on('did-fail-load', () => {
     console.log(`${logPrefix}child window: did-fail-load, reload soon...`);
     setTimeout(() => {
-      windowMap.child?.reload();
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.reload();
+      }
     }, 2000);
   });
 
   windowMap.child?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.child?.webContents.send('app-path', app.getAppPath());
-    windowMap.child?.webContents.send('native-window-handle', windowMap.child?.getNativeWindowHandle());
-    windowMap.child?.webContents.send('window-type', 'child');
-    windowMap.child?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-child\';');
+    sendToWindow(windowMap.child, 'app-path', app.getAppPath());
+    if (isWindowAlive(windowMap.child)) {
+      sendToWindow(windowMap.child, 'native-window-handle', windowMap.child.getNativeWindowHandle());
+      sendToWindow(windowMap.child, 'window-type', 'child');
+    }
+    if (isWebContentsAlive(windowMap.child)) {
+      windowMap.child.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-child\';');
+    }
   });
 
   windowMap.child?.on('close', (event) => {
-    if (windowMap.main) {
+    // In quit flow, allow child window to close naturally.
+    if (!isQuitting && isWindowAlive(windowMap.main) && isWindowAlive(windowMap.child)) {
       event.preventDefault();
-      windowMap.child?.hide();
+      windowMap.child.hide();
     }
   });
 
@@ -619,15 +1106,15 @@ function bindChildWindowEvent() {
 
   windowMap.child?.on('will-move', () => {
     console.log('Child window will move');
-    if (windowMap.mainCover?.isVisible()) {
-      windowMap.mainCover?.setIgnoreMouseEvents(false);
+    if (isWindowAlive(windowMap.mainCover) && windowMap.mainCover.isVisible()) {
+      windowMap.mainCover.setIgnoreMouseEvents(false);
     }
   });
 
   windowMap.child?.on('moved', () => {
     console.log('Child window moved');
-    if (windowMap.mainCover?.isVisible()) {
-      windowMap.mainCover?.setIgnoreMouseEvents(true, { forward: true });
+    if (isWindowAlive(windowMap.mainCover) && windowMap.mainCover.isVisible()) {
+      windowMap.mainCover.setIgnoreMouseEvents(true, { forward: true });
     }
   });
 }
@@ -636,21 +1123,29 @@ function bindCoverWindowEvent() {
   windowMap.mainCover?.webContents.on('did-fail-load', () => {
     console.log(`${logPrefix}child window: did-fail-load, reload soon...`);
     setTimeout(() => {
-      windowMap.mainCover?.reload();
+      if (isWindowAlive(windowMap.mainCover)) {
+        windowMap.mainCover.reload();
+      }
     }, 2000);
   });
 
   windowMap.mainCover?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.mainCover?.webContents.send('app-path', app.getAppPath());
-    windowMap.mainCover?.webContents.send('native-window-handle', windowMap.mainCover?.getNativeWindowHandle());
-    windowMap.mainCover?.webContents.send('window-type', 'cover');
-    windowMap.mainCover?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-cover\';');
+    sendToWindow(windowMap.mainCover, 'app-path', app.getAppPath());
+    if (isWindowAlive(windowMap.mainCover)) {
+      sendToWindow(windowMap.mainCover, 'native-window-handle', windowMap.mainCover.getNativeWindowHandle());
+      sendToWindow(windowMap.mainCover, 'window-type', 'cover');
+    }
+    if (isWebContentsAlive(windowMap.mainCover)) {
+      windowMap.mainCover.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-cover\';');
+    }
   });
 
   windowMap.mainCover?.on('focus', () => {
     if (lastChildWindowCommand !== '') {
-      windowMap.child?.show();
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.show();
+      }
     }
   });
 }
@@ -659,16 +1154,22 @@ function bindConfirmWindowEvent() {
   windowMap.confirm?.webContents.on('did-fail-load', () => {
     console.log(`${logPrefix}child window: did-fail-load, reload soon...`);
     setTimeout(() => {
-      windowMap.mainCover?.reload();
+      if (isWindowAlive(windowMap.confirm)) {
+        windowMap.confirm.reload();
+      }
     }, 2000);
   });
 
   windowMap.confirm?.webContents.on('did-finish-load', function(){
     console.log(`${logPrefix}child window: did-finish-load`);
-    windowMap.confirm?.webContents.send('app-path', app.getAppPath());
-    windowMap.confirm?.webContents.send('native-window-handle', windowMap.confirm?.getNativeWindowHandle());
-    windowMap.confirm?.webContents.send('window-type', 'confirm');
-    windowMap.confirm?.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-confirm\';');
+    sendToWindow(windowMap.confirm, 'app-path', app.getAppPath());
+    if (isWindowAlive(windowMap.confirm)) {
+      sendToWindow(windowMap.confirm, 'native-window-handle', windowMap.confirm.getNativeWindowHandle());
+      sendToWindow(windowMap.confirm, 'window-type', 'confirm');
+    }
+    if (isWebContentsAlive(windowMap.confirm)) {
+      windowMap.confirm.webContents.executeJavaScript('window.location.hash = \'/tui-live-kit-confirm\';');
+    }
   });
 }
 
@@ -702,7 +1203,7 @@ function openTUILiveKit() {
 
 const TUILiveKitMain = {
   open: (args) => {
-    if (windowMap.main === null) {
+    if (!isWindowAlive(windowMap.main)) {
       if (args?.userInfo) {
         basicInfo.userInfo = args.userInfo;
       }
@@ -710,10 +1211,14 @@ const TUILiveKitMain = {
     }
   },
   close: () => {
-    if (windowMap.main) {
-      windowMap.child?.close();
+    if (isWindowAlive(windowMap.main)) {
+      if (isWindowAlive(windowMap.child)) {
+        windowMap.child.close();
+      }
       windowMap.child = null;
-      windowMap.mainCover?.close();
+      if (isWindowAlive(windowMap.mainCover)) {
+        windowMap.mainCover.close();
+      }
       windowMap.mainCover = null;
       windowMap.main.close();
       windowMap.main = null;

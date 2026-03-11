@@ -10,11 +10,12 @@ import { isMainWindow } from '../TUILiveKit/utils/envUtils';
 import { getBasicInfo } from '../debug/basic-info-config.js';
 import { LoginType } from './Login/types';
 import logger from '../TUILiveKit/utils/logger';
+import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
 
 const logPrefix = '[Loading.vue]';
 
 const gotoLogin = () => {
-  window.localStorage.removeItem('TUILiveKit-userInfo');
+  window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
   router.push('/login');
 }
 
@@ -30,17 +31,15 @@ async function init(userInfo: Record<string, any>) {
 }
 
 onMounted(() => {
-  const storedUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+  const storedUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);
   let userInfo;
   if (!storedUserInfo) {
     userInfo = getBasicInfo();
     if (userInfo) {
-      window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+      window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
         sdkAppId: userInfo.sdkAppId,
         userId: userInfo.userId,
-        userName: userInfo.userName,
         userSig: userInfo.userSig,
-        avatarUrl: userInfo.avatarUrl,
         loginType: LoginType.SDKSecretKey,
       }));
     } else {

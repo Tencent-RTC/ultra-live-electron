@@ -19,9 +19,10 @@
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
 import { TUIIcon, TUISlider, IconSpeakerOn, IconSpeakerOff } from '@tencentcloud/uikit-base-component-vue3';
-import { useDeviceState } from 'tuikit-atomicx-vue3-electron';
+import { useDeviceState, useLiveListState } from 'tuikit-atomicx-vue3-electron';
 
 const { outputVolume, setOutputVolume } = useDeviceState();
+const { currentLive } = useLiveListState();
 
 const DEFAULT_VOLUME = 100;
 const speakerVolume = ref(outputVolume.value);
@@ -63,6 +64,30 @@ const handleSpeakerVolumeChange = (value: number) => {
 
 watch(outputVolume, (newVal) => {
   speakerVolume.value = newVal;
+  if (newVal === 0) {
+    speakerIsOn.value = false;
+    return;
+  }
+  speakerIsOn.value = true;
+  speakerVolumeBeforeMute.value = newVal;
+});
+
+watch(() => currentLive.value?.liveId, (newVal) => {
+  if (newVal) {
+    if (!speakerIsOn.value) {
+      setOutputVolume(0);
+      return;
+    }
+    const volumeToRestore = speakerVolumeBeforeMute.value || speakerVolume.value || DEFAULT_VOLUME;
+    speakerVolume.value = volumeToRestore;
+    setOutputVolume(volumeToRestore);
+    return;
+  }
+  if (speakerVolume.value > 0) {
+    speakerVolumeBeforeMute.value = speakerVolume.value;
+  }
+}, {
+  immediate: true,
 });
 </script>
 

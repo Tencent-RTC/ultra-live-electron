@@ -17,7 +17,8 @@
           @on-close="closeMoreMenu" @on-kick-off-seat="onKickOffSeat" @on-kick-out-room="onKickOutRoom" />
     </template>
     <div v-else class="tui-empty-region">
-      +
+      <span class="tui-seat-index">{{ props.region.seatIndex }}</span>
+      <span class="tui-seat-hint">{{ t('Conn Wait') }}</span>
     </div>
   </div>
 </template>
@@ -27,6 +28,7 @@ import { ref, computed, defineProps, onMounted, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
 import { TUIDeviceStatus } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIConnectionMode, TUIUserSeatStreamRegion } from '../../types';
+import { useI18n } from '../../locales';
 import MicOffIcon from '../../common/icons/MicOffIcon.vue';
 import MoreIcon from '../../common/icons/MoreIcon.vue';
 import LiveMemberControl from '../LiveChildView/LiveMemberControl.vue';
@@ -40,6 +42,7 @@ type Props = {
 
 const logPrefix = '[TUILiveKitStreamCover]';
 
+const { t } = useI18n();
 const props = defineProps<Props>();
 
 const streamCoverRef: Ref<HTMLElement | null> = ref(null);
@@ -210,10 +213,23 @@ onUnmounted(() => {
     width: 100%;
     height: 100%;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
     color: var(--text-color-secondary);
+
+    .tui-seat-index {
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--text-color-primary);
+    }
+
+    .tui-seat-hint {
+      font-size: 0.75rem;
+      line-height: 1.5;
+      opacity: 0.7;
+    }
   }
 
   .tui-stream-cover-pop-menu {

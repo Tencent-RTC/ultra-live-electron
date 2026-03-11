@@ -27,17 +27,47 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useUIKit, TUIDialog, TUIToast, TOAST_TYPE, IconCoGuest } from '@tencentcloud/uikit-base-component-vue3';
-import { CoGuestPanel, CoHostStatus, useCoGuestState, useCoHostState, useLiveListState } from 'tuikit-atomicx-vue3-electron';
+import { CoGuestPanel, CoHostStatus, useCoGuestState, useCoHostState, useLiveListState, useLiveSeatState, useLoginState } from 'tuikit-atomicx-vue3-electron';
+import { ipcBridge, IPCMessageType, toPlainIpcPayload, ChildPanelType } from '../../ipc';
+import { ERROR_MESSAGE } from './CoGuestPanel/constants';
+
+const props = defineProps({
+  isShowingInChildWindow: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const { t } = useUIKit();
-const { applicants } = useCoGuestState();
+const {
+  connected,
+  applicants,
+  acceptApplication,
+  rejectApplication
+} = useCoGuestState();
 const { currentLive } = useLiveListState();
 const { coHostStatus } = useCoHostState();
+const { loginUserInfo } = useLoginState();
+const { kickUserOutOfSeat } = useLiveSeatState();
 const disabled = computed(() => !currentLive.value?.liveId || coHostStatus.value !== CoHostStatus.Disconnected);
 
 const coGuestPanelVisible = ref(false);
+const isCoGuestChildWindowOpen = ref(false);
+
+const sendCoGuestPanelData = () => {
+  if (props.isShowingInChildWindow && isCoGuestChildWindowOpen.value) {
+    ipcBridge.sendToChild(IPCMessageType.UPDATE_CHILD_DATA, {
+      panelType: ChildPanelType.CoGuestConnection,
+      data: {
+        connected: toPlainIpcPayload(connected.value),
+        applicants: toPlainIpcPayload(applicants.value),
+        loginUserInfo: toPlainIpcPayload(loginUserInfo.value),
+      },
+    });
+  }
+};
 
 const handleCoGuest = () => {
   if (disabled.value) {
@@ -47,13 +77,80 @@ const handleCoGuest = () => {
     TUIToast({ type: TOAST_TYPE.ERROR, message });
     return;
   }
-  coGuestPanelVisible.value = true;
+
+  if (props.isShowingInChildWindow) {
+    isCoGuestChildWindowOpen.value = true;
+    ipcBridge.sendToChild(IPCMessageType.SHOW_CHILD_PANEL, {
+      panelType: ChildPanelType.CoGuestConnection,
+      initialData: {
+        connected: toPlainIpcPayload(connected.value),
+        applicants: toPlainIpcPayload(applicants.value),
+        loginUserInfo: toPlainIpcPayload(loginUserInfo.value),
+      },
+    });
+  } else {
+    coGuestPanelVisible.value = true;
+  }
 };
 
 watch(disabled, () => {
   if (disabled.value) {
     coGuestPanelVisible.value = false;
+    if (props.isShowingInChildWindow) {
+      ipcBridge.sendToElectronMain(IPCMessageType.HIDE_CHILD_PANEL, {
+        panelType: ChildPanelType.CoGuestConnection,
+      });
+    }
+    isCoGuestChildWindowOpen.value = false;
   }
+});
+
+watch([applicants, connected], () => {
+  sendCoGuestPanelData();
+});
+
+const onAcceptCoGuest = async (payload: { userId: string }) => {
+  try {
+    await acceptApplication({userId: payload.userId});
+  } catch (error: any) {
+    console.warn('[CoGuestButton] onAcceptCoGuest error', error);
+    const message = t(ERROR_MESSAGE[error.code as keyof typeof ERROR_MESSAGE] || 'Accept co-guest request failed');
+    TUIToast.error({ message });
+  }
+};
+
+const onRejectCoGuest = async (payload: { userId: string }) => {
+  try {
+    await rejectApplication({userId: payload.userId});
+  } catch (error) {
+    console.warn('[CoGuestButton] onRejectCoGuest error', error);
+    TUIToast.error({
+      message: t('Reject co-guest request failed'),
+    });
+  }
+};
+
+const onKickOffSeat = async (payload: { userId: string }) => {
+  try {
+    await kickUserOutOfSeat({userId: payload.userId});
+  } catch (error) {
+    console.warn('[CoGuestButton] onKickOffSeat error', error);
+    TUIToast.error({
+      message: t('Disconnect co-guest failed'),
+    });
+  }
+};
+
+onMounted(() => {
+  ipcBridge.on(IPCMessageType.ACCEPT_CO_GUEST, onAcceptCoGuest);
+  ipcBridge.on(IPCMessageType.REJECT_CO_GUEST, onRejectCoGuest);
+  ipcBridge.on(IPCMessageType.KICK_OFF_SEAT, onKickOffSeat);
+});
+
+onBeforeUnmount(() => {
+  ipcBridge.off(IPCMessageType.ACCEPT_CO_GUEST, onAcceptCoGuest);
+  ipcBridge.off(IPCMessageType.REJECT_CO_GUEST, onRejectCoGuest);
+  ipcBridge.off(IPCMessageType.KICK_OFF_SEAT, onKickOffSeat);
 });
 </script>
 

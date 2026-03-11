@@ -6,4 +6,10 @@ export function isMacPlatform() {
   return userAgent.includes('macintosh') || userAgent.includes('mac os x');
 }
 
-
+export function isWindowPlatform() {
+  if (typeof navigator === 'undefined' || typeof navigator.userAgent !== 'string') {
+    return false;
+  }
+  const userAgent = navigator.userAgent.toLowerCase();
+  return userAgent.includes('windows') || userAgent.includes('win32') || userAgent.includes('win64');
+}

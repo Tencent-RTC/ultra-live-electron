@@ -16,6 +16,7 @@ import TUIMessageBox from '../TUILiveKit/common/base/MessageBox';
 import { useI18n } from '../TUILiveKit/locales';
 import logger from '../TUILiveKit/utils/logger';
 import { LoginType } from './Login/types';
+import { USER_INFO_STORAGE_KEY, stripProfileFields } from '../TUILiveKit/utils/userInfoStorage';
 
 const logPrefix = '[LiveKitMain]';
 const liveKitRef = ref();
@@ -24,7 +25,7 @@ const { t } = useI18n();
 const isInited = ref(false);
 
 const gotoLogin = () => {
-  window.localStorage.removeItem('TUILiveKit-userInfo');
+  window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
   window.ipcRenderer.send('user-logout');
   router.replace('/login');
 };
@@ -46,8 +47,9 @@ const handleUserSigExpired = () => {
 };
 
 const handleUserAuthChanged = (userInfo: Record<string, any>) => {
-  window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
-    ...userInfo,
+  const authInfo = stripProfileFields(userInfo);
+  window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
+    ...authInfo,
     loginType: LoginType.UserSig
   }));
 };
@@ -110,7 +112,7 @@ onBeforeMount(() => {
 onMounted(async () => {
   window.ipcRenderer.on('openTUILiveKit', openTUILiveKit);
 
-  const currentUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+  const currentUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);
   if (!currentUserInfo) {
     gotoLogin();
   } else {

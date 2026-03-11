@@ -72,6 +72,7 @@ import UserSigForm from './UserSigForm.vue';
 import PasswordForm from './PasswordForm.vue';
 import logger from '../../TUILiveKit/utils/logger';
 import { LoginType, LoginState, VerifyStates } from './types';
+import { USER_INFO_STORAGE_KEY } from '../../TUILiveKit/utils/userInfoStorage';
 
 const serverURL = ''; // ********** Please config your login server URL *********
 
@@ -196,12 +197,10 @@ async function doPasswordLogin() {
     const response = await fetch(loginURL);
     if (response.ok) {
       const jsonResponse= response.json() as any;
-      window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+      window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
         sdkAppId: jsonResponse.sdkAppId,
         userId: jsonResponse.userId,
-        userName: jsonResponse.userName,
         userSig: jsonResponse.userSig,
-        avatarUrl: jsonResponse.avatarUrl,
         loginType: loginType.value
       }));
       await gotoNextPage();
@@ -224,26 +223,22 @@ async function doPasswordLogin() {
 }
 
 async function doUserSigLogin() {
-  window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+  window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
     sdkAppId: Number(loginState.sdkAppId),
     userId: loginState.userId.trim(),
-    userName: '',
     userSig: loginState.userSig.trim(),
-    avatarUrl: '',
     loginType: loginType.value
   }));
   await gotoNextPage();
 }
 
 async function doSDKSecretKeyLogin() {
-  const { sdkAppId, userId, userSig, userName, avatarUrl }
+  const { sdkAppId, userId, userSig }
     = getBasicInfo(loginState.userId.trim(), Number(loginState.sdkAppId.trim()), loginState.sdkSecretKey.trim());
-  window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+  window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
     sdkAppId,
     userId,
-    userName,
     userSig,
-    avatarUrl,
     loginType: loginType.value
   }));
   await gotoNextPage();

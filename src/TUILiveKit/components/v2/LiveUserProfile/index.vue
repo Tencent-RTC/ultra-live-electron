@@ -1,88 +1,67 @@
 <template>
   <div class="tui-live-user-profile">
     <div class="tui-live-user-profile-content">
-      <div class="profile-section">
-        <div class="avatar-display">
-          <div class="avatar-circle">
-            <img
-              v-if="editableData.avatarUrl"
-              :src="editableData.avatarUrl"
-              alt=""
-              class="avatar-image"
-            />
-            <div v-else class="avatar-placeholder">
-              <span>{{ getAvatarPlaceholder(editableData.userName) }}</span>
-            </div>
-          </div>
-        </div>
+      <div class="profile-avatar">
+        <Avatar :src="avatarUrl" :size="64" alt="" />
       </div>
 
-      <div class="profile-section">
-        <div class="profile-item">
-          <span class="profile-label">{{ t("User ID") }}</span>
-          <span class="profile-value">
-            {{ editableData.userId }}
-          </span>
-          <button
-            class="copy-btn"
-            @click="copyToClipboard(editableData.userId || '')"
-            :title="t('Copy')"
-          >
-            <CopyIcon class="copy-icon" />
-          </button>
-        </div>
-        <div class="profile-item" :class="{ 'editing': editingFields.userName }">
-          <span class="profile-label">{{ t("User Name") }}</span>
-          <div class="profile-value">
-            <span v-if="!editingFields.userName" class="display-value">
-              {{ editableData.userName || t("Not set") }}
-            </span>
-            <input
-              v-else
+      <div class="profile-list">
+        <div class="profile-row">
+          <span class="profile-label">{{ t('User ID') }}</span>
+          <div class="profile-field profile-field--with-action">
+            <TUIInput
+              size="medium"
+              class="field-input field-input--readonly"
+              :model-value="userId || '-'"
+              :readonly="true"
+              :spellcheck="false"
+            />
+            <TUIButton
               type="text"
-              v-model="editableData.userName"
+              class="action-btn"
+              :title="t('Copy')"
+              @click="copyToClipboard(userId || '')"
+            >
+              <CopyIcon class="action-icon" />
+            </TUIButton>
+          </div>
+        </div>
+
+        <div class="profile-row">
+          <span class="profile-label">{{ t('User Name') }}</span>
+          <div class="profile-field">
+            <TUIInput
+              size="medium"
+              class="field-input"
+              :class="{ 'is-invalid': userNameError }"
+              :model-value="userName"
               :placeholder="t('Please enter username')"
-              maxlength="20"
-              ref="userNameInput"
-              autofocus
-              @blur="editingFields.userName = false"
-              @keyup.enter="editingFields.userName = false"
+              :maxLength="20"
+              :spellcheck="false"
+              @update:modelValue="(value: string | number) => emit('update:userName', String(value))"
             />
+            <p class="field-tip field-tip--error" :class="{ 'field-tip--hidden': !userNameError }">
+              {{ t('Please enter username') }}
+            </p>
           </div>
-          <button
-            v-if="!editingFields.userName"
-            class="edit-btn"
-            @click="startEdit('userName')"
-            :title="t('Edit')"
-          >
-            <EditIcon class="edit-icon" />
-          </button>
         </div>
-        <div class="profile-item" :class="{ 'editing': editingFields.avatarUrl }">
-          <span class="profile-label">{{ t("Avatar URL") }}</span>
-          <div class="profile-value">
-            <span v-if="!editingFields.avatarUrl" class="display-value">
-              {{ editableData.avatarUrl || t("Not set") }}
-            </span>
-            <input
-              v-else
-              type="text"
-              v-model="editableData.avatarUrl"
-              :placeholder="t('Please enter avatar URL')"
-              ref="avatarUrlInput"
-              autofocus
-              @blur="editingFields.avatarUrl = false"
-              @keyup.enter="editingFields.avatarUrl = false"
+
+        <div class="profile-row">
+          <span class="profile-label">{{ t('Avatar URL') }}</span>
+          <div class="profile-field">
+            <TUIInput
+              size="medium"
+              class="field-input"
+              :class="{ 'is-invalid': avatarUrlError }"
+              :model-value="avatarUrl"
+              :placeholder="t('Please enter avatar URL (optional)')"
+              :spellcheck="false"
+              @update:modelValue="(value: string | number) => emit('update:avatarUrl', String(value))"
             />
+            <p class="field-tip field-tip--error" :class="{ 'field-tip--hidden': !avatarUrlError }">
+              {{ t('Please enter a valid avatar URL') }}
+            </p>
           </div>
-          <button
-            v-if="!editingFields.avatarUrl"
-            class="edit-btn"
-            @click="startEdit('avatarUrl')"
-            :title="t('Edit')"
-          >
-            <EditIcon class="edit-icon" />
-          </button>
         </div>
       </div>
     </div>
@@ -90,67 +69,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, reactive, defineEmits, defineExpose } from 'vue';
-import { TUIButton, TUIToast, TOAST_TYPE, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
-import { useLoginState } from 'tuikit-atomicx-vue3-electron';
+import { TUIToast, TOAST_TYPE, TUIInput, TUIButton, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { Avatar } from 'tuikit-atomicx-vue3-electron';
 import CopyIcon from '../../../common/icons/CopyIcon.vue';
-import EditIcon from '../../../common/icons/EditIcon.vue';
-import logger from '../../../utils/logger';
 
-const logPrefix = '[LiveUserProfile]';
+export interface UserProfileInfo {
+  userId: string;
+  userName: string;
+  avatarUrl: string;
+}
+
+withDefaults(defineProps<{
+  userId: string;
+  userName: string;
+  avatarUrl: string;
+  userNameError?: boolean;
+  avatarUrlError?: boolean;
+}>(), {
+  userNameError: false,
+  avatarUrlError: false,
+});
 
 const emit = defineEmits<{
-  close: [];
-  save: [];
-  cancel: [];
+  'update:userName': [value: string];
+  'update:avatarUrl': [value: string];
 }>();
 
 const { t } = useUIKit();
-const { loginUserInfo, setSelfInfo } = useLoginState();
-
-const editingFields = ref({
-  userName: false,
-  avatarUrl: false,
-});
-
-const editableData = reactive({
-  userId: '',
-  userName: '',
-  avatarUrl: '',
-});
-
-const originalData = ref({ ...editableData });
-
-// Check if there are changes
-const hasChanges = computed(() => {
-  return editableData.userName !== originalData.value.userName ||
-         editableData.avatarUrl !== originalData.value.avatarUrl;
-});
-
-// Initialize data from loginUserInfo
-watch(
-  () => loginUserInfo.value,
-  (newVal) => {
-    if (newVal) {
-      editableData.userId = newVal.userId || '';
-      editableData.userName = newVal.userName || '';
-      editableData.avatarUrl = newVal.avatarUrl || '';
-      originalData.value = { ...editableData };
-    }
-  },
-  { immediate: true, deep: true }
-);
-
-const getAvatarPlaceholder = (name: string) => {
-  if (!name) return '?';
-  return name.charAt(0).toUpperCase();
-};
-
-const startEdit = (field: keyof typeof editingFields.value) => {
-  editingFields.value[field] = true;
-};
 
 const copyToClipboard = async (text: string) => {
+  if (!text) {
+    return;
+  }
+
   try {
     await navigator.clipboard.writeText(text);
     TUIToast({
@@ -164,222 +115,98 @@ const copyToClipboard = async (text: string) => {
     });
   }
 };
-
-const saveChanges = async () => {
-  if (!hasChanges.value) {
-    logger.warn(`${logPrefix} No changes to save`);
-    emit('cancel');
-    return;
-  }
-
-  try {
-    logger.debug(`${logPrefix} Saving changes`, editableData);
-
-    await setSelfInfo({
-      userName: editableData.userName,
-      avatarUrl: editableData.avatarUrl,
-    });
-
-    originalData.value = { ...editableData };
-
-    TUIToast({
-      message: t('Save successfully'),
-      type: TOAST_TYPE.SUCCESS,
-    });
-
-    // Emit save event to parent
-    emit('save');
-  } catch (error) {
-    logger.error(`${logPrefix} Save changes error:`, error);
-    TUIToast({
-      message: t('Save failed'),
-      type: TOAST_TYPE.ERROR,
-    });
-  }
-};
-
-const onCancel = () => {
-  logger.debug(`${logPrefix} Cancel changes`);
-  // Reset to original data
-  Object.assign(editableData, originalData.value);
-  editingFields.value.userName = false;
-  editingFields.value.avatarUrl = false;
-  emit('cancel');
-};
-
-// Expose methods for parent component
-defineExpose({
-  saveChanges,
-  onCancel,
-  hasChanges,
-});
 </script>
 
 <style lang="scss" scoped>
 .tui-live-user-profile {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  min-height: 400px;
-  max-height: 400px;
   color: var(--text-color-primary);
   background-color: var(--bg-color-dialog);
 
   .tui-live-user-profile-content {
-    flex: 1 1 auto;
     width: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden auto;
   }
 
-  .avatar-display {
+  .profile-avatar {
     display: flex;
     justify-content: center;
-
-    .avatar-circle {
-      position: relative;
-      border-radius: 50%;
-      background-color: var(--bg-color-operate);
-      transition: all 0.2s ease;
-      cursor: pointer;
-      overflow: hidden;
-      width: 6rem;
-      height: 6rem;
-
-      &:hover {
-        transform: scale(1.05);
-        border-color: var(--button-color-primary-default);
-      }
-    }
+    margin-bottom: 1rem;
   }
 
-  .avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .avatar-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--button-color-primary-default), var(--button-color-primary-hover));
-    color: white;
-    font-size: 2rem;
-    font-weight: bold;
-  }
-
-  .profile-section {
+  .profile-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: 0.75rem;
+  }
 
-    .profile-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.75rem;
-      margin-bottom: 0.5rem;
-      background-color: var(--bg-color-bubble-reciprocal);
-      border: 1px solid var(--stroke-color-primary);
-      border-radius: 0.375rem;
+  .profile-row {
+    display: flex;
+    align-items: flex-start;
+
+    .profile-label {
+      width: 5rem;
+      flex-shrink: 0;
+      margin-top: 0.375rem;
+      color: var(--text-color-secondary);
       font-size: 0.875rem;
-      transition: all 0.2s;
-      position: relative;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      &:hover {
-        border-color: var(--stroke-color-secondary);
-      }
-
-      .profile-label {
-        color: var(--text-color-secondary);
-        min-width: 5rem;
-        flex-shrink: 0;
-        font-weight: 500;
-      }
-
-      .profile-value {
-        color: var(--text-color-primary);
-        font-weight: 400;
-        flex: 1;
-        margin-left: 1rem;
-        display: flex;
-        align-items: center;
-        overflow: hidden;
-        min-height: 1.375rem;
-
-        .display-value {
-          color: var(--text-color-primary);
-          font-size: 0.875rem;
-          line-height: 1.4;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          flex: 1;
-          min-width: 0;
-          word-break: break-all;
-        }
-
-        input {
-          user-select: text;
-          width: 100%;
-          padding: 0.25rem 0.5rem;
-          border: 1px solid var(--stroke-color-primary);
-          border-radius: 0.25rem;
-          background-color: var(--bg-color-operate);
-          color: var(--text-color-primary);
-          font-size: 0.875rem;
-          transition: all 0.2s ease;
-          line-height: 1.4;
-          font-family: inherit;
-
-          &:focus {
-            outline: none;
-            border-color: var(--button-color-primary-default);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-          }
-
-          &::placeholder {
-            color: var(--text-color-secondary);
-          }
-        }
-      }
-
-      .edit-btn,
-      .copy-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0.25rem;
-        border-radius: 0.25rem;
-        transition: all 0.2s;
-        font-size: 1rem;
-        margin-left: 0.5rem;
-        opacity: 0.7;
-        flex-shrink: 0;
-
-        .edit-icon,
-        .copy-icon {
-          color: var(--text-color-primary);
-          width: 1rem;
-          height: 1rem;
-        }
-
-        &:hover {
-          opacity: 1;
-          background-color: var(--bg-color-operate);
-        }
-      }
+      line-height: 1.25rem;
     }
   }
 
+  .profile-field {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .profile-field--with-action {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .field-tip {
+    margin: 0.25rem 0 0;
+    min-height: 1.125rem;
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+
+  .field-tip--error {
+    color: var(--text-color-error);
+  }
+
+  .field-tip--hidden {
+    visibility: hidden;
+  }
+
+  .action-btn {
+    min-width: 1.5rem;
+    padding: 0;
+  }
+
+  .action-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--text-color-primary);
+  }
+
+  :deep(.field-input .tui-input__native-input) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.field-input .tui-input__native-input::placeholder) {
+    color: var(--text-color-tertiary);
+  }
+
+  :deep(.field-input--readonly .tui-input__native-input) {
+    color: var(--text-color-secondary);
+    background-color: var(--bg-color-operate);
+    border-color: var(--stroke-color-primary);
+  }
+
+  :deep(.field-input.is-invalid .tui-input__native-input) {
+    border-color: var(--text-color-error);
+  }
 }
 </style>
-

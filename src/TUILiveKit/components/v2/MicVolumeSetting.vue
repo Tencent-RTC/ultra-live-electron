@@ -102,6 +102,10 @@ watch(captureVolume, (newVal) => {
 
 watch(() => currentLive.value?.liveId, (newVal) => {
   if (newVal) {
+    if (microphoneVolumeBeforeMute.value === 0) {
+      setCaptureVolume(DEFAULT_VOLUME);
+      return;
+    }
     setCaptureVolume(microphoneVolumeBeforeMute.value);
   } else {
     microphoneVolumeBeforeMute.value = microphoneVolume.value;

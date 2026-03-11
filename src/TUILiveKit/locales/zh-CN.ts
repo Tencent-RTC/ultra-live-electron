@@ -137,6 +137,7 @@ export default {
   'Co-guest management': '连麦管理',
   'Application for live': '连麦申请',
   'No application for live': '暂无连麦申请',
+  'Conn Wait': '等待连线',
   'Seat is empty': '麦位为空',
   'Current seat': '当前麦位',
   'Me': '我',
@@ -389,7 +390,10 @@ export default {
   'User ID': '用户 ID',
   'User Name': '用户名',
   'Enter user name': '请输入用户名',
+  'Please enter username': '请输入用户名',
   'Avatar URL': '头像 URL',
+  'Please enter avatar URL (optional)': '请输入头像 URL（选填）',
+  'Please enter a valid avatar URL': '请输入有效的头像 URL',
   'Not set': '未设置',
   'User Signature': '用户签名',
   'SDKAPPID': 'SDKAPPID',
@@ -524,5 +528,6 @@ export default {
   'Car': '豪华轿车',
   'Sports car': '超级跑车',
   'OnlyYou': '唯你',
-  'RomanticSail': '浪漫帆'
+  'RomanticSail': '浪漫帆',
+  'Network Error': '网络异常',
 }

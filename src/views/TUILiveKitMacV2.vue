@@ -20,8 +20,9 @@
             <div class="main-center-top-left">
               {{ currentLive?.liveName || liveParams.liveName }}
               <LiveSettingButton
-                v-if="!isInLive && loginUserInfo?.userId"
-                :live-name="liveParams.liveName"
+                v-if="loginUserInfo?.userId"
+                :live-name="currentLive?.liveName || liveParams.liveName"
+                :cover-url="liveParams.coverUrl"
                 @confirm="handleLiveSettingConfirm"
               />
               <IconCopy
@@ -140,12 +141,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, computed, ref, defineProps } from 'vue';
+import { onMounted, onBeforeUnmount, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import trtcCloud from '../TUILiveKit/utils/trtcCloud';
 import {
-  IconArrowStrokeBack,
-  IconArrowStrokeSelectDown,
   IconCopy,
   IconEndLive,
   IconLiveLoading,
@@ -182,6 +181,9 @@ import LiveHeader from '../TUILiveKit/components/v2/LiveHeader/index.vue';
 import LiveSettingButton from '../TUILiveKit/components/v2/LiveSettingButton.vue';
 import LivePusherNotification from '../TUILiveKit/components/v2/LivePusherNotification.vue';
 import { copyToClipboard, isNetworkOffline, isNetworkTimeoutError } from '../TUILiveKit/utils/utils';
+import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
+import { useSystemAudioLoopback } from '../TUILiveKit/hooks/useSystemAudioLoopback';
+import useRoomEngine from '../TUILiveKit/utils/useRoomEngine';
 
 console.log('TRTC SDK version:', trtcCloud.getSDKVersion());
 
@@ -199,11 +201,14 @@ const { currentLive, createLive, endLive, joinLive } = useLiveListState();
 const { audienceCount } = useLiveAudienceState();
 const { openLocalMicrophone } = useDeviceState();
 const { connected: coGuestConnected } = useCoGuestState();
+const roomEngine = useRoomEngine();
 const isInLive = computed(() => !!currentLive.value?.liveId);
 const loading = ref(false);
 const exitLiveDialogVisible = ref(false);
+const isAppQuitConfirming = ref(false);
 const liveParamsEditForm = ref({
   liveName: '',
+  coverUrl: undefined as string | undefined,
 });
 
 const liveParams = computed(() => ({
@@ -214,8 +219,13 @@ const liveParams = computed(() => ({
     || loginUserInfo.value?.userName
     || loginUserInfo.value?.userId
     || '',
+  coverUrl: liveParamsEditForm.value.coverUrl ?? currentLive.value?.coverUrl ?? '',
   seatMode: props.seatMode || TUISeatMode.kApplyToTake,
 }));
+const {
+  startSystemAudioLoopbackSafely,
+  stopSystemAudioLoopbackSafely,
+} = useSystemAudioLoopback('TUILiveKitMacV2');
 
 TUIRoomEngine.once('ready', () => {
   TUIRoomEngine.callExperimentalAPI(JSON.stringify({
@@ -259,7 +269,7 @@ const handleLogout = async () => {
 };
 
 function redirectToLogin() {
-  window.localStorage.removeItem('TUILiveKit-userInfo');
+  window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
   router.replace({ name: 'login' });
 }
 
@@ -303,12 +313,14 @@ const handleCreateLive = async () => {
     await createLive({
       liveId: liveParams.value.liveId,
       liveName: liveParams.value.liveName,
+      coverUrl: liveParams.value.coverUrl,
     });
     await joinLive({
       liveId: liveParams.value.liveId,
     });
     loading.value = false;
     await openLocalMicrophone();
+    startSystemAudioLoopbackSafely();
   } catch (error: any) {
     loading.value = false;
     if (isNetworkTimeoutError(error)) {
@@ -323,6 +335,7 @@ const handleCreateLive = async () => {
         liveId: liveParams.value.liveId,
       });
       await openLocalMicrophone();
+      startSystemAudioLoopbackSafely();
       return;
     }
     TUIToast.error({
@@ -331,55 +344,73 @@ const handleCreateLive = async () => {
   }
 };
 
-const handleEndLive = async () => {
+const handleEndLive = async (options: { showErrorToast?: boolean } = {}): Promise<boolean> => {
+  const { showErrorToast = true } = options;
   try {
     if (isNetworkOffline()) {
-      TUIToast.error({
-        message: t('Network error, please check your connection and try again'),
-      });
-      return;
+      if (showErrorToast) {
+        TUIToast.error({
+          message: t('Network error, please check your connection and try again'),
+        });
+      }
+      return false;
     }
     loading.value = true;
     exitLiveDialogVisible.value = false;
     await endLive();
-    loading.value = false;
+    stopSystemAudioLoopbackSafely();
+    return true;
   } catch (error: any) {
     console.error('End live error:', error);
-    loading.value = false;
-    if (isNetworkTimeoutError(error)) {
+    if (showErrorToast && isNetworkTimeoutError(error)) {
       TUIToast.error({
         message: t('Network error, please check your connection and try again'),
       });
-      return;
     }
     exitLiveDialogVisible.value = false;
+    return false;
+  } finally {
+    loading.value = false;
   }
 };
 
-/** Handles app quit request (e.g. Cmd+Q / close main window): confirm end live then quit or cancel. */
+/** Handles app quit request (e.g. Cmd+Q / close main window): always ask confirm before quit. */
 const handleAppRequestQuit = () => {
-  if (!isInLive.value) {
-    window.ipcRenderer?.send('app-quit-confirmed');
+  if (isAppQuitConfirming.value) {
     return;
   }
+  isAppQuitConfirming.value = true;
+  const shouldEndLiveBeforeQuit = isInLive.value;
   TUIMessageBox.confirm({
-    title: t('End live and quit?'),
-    content: t('You are currently live streaming. Do you want to end the live and quit the app?'),
-    confirmText: t('End live and quit'),
+    title: shouldEndLiveBeforeQuit ? t('End live and quit?') : t('Quit app?'),
+    content: shouldEndLiveBeforeQuit
+      ? t('You are currently live streaming. Do you want to end the live and quit the app?')
+      : t('Do you want to quit the app? Scene source settings will not be saved.'),
+    confirmText: shouldEndLiveBeforeQuit ? t('End live and quit') : t('Quit app'),
     cancelText: t('Cancel'),
     callback: async (action) => {
-      if (action !== 'confirm') {
-        window.ipcRenderer?.send('app-quit-cancel');
-        return;
-      }
-      await handleEndLive();
-      if (isInLive.value) {
-        TUIToast.error({
-          message: t('Failed to end live, please try again later'),
-        });
-        window.ipcRenderer?.send('app-quit-cancel');
-      } else {
-        window.ipcRenderer?.send('app-quit-confirmed');
+      try {
+        if (action !== 'confirm') {
+          window.ipcRenderer?.send('app-quit-cancel');
+          return;
+        }
+        if (!shouldEndLiveBeforeQuit) {
+          window.ipcRenderer?.send('app-quit-confirmed');
+          return;
+        }
+        const endLiveSuccess = loading.value
+          ? !isInLive.value
+          : await handleEndLive({ showErrorToast: false });
+        if (!endLiveSuccess || isInLive.value) {
+          TUIToast.error({
+            message: t('Failed to end live, please try again later'),
+          });
+          window.ipcRenderer?.send('app-quit-cancel');
+        } else {
+          window.ipcRenderer?.send('app-quit-confirmed');
+        }
+      } finally {
+        isAppQuitConfirming.value = false;
       }
     },
   });
@@ -393,7 +424,7 @@ onMounted(async () => {
   }
 
   // Read user info from localStorage
-  const currentUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+  const currentUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);
   if (!currentUserInfo) {
     router.replace({ name: 'login' });
     return;
@@ -401,23 +432,65 @@ onMounted(async () => {
 
   try {
     const userInfo = JSON.parse(currentUserInfo);
-    const { sdkAppId, userSig, userId, userName, avatarUrl } = userInfo;
+    const { sdkAppId, userSig, userId } = userInfo;
 
     // Use retry mechanism for login
     await loginWithRetry({
       sdkAppId,
       userId,
       userSig,
-      userName,
-      avatarUrl,
     });
   } catch (e) {
     redirectToLogin();
   }
 });
 
-const handleLiveSettingConfirm = (form: { liveName: string }) => {
-  liveParamsEditForm.value = form;
+const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: string }) => {
+  const updatedForm = {
+    liveName: form.liveName.trim(),
+    coverUrl: (form.coverUrl || '').trim(),
+  };
+  if (!isInLive.value || !currentLive.value?.liveId) {
+    liveParamsEditForm.value = updatedForm;
+    return;
+  }
+
+  if (isNetworkOffline()) {
+    TUIToast.error({
+      message: t('Network error, please check your connection and try again'),
+    });
+    return;
+  }
+
+  try {
+    loading.value = true;
+    const liveListManager = roomEngine.instance?.getLiveListManager();
+    if (!liveListManager) {
+      throw new Error('live list manager is unavailable');
+    }
+    await liveListManager.setLiveInfo({
+      roomId: currentLive.value.liveId,
+      name: updatedForm.liveName,
+      coverUrl: updatedForm.coverUrl,
+    });
+    if (currentLive.value) {
+      currentLive.value.liveName = updatedForm.liveName;
+      currentLive.value.coverUrl = updatedForm.coverUrl;
+    }
+    liveParamsEditForm.value = updatedForm;
+  } catch (error: unknown) {
+    if (isNetworkTimeoutError(error)) {
+      TUIToast.error({
+        message: t('Network error, please check your connection and try again'),
+      });
+      return;
+    }
+    TUIToast.error({
+      message: t('Save failed'),
+    });
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleCopyLiveID = async () => {
@@ -441,6 +514,7 @@ const handleCopyLiveID = async () => {
 };
 
 onBeforeUnmount(() => {
+  stopSystemAudioLoopbackSafely();
   cleanupEventListeners();
   if (window.ipcRenderer) {
     window.ipcRenderer.off('app-request-quit', handleAppRequestQuit);
@@ -460,7 +534,7 @@ onBeforeUnmount(() => {
 
   .live-pusher-main {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 44px);
     display: flex;
     flex-direction: row;
     user-select: none;
@@ -470,18 +544,18 @@ onBeforeUnmount(() => {
     @include scrollbar;
 
     .main-left {
+      flex: 0 0 20%;
       width: 20%;
       max-width: 320px;
-      flex: 0 0 20%;
       height: 100%;
-      color: $text-color1;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      color: $text-color1;
+      background-color: var(--bg-color-operate);
 
       .main-left-top {
         flex: 1;
-        background-color: var(--bg-color-operate);
         padding: 16px;
 
         .main-left-top-title {
@@ -515,7 +589,6 @@ onBeforeUnmount(() => {
         display: flex;
         flex-direction: column;
         justify-content: center;
-        background-color: var(--bg-color-operate);
         padding: 16px;
 
         .main-left-bottom-header {
@@ -554,16 +627,16 @@ onBeforeUnmount(() => {
       margin: 0 6px;
 
       .main-center-top {
-        box-sizing: border-box;
-        padding: 0 16px;
-        width: 100%;
-        height: 56px;
-        background-color: var(--bg-color-operate);
-        color: $text-color1;
+        position: relative;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        position: relative;
+        width: 100%;
+        height: 56px;
+        box-sizing: border-box;
+        padding: 0 16px;
+        color: $text-color1;
+        background-color: var(--bg-color-operate);
 
         .main-center-top-left {
           @include text-size-16;
@@ -603,14 +676,14 @@ onBeforeUnmount(() => {
       }
 
       .main-center-bottom {
-        width: 100%;
-        background-color: var(--bg-color-operate);
+        position: relative;
         display: flex;
         justify-content: space-between;
-        padding: 0 16px;
-        box-sizing: border-box;
         flex-direction: column;
-        position: relative;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0 16px;
+        background-color: var(--bg-color-operate);
 
         &::before {
           content: "";

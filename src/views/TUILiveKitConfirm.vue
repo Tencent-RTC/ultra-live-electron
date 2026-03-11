@@ -1,9 +1,12 @@
 <template>
-  <TUILiveKitConfirmView />
+  <UIKitProvider theme="dark">
+    <TUILiveKitConfirmView />
+  </UIKitProvider>
 </template>
 
 <script setup lang="ts">
-import TUILiveKitConfirmView from '../TUILiveKit/ConfirmView.vue';
+import { UIKitProvider } from '@tencentcloud/uikit-base-component-vue3';
+import TUILiveKitConfirmView from '../TUILiveKit/ConfirmView2.vue';
 </script>
 
 <style>

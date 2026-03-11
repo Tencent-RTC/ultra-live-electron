@@ -90,6 +90,7 @@ import { MAX_SDK_APP_ID } from '../../TUILiveKit/constants/tuiConstant';
 import { LoginType, LoginState, VerifyStates } from './types';
 import { MSG_APPID } from './constant';
 import logger from '../../TUILiveKit/utils/logger';
+import { USER_INFO_STORAGE_KEY, stripProfileFields } from '../../TUILiveKit/utils/userInfoStorage';
 
 const privacyGuideEN = 'https://www.tencentcloud.com/document/product/301/17345?lang=en&pg=';
 const privacyGuideCN = 'https://web.sdk.qcloud.com/document/Tencent-RTC-Privacy-Protection-Guidelines.html';
@@ -289,15 +290,15 @@ async function doMobilePhoneLogin() {
   const loginResult = await verifyCodeLogin(params);
   logger.log('login result:', loginResult);
   switch (loginResult.data.errorCode) {
-  case TUIServerErrorCode.SUCCESS:
-    window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
-      ...loginResult.data.data,
-      userName: loginResult.data.data.name,
-      avatarUrl: loginResult.data.data.avatar,
+  case TUIServerErrorCode.SUCCESS: {
+    const loginData = stripProfileFields(loginResult.data.data);
+    window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
+      ...loginData,
       loginType: loginType.value
     }));
     await gotoNextPage();
     break;
+  }
   case TUIServerErrorCode.VERIFY_CODE_ERROR:
     TUIMessageBox({
       title: t('Note'),
@@ -330,26 +331,22 @@ async function doMobilePhoneLogin() {
 }
 
 async function doUserSigLogin() {
-  window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+  window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
     sdkAppId: Number(loginState.sdkAppId),
     userId: loginState.userId.trim(),
-    userName: '',
     userSig: loginState.userSig.trim(),
-    avatarUrl: '',
     loginType: loginType.value
   }));
   await gotoNextPage();
 }
 
 async function doSDKSecretKeyLogin() {
-  const { sdkAppId, userId, userSig, userName, avatarUrl }
+  const { sdkAppId, userId, userSig }
     = getBasicInfo(loginState.userId.trim(), Number(loginState.sdkAppId.trim()), loginState.sdkSecretKey.trim());
-  window.localStorage.setItem('TUILiveKit-userInfo', JSON.stringify({
+  window.localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify({
     sdkAppId,
     userId,
-    userName,
     userSig,
-    avatarUrl,
     loginType: loginType.value
   }));
   await gotoNextPage();

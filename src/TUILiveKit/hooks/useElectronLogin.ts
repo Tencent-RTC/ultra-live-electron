@@ -3,6 +3,7 @@ import { useLoginState, useRoomEngine, useLiveListState } from 'tuikit-atomicx-v
 import { TUIToast, TOAST_TYPE, useUIKit, TUIMessageBox } from '@tencentcloud/uikit-base-component-vue3';
 import TUIRoomEngine, { TUIRoomEvents } from '@tencentcloud/tuiroom-engine-electron';
 import logger from '../utils/logger';
+import { USER_INFO_STORAGE_KEY } from '../utils/userInfoStorage';
 
 const logPrefix = '[useElectronLogin]';
 
@@ -36,13 +37,23 @@ export interface LoginOptions {
   sdkAppId: number;
   userId: string;
   userSig: string;
-  userName?: string;
-  avatarUrl?: string;
+}
+
+export type ForceLogoutReason = 'kicked-off-line' | 'user-sig-expired';
+export type ForceLogoutMode = 'alert-confirm' | 'immediate';
+
+export interface ForceLogoutNoticePayload {
+  reason: ForceLogoutReason;
+  title: string;
+  content: string;
+  eventInfo?: { roomId?: string; message?: string };
 }
 
 export interface UseElectronLoginOptions {
-  onLogout?: () => void;
+  onLogout?: () => void | Promise<void>;
   onLoginFailed?: () => void;
+  onForceLogoutNotice?: (payload: ForceLogoutNoticePayload) => void | Promise<void>;
+  forceLogoutMode?: ForceLogoutMode;
 }
 
 export interface UseElectronLoginReturn {
@@ -64,8 +75,13 @@ export interface UseElectronLoginReturn {
  * @returns Login management functions and state
  */
 export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElectronLoginReturn {
-  const { onLogout, onLoginFailed } = options;
-  const { login, logout, setSelfInfo } = useLoginState();
+  const {
+    onLogout,
+    onLoginFailed,
+    onForceLogoutNotice,
+    forceLogoutMode = 'alert-confirm',
+  } = options;
+  const { login, logout } = useLoginState();
   const { t } = useUIKit();
   const roomEngine = useRoomEngine();
   const { currentLive, endLive } = useLiveListState();
@@ -81,6 +97,174 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
   // Event handler references for cleanup
   let kickedOffLineHandler: ((eventInfo: { roomId: string; message: string }) => void) | null = null;
   let userSigExpiredHandler: (() => void) | null = null;
+  let forceLogoutAlertVisible = false;
+  let forceLogoutTriggered = false;
+  // Internal concurrency guards; intentionally non-reactive and not exposed to template.
+  let forceLogoutInProgress = false;
+  let logoutInProgress = false;
+
+  function resetLoginRuntimeState() {
+    loginStatus.value = 'idle';
+    isLoggingIn.value = false;
+    loginError.value = null;
+  }
+
+  async function triggerLogoutCallback(reason?: ForceLogoutReason) {
+    try {
+      await Promise.resolve(onLogout?.());
+    } catch (error) {
+      logger.error(`${logPrefix}onLogout callback failed:`, {
+        reason: reason || '',
+        error,
+      });
+    }
+  }
+
+  async function performLogoutCleanup(source: 'manual' | 'force-logout') {
+    if (logoutInProgress) {
+      logger.warn(`${logPrefix}skip logout cleanup: already in progress`, { source });
+      return;
+    }
+    logoutInProgress = true;
+    try {
+      cleanupEventListeners();
+      await logout();
+      window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
+      resetLoginRuntimeState();
+      if (window.ipcRenderer) {
+        window.ipcRenderer.send('user-logout');
+      }
+      logger.log(`${logPrefix}logout cleanup completed`, { source });
+    } finally {
+      logoutInProgress = false;
+    }
+  }
+
+  async function showForceLogoutNotice(
+    reason: ForceLogoutReason,
+    content: string,
+    eventInfo?: { roomId?: string; message?: string },
+  ) {
+    const payload: ForceLogoutNoticePayload = {
+      reason,
+      title: t('Note'),
+      content,
+      eventInfo,
+    };
+    if (onForceLogoutNotice) {
+      await Promise.resolve(onForceLogoutNotice(payload));
+      return;
+    }
+    TUIMessageBox.alert({
+      title: payload.title,
+      content: payload.content,
+      confirmText: t('Sure'),
+    });
+  }
+
+  async function runForceLogout(
+    reason: ForceLogoutReason,
+    eventInfo?: { roomId?: string; message?: string },
+    action?: 'cancel' | 'confirm' | 'close' | 'auto',
+  ) {
+    if (forceLogoutTriggered || forceLogoutInProgress) {
+      logger.warn(`${logPrefix}skip force logout execute:`, {
+        reason,
+        action: action || '',
+        forceLogoutTriggered,
+        forceLogoutInProgress,
+        roomId: eventInfo?.roomId || '',
+        message: eventInfo?.message || '',
+        happenedAt: new Date().toISOString(),
+      });
+      return;
+    }
+    forceLogoutTriggered = true;
+    forceLogoutInProgress = true;
+    logger.warn(`${logPrefix}trigger force logout:`, {
+      reason,
+      action: action || '',
+      roomId: eventInfo?.roomId || '',
+      message: eventInfo?.message || '',
+      happenedAt: new Date().toISOString(),
+    });
+    if (isInLive.value) {
+      void endLive().catch((error) => {
+        logger.warn(`${logPrefix}best-effort endLive failed before force logout:`, {
+          reason,
+          error,
+        });
+      });
+    }
+    try {
+      await performLogoutCleanup('force-logout');
+    } catch (error) {
+      logger.error(`${logPrefix}force logout cleanup failed:`, {
+        reason,
+        error,
+      });
+    } finally {
+      forceLogoutInProgress = false;
+    }
+    // Force-logout must continue to login redirect even if best-effort cleanup fails.
+    await triggerLogoutCallback(reason);
+  }
+
+  function triggerForceLogout(
+    reason: ForceLogoutReason,
+    content: string,
+    eventInfo?: { roomId?: string; message?: string },
+  ) {
+    if (forceLogoutTriggered || forceLogoutAlertVisible || forceLogoutInProgress) {
+      logger.warn(`${logPrefix}skip force logout alert:`, {
+        reason,
+        forceLogoutTriggered,
+        forceLogoutAlertVisible,
+        forceLogoutInProgress,
+        roomId: eventInfo?.roomId || '',
+        message: eventInfo?.message || '',
+        happenedAt: new Date().toISOString(),
+      });
+      return;
+    }
+    logger.warn(`${logPrefix}show force logout alert:`, {
+      reason,
+      mode: forceLogoutMode,
+      roomId: eventInfo?.roomId || '',
+      message: eventInfo?.message || '',
+      happenedAt: new Date().toISOString(),
+    });
+
+    if (forceLogoutMode === 'immediate') {
+      forceLogoutAlertVisible = true;
+      void Promise.resolve()
+        .then(async () => {
+          await showForceLogoutNotice(reason, content, eventInfo);
+        })
+        .catch((error) => {
+          logger.error(`${logPrefix}show force logout notice failed:`, {
+            reason,
+            error,
+          });
+        })
+        .finally(() => {
+          forceLogoutAlertVisible = false;
+        });
+      void runForceLogout(reason, eventInfo, 'auto');
+      return;
+    }
+
+    forceLogoutAlertVisible = true;
+    TUIMessageBox.alert({
+      title: t('Note'),
+      content,
+      confirmText: t('Sure'),
+      callback: async (action?: 'cancel' | 'confirm' | 'close') => {
+        forceLogoutAlertVisible = false;
+        await runForceLogout(reason, eventInfo, action);
+      },
+    });
+  }
 
   /**
    * Classify login error type based on error message
@@ -196,19 +380,6 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
         loginStatus.value = 'success';
         isLoggingIn.value = false;
 
-        // Set user info if provided
-        if (options.userName || options.avatarUrl) {
-          try {
-            await setSelfInfo({
-              userName: options.userName,
-              avatarUrl: options.avatarUrl,
-            });
-          } catch (error) {
-            logger.error(`${logPrefix}setSelfInfo error:`, error);
-            // Don't throw error, login is already successful
-          }
-        }
-
         return;
       } catch (error) {
         lastError = error as Error;
@@ -245,20 +416,12 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
    */
   function handleKickedOffLine(eventInfo: { roomId: string; message: string }) {
     logger.log(`${logPrefix}handleKickedOffLine:`, eventInfo);
-
-    TUIMessageBox.alert({
-      title: t('Note'),
-      message: t('You have been kicked off line.'),
-      confirmText: t('Sure'),
-    });
-
-    // Reset login status
-    loginStatus.value = 'idle';
-    isLoggingIn.value = false;
-    loginError.value = null;
-
-    // Trigger logout callback
-    onLogout?.();
+    resetLoginRuntimeState();
+    triggerForceLogout(
+      'kicked-off-line',
+      t('You have been kicked off line.'),
+      eventInfo,
+    );
   }
 
   /**
@@ -266,20 +429,12 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
    */
   function handleUserSigExpired() {
     logger.log(`${logPrefix}handleUserSigExpired:`);
-
-    TUIMessageBox.alert({
-      title: t('Note'),
-      message: t('The UserSig in use is expired. Please log in again.'),
-      confirmText: t('Sure'),
-    });
-
-    // Reset login status
-    loginStatus.value = 'idle';
-    isLoggingIn.value = false;
-    loginError.value = null;
-
-    // Trigger logout callback
-    onLogout?.();
+    resetLoginRuntimeState();
+    triggerForceLogout(
+      'user-sig-expired',
+      t('The UserSig in use is expired. Please log in again.'),
+      { message: 'onUserSigExpired', roomId: '' },
+    );
   }
 
   /**
@@ -342,6 +497,8 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
     // Clear handler references
     kickedOffLineHandler = null;
     userSigExpiredHandler = null;
+    forceLogoutAlertVisible = false;
+    forceLogoutTriggered = false;
   }
 
   /**
@@ -351,6 +508,10 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
     logger.log(`${logPrefix}handleLogout: starting logout process`);
 
     try {
+      if (logoutInProgress) {
+        logger.warn(`${logPrefix}handleLogout: logout already in progress`);
+        return;
+      }
       // Check if currently in live
       if (isInLive.value) {
         logger.log(`${logPrefix}handleLogout: currently in live, ending live first`);
@@ -368,29 +529,12 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
         }
       }
 
-      // Cleanup event listeners
-      cleanupEventListeners();
-
-      // Clear login state
-      await logout();
-
-      // Clear localStorage
-      window.localStorage.removeItem('TUILiveKit-userInfo');
-
-      // Reset login status
-      loginStatus.value = 'idle';
-      isLoggingIn.value = false;
-      loginError.value = null;
-
-      // Send IPC event to notify main process
-      if (window.ipcRenderer) {
-        window.ipcRenderer.send('user-logout');
-      }
+      await performLogoutCleanup('manual');
 
       logger.log(`${logPrefix}handleLogout: logout completed successfully`);
 
       // Trigger logout callback
-      onLogout?.();
+      await triggerLogoutCallback();
     } catch (error) {
       logger.error(`${logPrefix}handleLogout error:`, error);
       throw error;
@@ -407,4 +551,3 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
     handleLogout,
   };
 }
-

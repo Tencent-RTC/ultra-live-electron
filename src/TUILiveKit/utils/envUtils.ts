@@ -42,3 +42,12 @@ export async function getAppPath() {
   }
   return (window as any).APP_PATH;
 }
+
+export async function getWindowID(): Promise<Uint8Array|number> {
+  if (!(window as any).nativeWindowHandle) {
+    const windowID = await window.ipcRenderer.invoke('window-id');
+    (window as any).nativeWindowHandle = windowID;
+  }
+  console.debug('[envUtils] getWindowID:', window.nativeWindowHandle);
+  return window.nativeWindowHandle;
+}

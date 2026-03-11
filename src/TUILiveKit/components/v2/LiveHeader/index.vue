@@ -52,28 +52,17 @@
   </header>
 
   <!-- User Profile Dialog -->
-  <TUIDialog
+  <UserProfileDialog
     v-model:visible="showProfileDialog"
-    :title="t('User Profile')"
-    :width="'600px'"
-    :showClose="true"
-    :cancelText="t('Cancel')"
-    :confirmText="t('Save')"
-    :confirmDisabled="!profileHasChanges"
-    @confirm="handleProfileSave"
-    @cancel="handleProfileCancel"
-  >
-    <LiveUserProfile
-      ref="liveUserProfileRef"
-      @save="showProfileDialog = false"
-      @cancel="showProfileDialog = false"
-    />
-  </TUIDialog>
+    :userInfo="userProfileInfo"
+    @save="onSaveProfileDialog"
+    @close="onCancelProfileDialog"
+  />
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onBeforeUnmount, ref, defineProps, defineEmits, computed, type Ref } from 'vue';
-import { TUIButton, TUIDialog, useUIKit, IconArrowStrokeSelectDown } from '@tencentcloud/uikit-base-component-vue3';
+import { onMounted, onBeforeUnmount, ref, computed, type Ref } from 'vue';
+import { useUIKit, TUIToast, TOAST_TYPE, IconArrowStrokeSelectDown } from '@tencentcloud/uikit-base-component-vue3';
 import { useLoginState, Avatar } from 'tuikit-atomicx-vue3-electron';
 import type { TRTCStatistics } from 'trtc-electron-sdk';
 import SvgIcon from '../../../common/base/SvgIcon.vue';
@@ -84,12 +73,16 @@ import MiniIcon from '../../../common/icons/MiniIcon.vue';
 import CloseIcon from '../../../common/icons/CloseIcon.vue';
 import trtcCloud from '../../../utils/trtcCloud';
 import vClickOutside from '../../../utils/vClickOutside';
-import LiveUserProfile from '../LiveUserProfile/index.vue';
+import UserProfileDialog from './UserProfileDialog.vue';
+import { ChildPanelType, ipcBridge, IPCMessageType, toPlainIpcPayload } from '../../../ipc';
+import logger from '../../../utils/logger';
+
+const logPrefix = '[LiveHeader]';
 
 const props = defineProps({
-  loginButtonVisible: {
+  isShowingInChildWindow: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 });
 
@@ -98,17 +91,18 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useUIKit();
-const { loginUserInfo } = useLoginState();
+const { loginUserInfo, setSelfInfo } = useLoginState();
 
 // User control dropdown state
 const showUserControl = ref(false);
 const showProfileDialog = ref(false);
-const liveUserProfileRef = ref<InstanceType<typeof LiveUserProfile> | null>(null);
 
-// Computed: Check if profile has changes
-const profileHasChanges = computed(() => {
-  return liveUserProfileRef.value?.hasChanges ?? false;
-});
+// Construct userInfo for UserProfileDialog
+const userProfileInfo = computed(() => ({
+  userId: loginUserInfo.value?.userId || '',
+  userName: loginUserInfo.value?.userName || '',
+  avatarUrl: loginUserInfo.value?.avatarUrl || '',
+}));
 
 // Performance statistics
 const isMaximized: Ref<boolean> = ref(false);
@@ -125,7 +119,7 @@ const statistics = ref<TRTCStatistics>({
   systemCpu: 0,
   upLoss: 0,
   appMemoryUsageInMB: 0,
-});
+} as unknown as TRTCStatistics);
 
 const frameRate = computed(() => {
   return statistics.value.localStatisticsArray?.[0]?.frameRate || 0;
@@ -193,26 +187,50 @@ function handleHideUserControl() {
  */
 function openProfile() {
   showUserControl.value = false;
-  showProfileDialog.value = true;
-}
 
-/**
- * Handle profile save
- */
-async function handleProfileSave() {
-  if (liveUserProfileRef.value) {
-    await liveUserProfileRef.value.saveChanges();
-    // Only close dialog if save was successful (saveChanges will emit 'save' event)
+  if (props.isShowingInChildWindow) {
+    // If in child window, send IPC to main process to open profile dialog in a new child window
+    ipcBridge.sendToChild(IPCMessageType.SHOW_CHILD_PANEL, {
+      panelType: ChildPanelType.UserProfile,
+      initialData: toPlainIpcPayload(userProfileInfo.value),
+    });
+  } else {
+    // Otherwise, open profile dialog in current window
+    showProfileDialog.value = true;
   }
 }
 
 /**
- * Handle profile cancel
+ * Handle profile dialog save event
+ * Call setSelfInfo to persist changes and provide toast feedback
  */
-function handleProfileCancel() {
-  if (liveUserProfileRef.value) {
-    liveUserProfileRef.value.onCancel();
+async function onSaveProfileDialog(data: { userName: string; avatarUrl: string }) {
+  try {
+    logger.debug(`${logPrefix} Saving user profile`, data);
+    await setSelfInfo({
+      userName: data.userName,
+      avatarUrl: data.avatarUrl,
+    });
+
+    TUIToast({
+      message: t('Save successfully'),
+      type: TOAST_TYPE.SUCCESS,
+    });
+
+    showProfileDialog.value = false;
+  } catch (error) {
+    logger.error(`${logPrefix} Save user profile error:`, error);
+    TUIToast({
+      message: t('Save failed'),
+      type: TOAST_TYPE.ERROR,
+    });
   }
+}
+
+/**
+ * Handle profile dialog cancel event
+ */
+function onCancelProfileDialog() {
   showProfileDialog.value = false;
 }
 
@@ -227,10 +245,12 @@ function handleLogOut() {
 
 onMounted(async () => {
   trtcCloud.on('onStatistics', onStatistics);
+  ipcBridge.on(IPCMessageType.UPDATE_USER_PROFILE, onSaveProfileDialog);
 });
 
 onBeforeUnmount(() => {
   trtcCloud.off('onStatistics', onStatistics);
+  ipcBridge.off(IPCMessageType.UPDATE_USER_PROFILE, onSaveProfileDialog);
 });
 
 </script>
@@ -244,6 +264,7 @@ onBeforeUnmount(() => {
   align-items: center;
   height: 2.75rem;
   line-height: 2.75rem;
+  padding: 0 1rem;
   font-size: $font-live-header-size;
   user-select: none;
   -webkit-user-select: none;
@@ -388,7 +409,7 @@ onBeforeUnmount(() => {
     .user-control-container {
       position: absolute;
       top: 2.5rem;
-      left: 0;
+      right: 0;
       z-index: 999;
       font-weight: normal;
 
@@ -414,7 +435,7 @@ onBeforeUnmount(() => {
       &::before {
         content: '';
         position: absolute;
-        left: 1.25rem;
+        right: 1rem;
         top: -1.25rem;
         width: 0rem;
         border-top: 0.625rem solid transparent;
@@ -495,4 +516,3 @@ onBeforeUnmount(() => {
 }
 
 </style>
-

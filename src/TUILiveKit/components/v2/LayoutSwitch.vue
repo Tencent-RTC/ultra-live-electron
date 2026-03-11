@@ -7,136 +7,86 @@
     <IconLayoutTemplate class="custom-icon" />
     <span class="custom-text setting-text">{{ t('Layout Settings') }}</span>
   </div>
-  <TUIDialog
-    :custom-classes="['layout-dialog']"
-    :title="t('Layout Settings')"
-    :visible="layoutSwitchVisible"
-    :confirm-text="t('Confirm')"
-    :cancel-text="t('Cancel')"
-    @close="handleCancel"
-    @confirm="handleConfirm"
-    @cancel="handleCancel"
-  >
-    <div class="layout-label">
-      {{ t('Audience Layout') }}
-    </div>
-    <div class="template-options">
-      <div class="options-grid">
-        <template
-          v-for="template in layoutOptions"
-          :key="template.id"
-        >
-          <div
-            class="option-card"
-            :class="{ active: selectedTemplate === template.templateId }"
-            @click="selectTemplate(template.templateId)"
-          >
-            <div class="option-info">
-              <component
-                :is="template.icon"
-                v-if="template.icon"
-                class="option-icon"
-              />
-              <h4>{{ template.label }}</h4>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-  </TUIDialog>
+  <LayoutConfigPanelDialog
+    :layoutSwitchVisible="layoutSwitchVisible"
+    :currentLayoutTemplate="currentLayoutTemplate"
+    @update:layoutSwitchVisible="updateLayoutSwitchVisible"
+    @confirm="handleLayoutConfirm"
+  />
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
-import { TUIErrorCode  } from '@tencentcloud/tuiroom-engine-electron';
-import { useUIKit, TUIDialog, TUIToast, TOAST_TYPE, IconLayoutTemplate } from '@tencentcloud/uikit-base-component-vue3';
-import { useLiveListState, useCoHostState, CoHostStatus } from 'tuikit-atomicx-vue3-electron';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useUIKit, TUIToast, TOAST_TYPE, IconLayoutTemplate } from '@tencentcloud/uikit-base-component-vue3';
+import { useCoHostState, CoHostStatus, useLiveListState, TUIErrorCode } from 'tuikit-atomicx-vue3-electron';
+import LayoutConfigPanelDialog from './LayoutConfigPanel/LayoutConfigPanelDialog.vue';
 import { TUISeatLayoutTemplate } from '../../types';
-import Dynamic1v6 from '../../../icons/dynamic-1v6.vue';
-import DynamicGrid9 from '../../../icons/dynamic-grid9.vue';
-import Fixed1v6 from '../../../icons/fixed-1v6.vue';
-import FixedGrid9 from '../../../icons/fixed-grid9.vue';
-import HorizontalFloat from '../../../icons/horizontal-float.vue';
+import { ChildPanelType, ipcBridge, IPCMessageType } from '../../ipc';
+
+const props = defineProps({
+  isShowingInChildWindow: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const { t } = useUIKit();
-const { currentLive, updateLiveInfo } = useLiveListState();
 const { coHostStatus } = useCoHostState();
+const { currentLive, updateLiveInfo } = useLiveListState();
 const disabled = computed(() => coHostStatus.value === CoHostStatus.Connected);
+const currentLayoutTemplate = computed<TUISeatLayoutTemplate | null>(() => currentLive.value?.layoutTemplate ?? null);
 
 const layoutSwitchVisible = ref(false);
+
+watch(disabled, () => {
+  if (disabled.value) {
+    layoutSwitchVisible.value = false;
+    if (props.isShowingInChildWindow) {
+      ipcBridge.sendToElectronMain(IPCMessageType.HIDE_CHILD_PANEL, {
+        panelType: ChildPanelType.LayoutConfig,
+      });
+    }
+  }
+});
+
+watch(
+  currentLayoutTemplate,
+  (newVal) => {
+    if (props.isShowingInChildWindow) {
+      ipcBridge.sendToChild(IPCMessageType.UPDATE_CHILD_DATA, {
+        panelType: ChildPanelType.LayoutConfig,
+        data: {
+          layoutSwitchVisible: true,
+          currentLayoutTemplate: newVal ?? null,
+        },
+      });
+    }
+  }
+);
 
 const handleSwitchLayout = () => {
   if (disabled.value) {
     TUIToast({ type: TOAST_TYPE.ERROR, message: t('Layout switching is not available during co-hosting') });
     return;
   }
-  layoutSwitchVisible.value = true;
+  if (props.isShowingInChildWindow) {
+    ipcBridge.sendToChild(IPCMessageType.SHOW_CHILD_PANEL, {
+      panelType: ChildPanelType.LayoutConfig,
+      initialData: {
+        layoutSwitchVisible: true,
+        currentLayoutTemplate: currentLayoutTemplate.value ?? null,
+      },
+    });
+  } else {
+    layoutSwitchVisible.value = true;
+  }
 };
 
-const portraitLayoutOptions = computed(() => [
-  {
-    id: 'PortraitDynamic_Grid9',
-    icon: DynamicGrid9,
-    templateId: TUISeatLayoutTemplate.PortraitDynamic_Grid9,
-    label: t('Dynamic Grid9 Layout'),
-  },
-  {
-    id: 'PortraitFixed_1v6',
-    icon: Fixed1v6,
-    templateId: TUISeatLayoutTemplate.PortraitFixed_1v6,
-    label: t('Fixed 1v6 Layout'),
-  },
-  {
-    id: 'PortraitFixed_Grid9',
-    icon: FixedGrid9,
-    templateId: TUISeatLayoutTemplate.PortraitFixed_Grid9,
-    label: t('Fixed Grid9 Layout'),
-  },
-  {
-    id: 'PortraitDynamic_1v6',
-    icon: Dynamic1v6,
-    templateId: TUISeatLayoutTemplate.PortraitDynamic_1v6,
-    label: t('Dynamic 1v6 Layout'),
-  },
-]);
-
-const horizontalLayoutOptions = computed(() => [
-  {
-    id: 'LandscapeDynamic_1v3',
-    icon: HorizontalFloat,
-    templateId: TUISeatLayoutTemplate.LandscapeDynamic_1v3,
-    label: t('Landscape Template'),
-  },
-]);
-
-const layoutOptions = computed(() => {
-  if (currentLive.value && currentLive.value?.layoutTemplate >= 200 && currentLive.value?.layoutTemplate <= 599) {
-    return horizontalLayoutOptions.value;
-  }
-  return portraitLayoutOptions.value;
-});
-
-const selectedTemplate = ref<TUISeatLayoutTemplate | null>(currentLive.value?.layoutTemplate ?? null);
-
-function selectTemplate(template: TUISeatLayoutTemplate) {
-  selectedTemplate.value = template;
-}
-
-watch(() => currentLive.value?.layoutTemplate, (newVal) => {
-  if (newVal) {
-    selectedTemplate.value = newVal;
-  }
-});
-
-async function handleConfirm() {
-  if (selectedTemplate.value  === currentLive.value?.layoutTemplate) {
-    layoutSwitchVisible.value = false;
-    return;
-  }
-
-  if (selectedTemplate.value) {
+async function handleLayoutConfirm(options: { template: TUISeatLayoutTemplate | null} ) {
+  const { template } = options;
+  if (template && currentLive.value?.layoutTemplate !== template) {
     try {
-      await updateLiveInfo({ layoutTemplate: selectedTemplate.value });
+      await updateLiveInfo({ layoutTemplate: template });
       layoutSwitchVisible.value = false;
     } catch (error: any) {
       let errorMessage = t('Layout switch failed');
@@ -150,10 +100,17 @@ async function handleConfirm() {
   }
 }
 
-function handleCancel() {
-  selectedTemplate.value = currentLive.value?.layoutTemplate ?? null;
-  layoutSwitchVisible.value = false;
+function updateLayoutSwitchVisible(value: boolean) {
+  layoutSwitchVisible.value = value;
 }
+
+onMounted(() => {
+  ipcBridge.on(IPCMessageType.UPDATE_LAYOUT_TEMPLATE, handleLayoutConfirm);
+});
+
+onBeforeUnmount(() => {
+  ipcBridge.off(IPCMessageType.UPDATE_LAYOUT_TEMPLATE, handleLayoutConfirm);
+});
 </script>
 
 <style lang="scss" scoped>
@@ -202,92 +159,5 @@ function handleCancel() {
       color: $text-color3;
     }
   }
-}
-
-:deep(.layout-dialog) {
-  padding: 24px;
-  width: 480px;
-  .tui-dialog-body {
-    flex-wrap: wrap;
-  }
-  .tui-dialog-footer {
-    padding-top: 32px;
-  }
-}
-
-.layout-label {
-  @include text-size-14;
-  color: var(--text-color-primary, #ffffff);
-  margin: 4px 0px 16px 0px;
-}
-
-.template-options {
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-
-  .options-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: flex-start;
-
-    .option-card {
-      box-sizing: border-box;
-      padding: 12px 13px;
-      width: 208px;
-      background: #3a3a3a;
-      border: 2px solid transparent;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-align: center;
-
-      &:hover {
-        background: #4a4a4a;
-        border-color: #5a5a5a;
-      }
-
-      &.active {
-        border: 2px solid var(--text-color-link-hover, #2B6AD6);
-        background: var(--list-color-focused, #243047);
-
-        .option-info h4 {
-          color: #ffffff;
-        }
-      }
-
-      .option-info {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 8px;
-        .option-icon {
-          width: 24px;
-          height: 24px;
-        }
-        h4 {
-          margin: 0;
-          font-size: 14px;
-          font-weight: 600;
-          color: #ffffff;
-          transition: color 0.2s ease;
-        }
-      }
-    }
-  }
-}
-
-.setting-icon {
-  mask-image: url('../../../icons/setting-icon.svg');
-}
-
-.setting-panel {
-  display: flex;
-  flex-direction: column;
-  max-height: 600px;
-  width: 100%;
-  overflow: auto;
-  @include scrollbar;
 }
 </style>

@@ -1,7 +1,8 @@
 import { createRouter, createWebHashHistory, RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
 import Loading from '../views/Loading.vue';
 import Login from '../views/Login/Index.vue';
-import { isMacPlatform } from '../TUILiveKit/utils/platform';
+import { isMacPlatform, isWindowPlatform } from '../TUILiveKit/utils/platform';
+import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -15,6 +16,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import(/* webpackChunkName: "TUILiveKitMain" */ '../views/TUILiveKitMain.vue')
   },
   {
+    path: '/tui-live-kit-main-v2',
+    name: 'tui-live-kit-main-v2',
+    component: () => import(/* webpackChunkName: "TUILiveKitMainV2" */ '../views/TUILiveKitMainV2.vue')
+  },
+  {
     path: '/tui-livekit-mac-v2',
     name: 'tui-livekit-mac-v2',
     component: () => import(/* webpackChunkName: "TUILiveKitMacV2" */ '../views/TUILiveKitMacV2.vue')
@@ -25,9 +31,19 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import(/* webpackChunkName: "TUILiveKitChild" */ '../views/TUILiveKitChild.vue'),
   },
   {
+    path: '/tui-live-kit-child-v2',
+    name: 'tui-live-kit-child-v2',
+    component: () => import(/* webpackChunkName: "TUILiveKitChildV2" */ '../views/TUILiveKitChild2.vue'),
+  },
+  {
     path: '/tui-live-kit-cover',
     name: 'tui-live-kit-cover',
     component: () => import(/* webpackChunkName: "TUILiveKitCover" */ '../views/TUILiveKitCover.vue'),
+  },
+  {
+    path: '/tui-live-kit-cover-v2',
+    name: 'tui-live-kit-cover-v2',
+    component: () => import(/* webpackChunkName: "TUILiveKitCoverV2" */ '../views/TUILiveKitCoverV2.vue'),
   },
   {
     path: '/tui-live-kit-confirm',
@@ -52,13 +68,21 @@ window.ipcRenderer.on('window-type', (event: any, type: string) => {
 });
 
 router.beforeEach((to: RouteLocationNormalized) => {
-  if (isMacPlatform() && to.name === 'tui-live-kit-main') {
-    return { name: 'tui-livekit-mac-v2' };
-  }
   if (to.name === 'tui-live-kit-main') {
-    const storedUserInfo = window.localStorage.getItem('TUILiveKit-userInfo');
+    const storedUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);
     if (!storedUserInfo) {
       return { name: 'login' };
+    }
+    if (isMacPlatform()) {
+      return { name: 'tui-livekit-mac-v2' };
+    } else if (isWindowPlatform()) {
+      return { name: 'tui-live-kit-main-v2' };
+    }
+  } else if (isWindowPlatform()) {
+    if (to.name === 'tui-live-kit-child') {
+      return { name: 'tui-live-kit-child-v2' };
+    } else if (to.name === 'tui-live-kit-cover') {
+      return { name: 'tui-live-kit-cover-v2' };
     }
   }
 });

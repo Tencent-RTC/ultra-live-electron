@@ -5,17 +5,7 @@
     <div class="tui-live-user-profile-content">
       <div class="profile-section">
         <div class="avatar-display">
-          <div class="avatar-circle">
-            <img
-              v-if="editableData.avatarUrl"
-              :src="editableData.avatarUrl"
-              alt=""
-              class="avatar-image"
-            />
-            <div v-else class="avatar-placeholder">
-              <span>{{ getAvatarPlaceholder(editableData.userName) }}</span>
-            </div>
-          </div>
+          <Avatar :src="editableData.avatarUrl" :size="64" alt="" />
         </div>
       </div>
 
@@ -25,13 +15,14 @@
           <span class="profile-value">
             {{ editableData.userId }}
           </span>
-          <button
+          <TUIButton
+            type="text"
             class="copy-btn"
             @click="copyToClipboard(editableData.userId || '')"
             :title="t('Copy')"
           >
             <CopyIcon class="copy-icon" />
-          </button>
+          </TUIButton>
         </div>
         <div class="profile-item" :class="{ 'editing': editingFields.userName }">
           <span class="profile-label">{{ t("User Name") }}</span>
@@ -39,106 +30,116 @@
             <span v-if="!editingFields.userName" class="display-value">
               {{ editableData.userName || t("Not set") }}
             </span>
-            <input
+            <TUIInput
               v-else
-              type="text"
+              class="profile-input"
+              :class="{ 'is-invalid': showUserNameError }"
               v-model="editableData.userName"
               :placeholder="t('Please enter username')"
-              maxlength="20"
+              :maxLength="20"
+              :spellcheck="false"
               ref="userNameInput"
               autofocus
-              @blur="editingFields.userName = false"
-              @keyup.enter="editingFields.userName = false"
+              @blur="finishEdit('userName')"
+              @done="finishEdit('userName')"
             />
           </div>
-          <button
+          <TUIButton
             v-if="!editingFields.userName"
+            type="text"
             class="edit-btn"
             @click="startEdit('userName')"
             :title="t('Edit')"
           >
             <EditIcon class="edit-icon" />
-          </button>
+          </TUIButton>
         </div>
         <div class="profile-item" :class="{ 'editing': editingFields.avatarUrl }">
           <span class="profile-label">{{ t("Avatar URL") }}</span>
           <div class="profile-value">
             <span v-if="!editingFields.avatarUrl" class="display-value">
-              <span class="display-value">{{ editableData.avatarUrl || t("Not set") }}</span>
+              {{ editableData.avatarUrl || t("Not set") }}
             </span>
-            <input
+            <TUIInput
               v-else
-              type="text"
+              class="profile-input"
+              :class="{ 'is-invalid': showAvatarUrlError }"
               v-model="editableData.avatarUrl"
               :placeholder="t('Please enter avatar URL')"
+              :spellcheck="false"
               ref="avatarUrlInput"
               autofocus
-              @blur="editingFields.avatarUrl = false"
-              @keyup.enter="editingFields.avatarUrl = false"
+              @blur="finishEdit('avatarUrl')"
+              @done="finishEdit('avatarUrl')"
             />
           </div>
-          <button
+          <TUIButton
             v-if="!editingFields.avatarUrl"
+            type="text"
             class="edit-btn"
             @click="startEdit('avatarUrl')"
             :title="t('Edit')"
           >
             <EditIcon class="edit-icon" />
-          </button>
+          </TUIButton>
         </div>
         <div class="profile-item">
           <span class="profile-label">{{ t("SDKAPPID") }}</span>
           <span class="profile-value">
             <span class="display-value">{{ editableData.sdkAppId }}</span>
           </span>
-          <button
+          <TUIButton
+            type="text"
             class="copy-btn"
             @click="copyToClipboard(String(editableData.sdkAppId || ''))"
             :title="t('Copy')"
           >
             <CopyIcon class="copy-icon" />
-          </button>
+          </TUIButton>
         </div>
         <div class="profile-item">
           <span class="profile-label">{{ t("User Signature") }}</span>
           <span class="profile-value">
             <span class="display-value signature-value">{{ editableData.userSig || t("Not set") }}</span>
           </span>
-          <button
+          <TUIButton
+            type="text"
             class="copy-btn"
             @click="copyToClipboard(editableData.userSig || '')"
             :title="t('Copy')"
           >
             <CopyIcon class="copy-icon" />
-          </button>
+          </TUIButton>
         </div>
       </div>
     </div>
 
     <div class="tui-live-user-profile-foot">
-      <button
-        class="tui-button-confirm"
+      <TUIButton @click="onCancel">
+        {{ t("Cancel") }}
+      </TUIButton>
+      <TUIButton
+        type="primary"
         @click="saveChanges"
         :disabled="!isFormValid"
       >
         {{ t("Save") }}
-      </button>
-      <button class="tui-button-cancel" @click="onCancel">
-        {{ t("Cancel") }}
-      </button>
+      </TUIButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, defineProps, reactive, Ref } from 'vue';
-import { TUIToast, TOAST_TYPE } from '@tencentcloud/uikit-base-component-vue3';
+import { computed, ref, watch, reactive } from 'vue';
+import { TUIInput, TUIButton, TUIToast, TOAST_TYPE } from '@tencentcloud/uikit-base-component-vue3';
+import { Avatar } from 'tuikit-atomicx-vue3-electron';
 import LiveChildHeader from './LiveChildHeader.vue';
 import CopyIcon from '../../common/icons/CopyIcon.vue';
 import EditIcon from '../../common/icons/EditIcon.vue';
 import { useCurrentSourceStore } from '../../store/child/currentSource';
 import { useI18n } from '../../locales';
 import logger from '../../utils/logger';
+import { isHttpUrl } from '../../utils/url';
 
 const logPrefix = '[LiveUserProfile]';
 
@@ -195,20 +196,32 @@ const editableData = reactive<UserProfileData>({
 const originalData = ref<UserProfileData>({ ...editableData });
 
 const isFormValid = computed(() => {
+  const avatarUrl = editableData.avatarUrl.trim();
+
   return editableData.userId.trim().length > 0 &&
          editableData.userName.trim().length > 0 &&
          editableData.userSig.trim().length > 0 &&
-         editableData.avatarUrl.trim().length > 0 &&
+         (avatarUrl.length === 0 || isHttpUrl(avatarUrl)) &&
          editableData.sdkAppId > 0 && editableData.sdkAppId <= 4294967295;
 });
 
-const getAvatarPlaceholder = (name: string) => {
-  if (!name) return '?';
-  return name.charAt(0).toUpperCase();
-};
+const showUserNameError = computed(() => editingFields.value.userName && editableData.userName.trim().length === 0);
+const showAvatarUrlError = computed(() => {
+  if (!editingFields.value.avatarUrl) {
+    return false;
+  }
+  const avatarUrl = editableData.avatarUrl.trim();
+  return avatarUrl.length > 0 && !isHttpUrl(avatarUrl);
+});
 
 const startEdit = (field: keyof typeof editingFields.value) => {
+  isEditing.value = true;
   editingFields.value[field] = true;
+};
+
+const finishEdit = (field: keyof typeof editingFields.value) => {
+  editingFields.value[field] = false;
+  isEditing.value = Object.values(editingFields.value).some(Boolean);
 };
 
 const copyToClipboard = async (text: string) => {
@@ -256,10 +269,10 @@ const resetCurrentView = () => {
   currentSourceStore.setCurrentViewName('');
 };
 
-watch(() => props.data, (newData: Record<string, any>) => {
+watch(() => props.data, (newData: Partial<UserProfileData>) => {
   if (newData && !isEditing.value) {
     Object.assign(editableData, newData);
-    originalData.value = { ...newData as UserProfileData };
+    originalData.value = { ...editableData };
   }
 }, { deep: true, immediate: true });
 </script>
@@ -289,41 +302,6 @@ watch(() => props.data, (newData: Record<string, any>) => {
     justify-content: center;
     margin-bottom: 2rem;
     margin-top: 1rem;
-
-    .avatar-circle {
-      position: relative;
-      border-radius: 50%;
-      border: 3px solid var(--stroke-color-primary);
-      background-color: var(--bg-color-operate);
-      transition: all 0.2s ease;
-      cursor: pointer;
-      overflow: hidden;
-      width: 6rem;
-      height: 6rem;
-
-      &:hover {
-        transform: scale(1.05);
-        border-color: var(--button-color-primary-default);
-      }
-    }
-  }
-
-  .avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .avatar-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--button-color-primary-default), var(--button-color-primary-hover));
-    color: white;
-    font-size: 2rem;
-    font-weight: bold;
   }
 
   .profile-section {
@@ -387,42 +365,16 @@ watch(() => props.data, (newData: Record<string, any>) => {
           }
         }
 
-        input {
-          user-select: text;
+        .profile-input {
           width: 100%;
-          padding: 0.25rem 0.5rem;
-          border: 1px solid var(--stroke-color-primary);
-          border-radius: 0.25rem;
-          background-color: var(--bg-color-operate);
-          color: var(--text-color-primary);
-          font-size: 0.875rem;
-          transition: all 0.2s ease;
-          line-height: 1.4;
-          font-family: inherit;
-
-          &:focus {
-            outline: none;
-            border-color: var(--button-color-primary-default);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-          }
-
-          &::placeholder {
-            color: var(--text-color-secondary);
-          }
         }
       }
 
       .edit-btn,
       .copy-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0.25rem;
-        border-radius: 0.25rem;
-        transition: all 0.2s;
-        font-size: 1rem;
-        margin-left: 0.5rem;
-        opacity: 0.7;
+        min-width: 1.5rem;
+        padding: 0;
+        margin-left: 0.25rem;
         flex-shrink: 0;
 
         .edit-icon,
@@ -432,10 +384,6 @@ watch(() => props.data, (newData: Record<string, any>) => {
           height: 1rem;
         }
 
-        &:hover {
-          opacity: 1;
-          background-color: var(--bg-color-operate);
-        }
       }
     }
   }
@@ -445,9 +393,18 @@ watch(() => props.data, (newData: Record<string, any>) => {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    gap: 0.75rem;
     padding: 0 1.5rem;
     background-color: var(--bg-color-dialog);
     border-top: 1px solid var(--border-color);
+  }
+
+  :deep(.profile-input .tui-input__native-input) {
+    font-size: 0.875rem;
+  }
+
+  :deep(.profile-input.is-invalid .tui-input__native-input) {
+    border-color: var(--text-color-error);
   }
 }
 </style>
