@@ -16,7 +16,11 @@
     "build:win64": "electron-builder --win --x64",
     "pack:win64": "npm run build && npm run build:win64",
     "build:mac-x64": "electron-builder --mac --x64",
-    "pack:mac-x64": "npm run build && npm run build:mac-x64"
+    "pack:mac-x64": "npm run build && npm run build:mac-x64",
+    "upload-server": "npm --prefix ./upload-server run start",
+    "upload-server:standalone": "npm --prefix ./upload-server run start",
+    "upload-server:bootstrap": "npm --prefix ./upload-server install",
+    "start:with-upload-server": "concurrently \"npm run serve\" \"npm run upload-server\" \"npm run electron\""
   },
   "dependencies": {
     "@tencentcloud/tuiroom-engine-electron": "~4.0.1",

@@ -97,7 +97,6 @@ The built package is in the `release` directory.
 Windows:
 ```bash
 npm run pack:win64
-npm run pack:win32
 ```
 
 Mac:

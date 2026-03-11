@@ -98,7 +98,6 @@ VUE_APP_UPLOAD_SERVER_BASE_URL=https://your-upload-domain npm run build
 Windows：
 ```bash
 npm run pack:win64
-npm run pack:win32
 ```
 
 Mac：
