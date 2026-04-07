@@ -1,11 +1,13 @@
 import { ref, Ref, computed } from 'vue';
-import { useLoginState, useRoomEngine, useLiveListState } from 'tuikit-atomicx-vue3-electron';
+import { useLoginState, useRoomEngine, useLiveListState, useLiveErrorModal } from 'tuikit-atomicx-vue3-electron';
 import { TUIToast, TOAST_TYPE, useUIKit, TUIMessageBox } from '@tencentcloud/uikit-base-component-vue3';
 import TUIRoomEngine, { TUIRoomEvents } from '@tencentcloud/tuiroom-engine-electron';
 import logger from '../utils/logger';
 import { USER_INFO_STORAGE_KEY } from '../utils/userInfoStorage';
+import { isMacPlatform } from '../utils/platform';
 
 const logPrefix = '[useElectronLogin]';
+const KICKED_OFFLINE_MODAL_CODE = 41013;
 
 // Constants
 const MAX_LOGIN_RETRY_COUNT = 1;
@@ -69,6 +71,12 @@ export interface UseElectronLoginReturn {
   handleLogout: () => Promise<void>;
 }
 
+interface LiveModalErrorInput {
+  code?: number;
+  message: string;
+  sdkAppId?: number;
+}
+
 /**
  * Electron login management hook with retry mechanism
  * @param options - Configuration options
@@ -85,6 +93,7 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
   const { t } = useUIKit();
   const roomEngine = useRoomEngine();
   const { currentLive, endLive } = useLiveListState();
+  const { handleErrorWithModal } = useLiveErrorModal();
 
   // State
   const isLoggingIn = ref<boolean>(false);
@@ -102,6 +111,7 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
   // Internal concurrency guards; intentionally non-reactive and not exposed to template.
   let forceLogoutInProgress = false;
   let logoutInProgress = false;
+  let latestLoginSdkAppId: number | undefined;
 
   function resetLoginRuntimeState() {
     loginStatus.value = 'idle';
@@ -131,6 +141,7 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
       await logout();
       window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
       resetLoginRuntimeState();
+      latestLoginSdkAppId = undefined;
       if (window.ipcRenderer) {
         window.ipcRenderer.send('user-logout');
       }
@@ -327,7 +338,23 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
    * Handle login error with classification
    * @param error - The error object
    */
-  function handleLoginError(error: Error | null) {
+  function normalizeErrorForLiveModal(error: unknown, sdkAppId?: number): LiveModalErrorInput {
+    const errorRecord = (error && typeof error === 'object')
+      ? error as Record<string, unknown>
+      : null;
+    const normalizedCode = Number(errorRecord?.code ?? errorRecord?.errorCode);
+    const normalizedMessage = typeof errorRecord?.message === 'string'
+      ? errorRecord.message
+      : (error as Error)?.message || '';
+
+    return {
+      code: Number.isFinite(normalizedCode) ? normalizedCode : undefined,
+      message: normalizedMessage,
+      sdkAppId,
+    };
+  }
+
+  function handleLoginError(error: Error | null, sdkAppId?: number) {
     if (!error) {
       logger.warn(`${logPrefix}handleLoginError: error is null`);
       return;
@@ -341,6 +368,10 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
       errorMessage: error.message,
       classifiedMessage: errorMessage,
     });
+
+    if (handleErrorWithModal(normalizeErrorForLiveModal(error, sdkAppId))) {
+      return;
+    }
 
     if (errorMessage) {
       TUIToast({
@@ -356,6 +387,7 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
    */
   async function loginWithRetry(options: LoginOptions): Promise<void> {
     logger.log(`${logPrefix}loginWithRetry:`, options);
+    latestLoginSdkAppId = options.sdkAppId;
 
     isLoggingIn.value = true;
     loginStatus.value = 'logging';
@@ -401,7 +433,7 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
     isLoggingIn.value = false;
 
     // Handle login error with classification
-    handleLoginError(lastError);
+    handleLoginError(lastError, options.sdkAppId);
 
     // Trigger login failed callback
     onLoginFailed?.();
@@ -417,10 +449,33 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
   function handleKickedOffLine(eventInfo: { roomId: string; message: string }) {
     logger.log(`${logPrefix}handleKickedOffLine:`, eventInfo);
     resetLoginRuntimeState();
+
+    const normalizedEventInfo = {
+      roomId: eventInfo?.roomId || '',
+      message: eventInfo?.message || 'kicked off line.',
+    };
+
+    if (forceLogoutMode === 'alert-confirm' && isMacPlatform()) {
+      const handled = handleErrorWithModal({
+        code: KICKED_OFFLINE_MODAL_CODE,
+        message: normalizedEventInfo.message,
+        sdkAppId: latestLoginSdkAppId,
+      }, {
+        onConfirm: () => {
+          forceLogoutAlertVisible = false;
+          void runForceLogout('kicked-off-line', normalizedEventInfo, 'confirm');
+        },
+      });
+      if (handled) {
+        forceLogoutAlertVisible = true;
+        return;
+      }
+    }
+
     triggerForceLogout(
       'kicked-off-line',
       t('You have been kicked off line.'),
-      eventInfo,
+      normalizedEventInfo,
     );
   }
 

@@ -509,6 +509,9 @@ function bindIPCEvent() {
   ipcMain.handle('app-path', () => {
     return app.getAppPath();
   });
+  ipcMain.handle('get-language', () => {
+    return language;
+  });
 
   ipcMain.handle('window-type', (event) => {
     if (event.sender === windowMap.main?.webContents) {
@@ -794,10 +797,8 @@ function bindIPCEvent() {
     postMessageToWindow(windowMap.confirm, 'port-to-confirm', null, [port]);
   });
 
-  ipcMain.on('set-language', (event, args) => {
-    console.log(`${logPrefix}set-language`, args);
-    language = args;
-  });
+  // Legacy 'set-language' channel removed — language updates now flow through
+  // the V2 mainProcessHandlers['setLanguage'] via ipcBridge.sendToElectronMain().
 
   ipcMain.on('show-context-menu', (event) => {
     const template = [
@@ -948,6 +949,7 @@ function bindIPCEvent() {
 
 function unbindIPCMainEvent() {
   ipcMain.removeHandler('app-path');
+  ipcMain.removeHandler('get-language');
   ipcMain.removeHandler('window-type');
   ipcMain.removeAllListeners('window-message'); // V2 IPC message router
   ipcMain.removeAllListeners('on-minimize-window');
@@ -957,7 +959,6 @@ function unbindIPCMainEvent() {
   ipcMain.removeAllListeners('close-child');
   ipcMain.removeAllListeners('login');
   ipcMain.removeAllListeners('port-to-child');
-  ipcMain.removeAllListeners('set-language');
   ipcMain.removeAllListeners('show-context-menu');
   ipcMain.removeAllListeners('start-use-driver-installer');
   ipcMain.removeAllListeners('app-quit-confirmed');

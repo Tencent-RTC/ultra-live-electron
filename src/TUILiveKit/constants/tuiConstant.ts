@@ -1,7 +1,5 @@
 import { TRTCVideoResolution, TRTCVideoColorSpace, TRTCVideoColorRange } from 'trtc-electron-sdk';
-import { useI18n } from '../locales';
-
-const { t } = useI18n();
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 
 type TUIVideoResolutionType = Record<string | number, {
   width: number;
@@ -29,40 +27,48 @@ const initResolutionMap = (): TUIVideoResolutionType => {
 
 export const resolutionMap: TUIVideoResolutionType = initResolutionMap();
 
-export const colorSpaceOptions = [
-  {
-    label: t('Auto'),
-    value: TRTCVideoColorSpace.TRTCVideoColorSpace_Auto,
-  },
-  {
-    label: t('Color Space - BT709'),
-    value: TRTCVideoColorSpace.TRTCVideoColorSpace_BT709,
-  },
-  {
-    label: t('Color Space - BT601'),
-    value: TRTCVideoColorSpace.TRTCVideoColorSpace_BT601,
-  }
-];
+// Defer useUIKit() into getter functions to avoid calling it outside of a component context
+export function getColorSpaceOptions() {
+  const { t } = useUIKit();
+  return [
+    {
+      label: t('Auto'),
+      value: TRTCVideoColorSpace.TRTCVideoColorSpace_Auto,
+    },
+    {
+      label: t('Color Space - BT709'),
+      value: TRTCVideoColorSpace.TRTCVideoColorSpace_BT709,
+    },
+    {
+      label: t('Color Space - BT601'),
+      value: TRTCVideoColorSpace.TRTCVideoColorSpace_BT601,
+    }
+  ];
+}
 
-export const colorRangeOptions = [
-  {
-    label: t('Auto'),
-    value: TRTCVideoColorRange.TRTCVideoColorRange_Auto,
-  },
-  {
-    label: t('Color Range - Full'),
-    value: TRTCVideoColorRange.TRTCVideoColorRange_Full,
-  },
-  {
-    label: t('Color Range - Limited'),
-    value: TRTCVideoColorRange.TRTCVideoColorRange_Limited,
-  }
-];
+export function getColorRangeOptions() {
+  const { t } = useUIKit();
+  return [
+    {
+      label: t('Auto'),
+      value: TRTCVideoColorRange.TRTCVideoColorRange_Auto,
+    },
+    {
+      label: t('Color Range - Full'),
+      value: TRTCVideoColorRange.TRTCVideoColorRange_Full,
+    },
+    {
+      label: t('Color Range - Limited'),
+      value: TRTCVideoColorRange.TRTCVideoColorRange_Limited,
+    }
+  ];
+}
 
 export const MEDIA_SOURCE_STORAGE_KEY = 'TRTC_LIVE_MEDIA_SOURCES';
 export const INVITATION_TIMEOUT = 10; // seconds
 export const DEFAULT_USER_AVATAR_URL =  'https://web.sdk.qcloud.com/component/TUIKit/assets/avatar_16.png';
 export const MAX_SDK_APP_ID = 4294967295;
+export const LIVE_NAME_MAX_UTF8_BYTES = 100;
 
 export enum TUIMediaSourceEditMode {
   Add = 'Add',

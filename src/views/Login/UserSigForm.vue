@@ -43,7 +43,7 @@
 </template>
 <script lang="ts" setup>
 import { defineProps, defineEmits, defineExpose, ref, watch } from 'vue';
-import { useI18n } from '../../TUILiveKit/locales';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import { LoginState, VerifyStates } from './types';
 import SvgIcon from '../../TUILiveKit/common/base/SvgIcon.vue';
 import AppIcon from '../../TUILiveKit/common/icons/AppIcon.vue';
@@ -63,7 +63,7 @@ const emit = defineEmits([
   'update:userSig',
 ]);
 
-const { t } = useI18n();
+const { t } = useUIKit();
 
 const sdkAppIdError = ref('');
 const userIdError = ref('');

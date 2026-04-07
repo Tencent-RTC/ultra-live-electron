@@ -289,7 +289,7 @@ export interface LiveTitleSettingInitialData {
   liveName: string;
   /** Current cover url displayed in cover upload area */
   coverUrl?: string;
-  /** Optional max length limit, defaults to 20 */
+  /** Optional live name UTF-8 byte limit, defaults to 100 */
   maxLength?: number;
 }
 

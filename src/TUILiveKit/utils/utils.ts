@@ -75,4 +75,46 @@ export function isNetworkTimeoutError(error: any): boolean {
   return false;
 }
 
+const utf8Encoder = new TextEncoder();
 
+export function getUtf8ByteLength(value: string): number {
+  if (!value) {
+    return 0;
+  }
+  return utf8Encoder.encode(value).length;
+}
+
+export function trimToUtf8ByteLength(value: string, maxBytes: number): string {
+  if (!value || maxBytes <= 0) {
+    return '';
+  }
+  if (getUtf8ByteLength(value) <= maxBytes) {
+    return value;
+  }
+  let bytes = 0;
+  let endIndex = 0;
+  for (const char of value) {
+    const nextBytes = utf8Encoder.encode(char).length;
+    if (bytes + nextBytes > maxBytes) {
+      break;
+    }
+    bytes += nextBytes;
+    endIndex += char.length;
+  }
+  return value.slice(0, endIndex);
+}
+
+export function isSvgCoverUrl(coverUrl: string): boolean {
+  if (!coverUrl) {
+    return false;
+  }
+  const normalizedUrl = coverUrl.trim().toLowerCase();
+  if (!normalizedUrl) {
+    return false;
+  }
+  if (normalizedUrl.startsWith('data:image/svg+xml')) {
+    return true;
+  }
+  const urlWithoutQuery = normalizedUrl.split('#')[0].split('?')[0];
+  return urlWithoutQuery.endsWith('.svg') || urlWithoutQuery.endsWith('.svgz');
+}

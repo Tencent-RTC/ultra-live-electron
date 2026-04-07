@@ -1,8 +1,11 @@
 <template>
-  <TUILiveMainCoverView/>
+  <UIKitProvider theme="dark">
+    <TUILiveMainCoverView/>
+  </UIKitProvider>
 </template>
 
 <script setup lang="ts">
+import { UIKitProvider } from '@tencentcloud/uikit-base-component-vue3';
 import TUILiveMainCoverView from '../TUILiveKit/MainCoverView2.vue';
 </script>
 

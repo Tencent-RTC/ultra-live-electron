@@ -69,6 +69,7 @@
 
     <template v-if="!uploadEnabled">
       <TUIInput
+        maxLength="200"
         v-model="coverUrlModel"
         :placeholder="t('Cover URL')"
         :spellcheck="false"
@@ -208,14 +209,6 @@ async function validateCoverFile(file: File, type: CoverType): Promise<string> {
   return '';
 }
 
-function switchCoverType(type: CoverType) {
-  if (props.coverType === type) {
-    return;
-  }
-  emit('update:coverType', type);
-  emit('update:modelValue', '');
-}
-
 function showUploadUnavailableTip() {
   TUIToast.info({
     message: t('Upload is unavailable. Please enter cover URL manually'),
@@ -231,7 +224,6 @@ function handleCardClick(type: CoverType) {
   if (isUploading.value) {
     return;
   }
-  switchCoverType(type);
   if (!props.uploadEnabled) {
     showUploadUnavailableTip();
     return;
@@ -249,7 +241,6 @@ async function handleDrop(event: DragEvent, type: CoverType) {
   if (isUploading.value) {
     return;
   }
-  switchCoverType(type);
   if (!props.uploadEnabled) {
     showUploadUnavailableTip();
     return;
@@ -281,6 +272,9 @@ async function processUploadFile(selectedFile: File, type: CoverType) {
       file: selectedFile,
       type: 'cover',
     });
+    if (props.coverType !== type) {
+      emit('update:coverType', type);
+    }
     emit('update:modelValue', uploadResult.url);
     emit('upload-success', { url: uploadResult.url });
   } catch (error: unknown) {

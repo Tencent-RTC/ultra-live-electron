@@ -3,7 +3,7 @@ import {
   TUIRole,
   TUISeatRegion,
 } from '@tencentcloud/tuiroom-engine-electron';
-import { TRTCXmagicEffectProperty } from './utils/beauty';
+import type { TRTCXmagicEffectProperty } from './utils/beauty';
 
 
 export type TUIBeautyConfig = {

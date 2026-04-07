@@ -23,10 +23,6 @@
       {
         "from": "node_modules/trtc-electron-sdk/build/mac-framework/${arch}/",
         "to": "./Frameworks"
-      },
-      {
-        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/mac/",
-        "to": "./Resources/app/plugin/XMagic/mac/"
       }
     ],
     "target": ["dmg"],
@@ -46,21 +42,6 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/${arch}/platforms/",
-        "to": "./resources/platforms",
-        "filter": ["**/*"],
-      },
-      {
-        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/${arch}/",
-        "to": "./resources/app/plugin/XMagic/win/${arch}/",
-        "filter": ["**/*"],
-      },
-      {
-        "from": "node_modules/trtc-electron-plugin-xmagic/plugin/XMagic/win/res/",
-        "to": "./resources/app/plugin/XMagic/win/res/",
-        "filter": ["**/*"],
       },
     ],
     "target": ["nsis", "zip"],

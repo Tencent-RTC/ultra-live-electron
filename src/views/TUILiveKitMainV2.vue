@@ -18,7 +18,9 @@
         <div class="main-center">
           <div class="main-center-top">
             <div class="main-center-top-left">
-              {{ currentLive?.liveName || liveParams.liveName }}
+              <span class="live-title" :title="currentLive?.liveName || liveParams.liveName">
+                {{ currentLive?.liveName || liveParams.liveName }}
+              </span>
               <LiveSettingButton
                 v-if="loginUserInfo?.userId && !isGoingToLoginPage"
                 :live-name="liveParams.liveName"
@@ -26,11 +28,9 @@
                 @confirm="showLiveSettingChildWindow"
                 :isShowingInChildWindow="true"
               />
-              <IconCopy
+              <LiveURLCopy
                 v-if="isInLive && !isGoingToLoginPage"
-                class="copy-icon"
-                size="16"
-                @click="handleCopyLiveID"
+                :live-id="currentLive?.liveId"
               />
             </div>
             <div class="main-center-top-right">
@@ -115,7 +115,7 @@
                 height="56px"
                 :disabled="!isInLive"
                 :placeholder="isInLive ? '' : t('Live not started')"
-                emoji-popup-mode="rightSafe"
+                emoji-popup-mode="inset"
               />
             </div>
           </div>
@@ -134,7 +134,6 @@ import {
   UIKitProvider,
   useUIKit,
   TUIButton,
-  IconCopy,
   IconLiveLoading,
   IconLiveStart,
   IconEndLive,
@@ -150,13 +149,21 @@ import {
   useDeviceState,
   useCoGuestState,
   StreamMixer,
+  LiveListEvent,
+  LiveEndedReason,
+  LiveListEventInfo,
 } from 'tuikit-atomicx-vue3-electron';
 import { useElectronLogin, type ForceLogoutNoticePayload } from '../TUILiveKit/hooks/useElectronLogin';
 import LiveHeader from '../TUILiveKit/components/v2/LiveHeader/index.vue';
 import LiveScenePanel from '../TUILiveKit/components/v2/LiveScene/LiveScenePanel.vue';
 import LiveSettingButton from '../TUILiveKit/components/v2/LiveSettingButton.vue';
+import LiveURLCopy from '../TUILiveKit/components/v2/LiveURLCopy.vue';
 import CoGuestButton from '../TUILiveKit/components/v2/CoGuestButton.vue';
-import { copyToClipboard, isNetworkOffline, isNetworkTimeoutError } from '../TUILiveKit/utils/utils';
+import {
+  isNetworkOffline,
+  isNetworkTimeoutError,
+  isSvgCoverUrl,
+} from '../TUILiveKit/utils/utils';
 import { getWindowID } from '../TUILiveKit/utils/envUtils';
 import { TUIButtonAction, TUIButtonActionType } from '../TUILiveKit/types';
 import {
@@ -175,6 +182,8 @@ import LayoutSwitch from '../TUILiveKit/components/v2/LayoutSwitch.vue';
 import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
 import { useSystemAudioLoopback } from '../TUILiveKit/hooks/useSystemAudioLoopback';
 import useRoomEngine from '../TUILiveKit/utils/useRoomEngine';
+import { mapToRoomEngineLanguage } from '../TUILiveKit/utils/common';
+import { LIVE_NAME_MAX_UTF8_BYTES } from '../TUILiveKit/constants/tuiConstant';
 
 console.log('TRTC SDK version:', trtcCloud.getSDKVersion());
 
@@ -191,7 +200,7 @@ const props = defineProps<{
   seatMode?: TUISeatMode;
 }>();
 
-const { currentLive, createLive, endLive, joinLive } = useLiveListState();
+const { currentLive, createLive, endLive, joinLive, subscribeEvent, unsubscribeEvent } = useLiveListState();
 const { audienceCount } = useLiveAudienceState();
 const { openLocalMicrophone } = useDeviceState();
 const { connected: coGuestConnected } = useCoGuestState();
@@ -289,7 +298,7 @@ const handleCreateLive = async () => {
     await TUIRoomEngine.callExperimentalAPI(JSON.stringify({
       api: 'setCurrentLanguage',
       params: {
-        language: language.value === 'zh-CN' ? 'zh-Hans' : 'en',
+        language: mapToRoomEngineLanguage(language.value),
       },
     }));
     await createLive({
@@ -361,7 +370,7 @@ const showLiveSettingChildWindow = (form: { liveName: string; coverUrl?: string 
       dialogId,
       liveName: pendingLiveSettingName.value,
       coverUrl: pendingLiveSettingCoverUrl.value,
-      maxLength: 20,
+      maxLength: LIVE_NAME_MAX_UTF8_BYTES,
     },
   });
 };
@@ -647,7 +656,28 @@ onBeforeMount(async () => {
   nativeId.value = await getWindowID();
 });
 
+const handleLiveEnded = (eventInfo: LiveListEventInfo) => {
+  if (eventInfo.reason === LiveEndedReason.endedByHost) {
+    return;
+  }
+  if (eventInfo.reason === LiveEndedReason.endedByServer) {
+    TUIToast.warning({
+      message: t('Stream closed due to content violation'),
+      duration: 5000,
+    });
+    return;
+  }
+  // Fallback for unknown ending reasons
+  TUIToast.warning({
+    message: t('The live room has been closed'),
+    duration: 5000,
+  });
+};
+
 onMounted(async () => {
+  // Subscribe to live ended event
+  subscribeEvent(LiveListEvent.onLiveEnded, handleLiveEnded);
+
   // Setup event listeners
   setupEventListeners();
   ipcBridge.on(IPCMessageType.CONFIRM_DIALOG_ACTION, onConfirmDialogAction);
@@ -683,6 +713,12 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
     liveName: form.liveName.trim(),
     coverUrl: (form.coverUrl || '').trim(),
   };
+  if (isSvgCoverUrl(updatedForm.coverUrl)) {
+    TUIToast.error({
+      message: t('Unsupported image format'),
+    });
+    return;
+  }
   if (!isInLive.value || !currentLive.value?.liveId) {
     liveParamsEditForm.value = updatedForm;
     return;
@@ -731,30 +767,8 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
   }
 };
 
-const handleCopyLiveID = async () => {
-  if (isTransitioningToLogin()) {
-    return;
-  }
-  if (!currentLive.value?.liveId) {
-    TUIToast.error({
-      message: t('Copy failed'),
-    });
-    return;
-  }
-
-  try {
-    await copyToClipboard(currentLive.value.liveId);
-    TUIToast.success({
-      message: t('Copy successful'),
-    });
-  } catch (error) {
-    TUIToast.error({
-      message: t('Copy failed'),
-    });
-  }
-};
-
 onBeforeUnmount(() => {
+  unsubscribeEvent(LiveListEvent.onLiveEnded, handleLiveEnded);
   if (loginRedirectTimer) {
     clearTimeout(loginRedirectTimer);
     loginRedirectTimer = null;
@@ -840,6 +854,7 @@ onBeforeUnmount(() => {
 
     .main-center {
       flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -862,18 +877,21 @@ onBeforeUnmount(() => {
           display: flex;
           align-items: center;
           gap: 8px;
+          flex: 1;
+          min-width: 0;
 
-          .copy-icon {
-            cursor: pointer;
-
-            &:hover {
-              color: $icon-hover-color;
-            }
+          .live-title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
         }
 
         .main-center-top-right {
           @include text-size-12;
+          flex-shrink: 0;
+          margin-left: 12px;
         }
 
         &::after {

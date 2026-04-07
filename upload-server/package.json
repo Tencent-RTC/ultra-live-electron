@@ -1,8 +1,8 @@
 {
-  "name": "tui-livekit-electron-upload-server",
+  "name": "tui-livekit-upload-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Standalone upload server for tui-livekit electron demo",
+  "description": "Shared upload server for TUI LiveKit demos",
   "main": "src/index.js",
   "scripts": {
     "start": "node ./src/index.js",

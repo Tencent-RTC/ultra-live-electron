@@ -1,7 +1,7 @@
-import { createRouter, createWebHashHistory, RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import Loading from '../views/Loading.vue';
 import Login from '../views/Login/Index.vue';
-import { isMacPlatform, isWindowPlatform } from '../TUILiveKit/utils/platform';
+import { isMacPlatform } from '../TUILiveKit/utils/platform';
 import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
 
 const routes: Array<RouteRecordRaw> = [
@@ -10,10 +10,11 @@ const routes: Array<RouteRecordRaw> = [
     name: 'loading',
     component: Loading,
   },
+  // TODO: v1 legacy routes kept as redirects for IPC compatibility, remove after IPC messages are updated to v2 names
   {
     path: '/tui-live-kit-main',
     name: 'tui-live-kit-main',
-    component: () => import(/* webpackChunkName: "TUILiveKitMain" */ '../views/TUILiveKitMain.vue')
+    redirect: { name: 'tui-live-kit-main-v2' },
   },
   {
     path: '/tui-live-kit-main-v2',
@@ -28,7 +29,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/tui-live-kit-child',
     name: 'tui-live-kit-child',
-    component: () => import(/* webpackChunkName: "TUILiveKitChild" */ '../views/TUILiveKitChild.vue'),
+    redirect: { name: 'tui-live-kit-child-v2' },
   },
   {
     path: '/tui-live-kit-child-v2',
@@ -38,7 +39,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/tui-live-kit-cover',
     name: 'tui-live-kit-cover',
-    component: () => import(/* webpackChunkName: "TUILiveKitCover" */ '../views/TUILiveKitCover.vue'),
+    redirect: { name: 'tui-live-kit-cover-v2' },
   },
   {
     path: '/tui-live-kit-cover-v2',
@@ -67,22 +68,19 @@ window.ipcRenderer.on('window-type', (event: any, type: string) => {
   router.replace({ name: `tui-live-kit-${type}`});
 });
 
-router.beforeEach((to: RouteLocationNormalized) => {
-  if (to.name === 'tui-live-kit-main') {
-    const storedUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);
+router.beforeEach((to) => {
+  if (isMacPlatform() && to.name === 'tui-live-kit-main-v2') {
+    return { name: 'tui-livekit-mac-v2' };
+  }
+  if (to.name === 'tui-live-kit-main-v2') {
+    let storedUserInfo: string | null = null;
+    try {
+      storedUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);
+    } catch (e) {
+      console.warn('[router] Failed to read localStorage:', e);
+    }
     if (!storedUserInfo) {
       return { name: 'login' };
-    }
-    if (isMacPlatform()) {
-      return { name: 'tui-livekit-mac-v2' };
-    } else if (isWindowPlatform()) {
-      return { name: 'tui-live-kit-main-v2' };
-    }
-  } else if (isWindowPlatform()) {
-    if (to.name === 'tui-live-kit-child') {
-      return { name: 'tui-live-kit-child-v2' };
-    } else if (to.name === 'tui-live-kit-cover') {
-      return { name: 'tui-live-kit-cover-v2' };
     }
   }
 });

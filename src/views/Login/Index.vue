@@ -1,5 +1,6 @@
 <template>
-  <div class="tui-login-page">
+  <UIKitProvider theme="dark">
+    <div class="tui-login-page">
     <div class="tui-login-header">
       <div class="window-tool tui-window-header">
         <button class="tui-live-icon" @click="onMinimize">
@@ -52,14 +53,15 @@
         </div>
       </div>
     </div>
-  </div>
+    </div>
+  </UIKitProvider>
 </template>
 
 <script setup lang="ts">
 import { ref, Ref, reactive, onMounted } from 'vue';
 import router from '../../router';
 import { getWindowType } from '../../TUILiveKit/utils/envUtils';
-import { useI18n } from '../../TUILiveKit/locales';
+import { UIKitProvider, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import { getBasicInfo } from '../../debug/basic-info-config.js';
 import SvgIcon from '../../TUILiveKit/common/base/SvgIcon.vue';
 import MaximizeIcon from '../../TUILiveKit/common/icons/MaximizeIcon.vue';
@@ -97,7 +99,7 @@ const verifyStates:VerifyStates = reactive({
   timer: 0,
 });
 
-const { t } = useI18n();
+const { t } = useUIKit();
 
 const loginType: Ref<LoginType> = ref(LoginType.UserAccount);
 const isLoggingIn = ref(false);

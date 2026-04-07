@@ -18,18 +18,18 @@
         <div class="main-center">
           <div class="main-center-top">
             <div class="main-center-top-left">
-              {{ currentLive?.liveName || liveParams.liveName }}
+              <span class="live-title" :title="currentLive?.liveName || liveParams.liveName">
+                {{ currentLive?.liveName || liveParams.liveName }}
+              </span>
               <LiveSettingButton
                 v-if="loginUserInfo?.userId"
                 :live-name="currentLive?.liveName || liveParams.liveName"
                 :cover-url="liveParams.coverUrl"
                 @confirm="handleLiveSettingConfirm"
               />
-              <IconCopy
+              <LiveURLCopy
                 v-if="isInLive"
-                class="copy-icon"
-                size="16"
-                @click="handleCopyLiveID"
+                :live-id="currentLive?.liveId"
               />
             </div>
             <div class="main-center-top-right">
@@ -145,7 +145,6 @@ import { onMounted, onBeforeUnmount, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import trtcCloud from '../TUILiveKit/utils/trtcCloud';
 import {
-  IconCopy,
   IconEndLive,
   IconLiveLoading,
   IconLiveStart,
@@ -167,6 +166,10 @@ import {
   LiveAudienceList,
   BarrageList,
   BarrageInput,
+  useLiveErrorModal,
+  LiveListEvent,
+  LiveEndedReason,
+  LiveListEventInfo,
 } from 'tuikit-atomicx-vue3-electron';
 import TUIRoomEngine, { TUISeatMode } from '@tencentcloud/tuiroom-engine-electron';
 import { useElectronLogin } from '../TUILiveKit/hooks/useElectronLogin';
@@ -179,11 +182,17 @@ import SettingButton from '../TUILiveKit/components/v2/SettingButton.vue';
 import SpeakerVolumeSetting from '../TUILiveKit/components/v2/SpeakerVolumeSetting.vue';
 import LiveHeader from '../TUILiveKit/components/v2/LiveHeader/index.vue';
 import LiveSettingButton from '../TUILiveKit/components/v2/LiveSettingButton.vue';
+import LiveURLCopy from '../TUILiveKit/components/v2/LiveURLCopy.vue';
 import LivePusherNotification from '../TUILiveKit/components/v2/LivePusherNotification.vue';
-import { copyToClipboard, isNetworkOffline, isNetworkTimeoutError } from '../TUILiveKit/utils/utils';
+import {
+  isNetworkOffline,
+  isNetworkTimeoutError,
+  isSvgCoverUrl,
+} from '../TUILiveKit/utils/utils';
 import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
 import { useSystemAudioLoopback } from '../TUILiveKit/hooks/useSystemAudioLoopback';
 import useRoomEngine from '../TUILiveKit/utils/useRoomEngine';
+import { mapToRoomEngineLanguage } from '../TUILiveKit/utils/common';
 
 console.log('TRTC SDK version:', trtcCloud.getSDKVersion());
 
@@ -197,7 +206,8 @@ const props = defineProps<{
   seatMode?: TUISeatMode;
 }>();
 
-const { currentLive, createLive, endLive, joinLive } = useLiveListState();
+const { currentLive, createLive, endLive, joinLive, subscribeEvent, unsubscribeEvent } = useLiveListState();
+const { handleErrorWithModal } = useLiveErrorModal();
 const { audienceCount } = useLiveAudienceState();
 const { openLocalMicrophone } = useDeviceState();
 const { connected: coGuestConnected } = useCoGuestState();
@@ -307,7 +317,7 @@ const handleCreateLive = async () => {
     await TUIRoomEngine.callExperimentalAPI(JSON.stringify({
       api: 'setCurrentLanguage',
       params: {
-        language: language.value === 'zh-CN' ? 'zh-Hans' : 'en',
+        language: mapToRoomEngineLanguage(language.value),
       },
     }));
     await createLive({
@@ -338,6 +348,9 @@ const handleCreateLive = async () => {
       startSystemAudioLoopbackSafely();
       return;
     }
+    if (handleErrorWithModal(error)) {
+      return;
+    }
     TUIToast.error({
       message: t('Failed to create live'),
     });
@@ -366,6 +379,10 @@ const handleEndLive = async (options: { showErrorToast?: boolean } = {}): Promis
       TUIToast.error({
         message: t('Network error, please check your connection and try again'),
       });
+      return false;
+    }
+    if (showErrorToast && handleErrorWithModal(error)) {
+      return false;
     }
     exitLiveDialogVisible.value = false;
     return false;
@@ -416,7 +433,28 @@ const handleAppRequestQuit = () => {
   });
 };
 
+const handleLiveEnded = (eventInfo: LiveListEventInfo) => {
+  if (eventInfo.reason === LiveEndedReason.endedByHost) {
+    return;
+  }
+  if (eventInfo.reason === LiveEndedReason.endedByServer) {
+    TUIToast.warning({
+      message: t('Stream closed due to content violation'),
+      duration: 5000,
+    });
+    return;
+  }
+  // Fallback for unknown ending reasons
+  TUIToast.warning({
+    message: t('The live room has been closed'),
+    duration: 5000,
+  });
+};
+
 onMounted(async () => {
+  // Subscribe to live ended event
+  subscribeEvent(LiveListEvent.onLiveEnded, handleLiveEnded);
+
   // Setup event listeners
   setupEventListeners();
   if (window.ipcRenderer) {
@@ -450,6 +488,12 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
     liveName: form.liveName.trim(),
     coverUrl: (form.coverUrl || '').trim(),
   };
+  if (isSvgCoverUrl(updatedForm.coverUrl)) {
+    TUIToast.error({
+      message: t('Unsupported image format'),
+    });
+    return;
+  }
   if (!isInLive.value || !currentLive.value?.liveId) {
     liveParamsEditForm.value = updatedForm;
     return;
@@ -493,27 +537,8 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
   }
 };
 
-const handleCopyLiveID = async () => {
-  if (!currentLive.value?.liveId) {
-    TUIToast.error({
-      message: t('Copy failed'),
-    });
-    return;
-  }
-
-  try {
-    await copyToClipboard(currentLive.value?.liveId || '');
-    TUIToast.success({
-      message: t('Copy successful'),
-    });
-  } catch (error) {
-    TUIToast.error({
-      message: t('Copy failed'),
-    });
-  }
-};
-
 onBeforeUnmount(() => {
+  unsubscribeEvent(LiveListEvent.onLiveEnded, handleLiveEnded);
   stopSystemAudioLoopbackSafely();
   cleanupEventListeners();
   if (window.ipcRenderer) {
@@ -643,18 +668,21 @@ onBeforeUnmount(() => {
           display: flex;
           align-items: center;
           gap: 8px;
+          flex: 1;
+          min-width: 0;
 
-          .copy-icon {
-            cursor: pointer;
-
-            &:hover {
-              color: $icon-hover-color;
-            }
+          .live-title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
         }
 
         .main-center-top-right {
           @include text-size-12;
+          flex-shrink: 0;
+          margin-left: 12px;
         }
 
         &::after {

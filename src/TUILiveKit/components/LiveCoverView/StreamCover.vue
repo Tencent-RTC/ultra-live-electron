@@ -4,21 +4,16 @@
       <div class="tui-stream-avatar" v-if="region.userCameraStatus !== TUIDeviceStatus.TUIDeviceStatusOpened">
         <img :src="region.userAvatar || DEFAULT_USER_AVATAR_URL" width="3rem" height="3rem" />
       </div>
-      <div v-if="mode === TUIConnectionMode.CoGuest" class="tui-menu-icon" ref="moreIconRef">
-        <MoreIcon @click="openMoreMenu" class="tui-more-icon"/>
-      </div>
       <div class="tui-stream-state">
         <span class="tui-mic-state">
           <MicOffIcon v-if="region.userMicrophoneStatus !== TUIDeviceStatus.TUIDeviceStatusOpened" />
         </span>
         <span class="tui-stream-name">{{ props.region.userName || props.region.userId }}</span>
       </div>
-      <LiveMemberControl v-if="isMoreMenuVisible" class="tui-stream-cover-pop-menu" :user-id="region.userId"
-          @on-close="closeMoreMenu" @on-kick-off-seat="onKickOffSeat" @on-kick-out-room="onKickOutRoom" />
     </template>
     <div v-else class="tui-empty-region">
       <span class="tui-seat-index">{{ props.region.seatIndex }}</span>
-      <span class="tui-seat-hint">{{ t('Conn Wait') }}</span>
+      <span class="tui-seat-hint">{{ t('LiveView.WaitingForConnection') }}</span>
     </div>
   </div>
 </template>
@@ -28,10 +23,8 @@ import { ref, computed, defineProps, onMounted, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
 import { TUIDeviceStatus } from '@tencentcloud/tuiroom-engine-electron';
 import { TUIConnectionMode, TUIUserSeatStreamRegion } from '../../types';
-import { useI18n } from '../../locales';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import MicOffIcon from '../../common/icons/MicOffIcon.vue';
-import MoreIcon from '../../common/icons/MoreIcon.vue';
-import LiveMemberControl from '../LiveChildView/LiveMemberControl.vue';
 import { DEFAULT_USER_AVATAR_URL } from '../../constants/tuiConstant';
 import logger from '../../utils/logger';
 
@@ -42,12 +35,10 @@ type Props = {
 
 const logPrefix = '[TUILiveKitStreamCover]';
 
-const { t } = useI18n();
+const { t } = useUIKit();
 const props = defineProps<Props>();
 
 const streamCoverRef: Ref<HTMLElement | null> = ref(null);
-const moreIconRef: Ref<HTMLElement | null> = ref(null);
-const isMoreMenuVisible: Ref<boolean> = ref(false);
 
 const positonStyle = computed(() => {
   return {
@@ -57,35 +48,6 @@ const positonStyle = computed(() => {
     height: `${props.region.rect.bottom - props.region.rect.top}px`,
   };
 });
-
-const openMoreMenu = () => {
-  isMoreMenuVisible.value = true;
-};
-
-const closeMoreMenu = () => {
-  isMoreMenuVisible.value = false;
-};
-
-const onKickOffSeat = (userId: string) => {
-  logger.log(`${logPrefix}onKickOffSeat:${userId}`);
-  window.mainWindowPortInCover?.postMessage({
-    key: 'kickOffSeat',
-    data: {
-      userId,
-    }
-  });
-};
-
-
-const onKickOutRoom = (userId: string) => {
-  logger.log(`${logPrefix}onKickOutRoom:${userId}`);
-  window.mainWindowPortInCover?.postMessage({
-    key: 'kickOutRoom',
-    data: {
-      userId,
-    }
-  });
-};
 
 // eslint-disable-next-line no-undef
 let timerId: string | number | NodeJS.Timeout | undefined;
@@ -106,23 +68,14 @@ const bindMouseEnterLeaveEvent = () => {
   }
 };
 
-const onClickOutMenuSide = (event: MouseEvent) => {
-  if (moreIconRef.value && moreIconRef.value.contains(event.target as Node)) {
-    return;
-  }
-  closeMoreMenu();
-};
-
 onMounted(() => {
   bindMouseEnterLeaveEvent();
-  document.addEventListener('click', onClickOutMenuSide, false);
 });
 
 onUnmounted(() => {
   if (timerId) {
     clearTimeout(timerId);
   }
-  document.removeEventListener('click', onClickOutMenuSide, false);
 });
 </script>
 
@@ -143,33 +96,6 @@ onUnmounted(() => {
       width: 3rem;
       height: 3rem;
       border-radius: 1.5rem;
-    }
-  }
-
-  &:hover .tui-menu-icon {
-    display: block;
-  }
-  .tui-menu-icon {
-    display: none;
-    position: absolute;
-    top: 0.125rem;
-    right: 0.125rem;
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 0.25rem;
-    background-color: $color-cover-pendant-background;
-    cursor: pointer;
-
-    .tui-more-icon {
-      transform: rotate(90deg);
-    }
-
-    &:hover {
-      background-color: $font-button-text-hover-color;
-    }
-
-    &:active {
-      background-color: $font-button-text-active-color;
     }
   }
 
@@ -216,24 +142,20 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    text-align: center;
     color: var(--text-color-secondary);
 
     .tui-seat-index {
-      font-size: 1.25rem;
-      font-weight: 600;
-      line-height: 1.5;
-      color: var(--text-color-primary);
+      font-size: 1.5rem;
+      font-weight: 500;
     }
 
     .tui-seat-hint {
-      font-size: 0.75rem;
-      line-height: 1.5;
-      opacity: 0.7;
+      max-width: 80%;
+      font-size: 0.875rem;
+      font-weight: 400;
+      overflow-wrap: break-word;
     }
-  }
-
-  .tui-stream-cover-pop-menu {
-    top: 1.5rem;
   }
 }
 </style>

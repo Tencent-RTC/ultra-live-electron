@@ -34,7 +34,7 @@
 </template>
 <script lang="ts" setup>
 import { defineProps, defineEmits } from 'vue';
-import { useI18n } from '../../TUILiveKit/locales';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import { LoginState, VerifyStates } from './types';
 import SvgIcon from '../../TUILiveKit/common/base/SvgIcon.vue';
 import AppIcon from '../../TUILiveKit/common/icons/AppIcon.vue';
@@ -67,5 +67,5 @@ const handleSdkAppIdInput = (event: Event) => {
   emit('update:sdkAppId', numericValue);
 };
 
-const { t } = useI18n();
+const { t } = useUIKit();
 </script>

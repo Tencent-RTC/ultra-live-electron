@@ -14,6 +14,40 @@
           <i class="statistics-space" v-if="index < statisticsInfoList.length - 1"></i>
         </div>
       </div>
+      <div
+        class="language-switch"
+        v-click-outside="closeLanguageMenu"
+      >
+        <button
+          class="language-button"
+          type="button"
+          :title="currentLanguageLabel"
+          @click="toggleLanguageMenu"
+        >
+          <svg-icon class="language-icon" :icon="LanguageIcon" />
+          <span class="language-short">{{ currentLanguageShort }}</span>
+          <IconArrowStrokeSelectDown
+            class="language-arrow"
+            :class="[showLanguageMenu ? 'up-icon' : 'down-icon']"
+          />
+        </button>
+        <div
+          v-if="showLanguageMenu"
+          class="language-menu"
+          :class="{ 'language-menu--windows-constrained': isWindowsPlatform }"
+        >
+          <button
+            v-for="option in languageOptions"
+            :key="option.value"
+            type="button"
+            class="language-item"
+            :class="{ active: option.value === language }"
+            @click="selectLanguage(option.value)"
+          >
+            <span class="language-label">{{ option.label }}</span>
+          </button>
+        </div>
+      </div>
       <div class="header-right">
         <div
           v-if="loginUserInfo"
@@ -32,8 +66,12 @@
           </button>
         </div>
         <div v-if="showUserControl" class="user-control-container">
-          <div class="user-control-item-foot" @click="openProfile">{{ t('User Profile') }}</div>
-          <div class="user-control-item-foot" @click="handleLogOut">{{ t('Logout') }}</div>
+          <div class="user-control-item-foot" :title="t('User Profile')" @click="openProfile">
+            <span class="user-control-label">{{ t('User Profile') }}</span>
+          </div>
+          <div class="user-control-item-foot" :title="t('Logout')" @click="handleLogOut">
+            <span class="user-control-label">{{ t('Logout') }}</span>
+          </div>
         </div>
       </div>
       <div class="window-tool">
@@ -63,6 +101,7 @@
 <script lang="ts" setup>
 import { onMounted, onBeforeUnmount, ref, computed, type Ref } from 'vue';
 import { useUIKit, TUIToast, TOAST_TYPE, IconArrowStrokeSelectDown } from '@tencentcloud/uikit-base-component-vue3';
+import TUIRoomEngine from '@tencentcloud/tuiroom-engine-electron';
 import { useLoginState, Avatar } from 'tuikit-atomicx-vue3-electron';
 import type { TRTCStatistics } from 'trtc-electron-sdk';
 import SvgIcon from '../../../common/base/SvgIcon.vue';
@@ -71,8 +110,11 @@ import MaximizeIcon from '../../../common/icons/MaximizeIcon.vue';
 import MinimizeIcon from '../../../common/icons/MinimizeIcon.vue';
 import MiniIcon from '../../../common/icons/MiniIcon.vue';
 import CloseIcon from '../../../common/icons/CloseIcon.vue';
+import LanguageIcon from '../../../common/icons/LanguageIcon.vue';
 import trtcCloud from '../../../utils/trtcCloud';
 import vClickOutside from '../../../utils/vClickOutside';
+import { isWindowPlatform } from '../../../utils/platform';
+import { mapToRoomEngineLanguage } from '../../../utils/common';
 import UserProfileDialog from './UserProfileDialog.vue';
 import { ChildPanelType, ipcBridge, IPCMessageType, toPlainIpcPayload } from '../../../ipc';
 import logger from '../../../utils/logger';
@@ -90,12 +132,14 @@ const emit = defineEmits<{
   logout: [];
 }>();
 
-const { t } = useUIKit();
+const { t, language, setLanguage } = useUIKit();
 const { loginUserInfo, setSelfInfo } = useLoginState();
 
 // User control dropdown state
 const showUserControl = ref(false);
+const showLanguageMenu = ref(false);
 const showProfileDialog = ref(false);
+const isWindowsPlatform = isWindowPlatform();
 
 // Construct userInfo for UserProfileDialog
 const userProfileInfo = computed(() => ({
@@ -140,6 +184,34 @@ const statisticsInfoList = computed(() => [
   }
 ]);
 
+const languageOptions = [
+  { label: '简体中文', value: 'zh-CN' },
+  { label: '繁體中文', value: 'zh-TW' },
+  { label: '日本語', value: 'ja-JP' },
+  { label: 'English', value: 'en-US' },
+  { label: '한국어', value: 'ko-KR' },
+];
+
+const currentLanguageLabel = computed(() => {
+  return languageOptions.find(option => option.value === language.value)?.label || '';
+});
+
+const currentLanguageShort = computed(() => {
+  switch (language.value) {
+  case 'zh-CN':
+    return '简';
+  case 'zh-TW':
+    return '繁';
+  case 'ja-JP':
+    return '日';
+  case 'ko-KR':
+    return '한';
+  case 'en-US':
+  default:
+    return 'EN';
+  }
+});
+
 // Handle statistics update from TRTCCloud
 function onStatistics(statis: TRTCStatistics) {
   statistics.value = statis;
@@ -173,6 +245,9 @@ const onClose = () => {
  */
 function handleUserControl() {
   showUserControl.value = !showUserControl.value;
+  if (showUserControl.value) {
+    showLanguageMenu.value = false;
+  }
 }
 
 /**
@@ -180,6 +255,30 @@ function handleUserControl() {
  */
 function handleHideUserControl() {
   showUserControl.value = false;
+}
+
+function toggleLanguageMenu() {
+  showLanguageMenu.value = !showLanguageMenu.value;
+  if (showLanguageMenu.value) {
+    showUserControl.value = false;
+  }
+}
+
+function closeLanguageMenu() {
+  showLanguageMenu.value = false;
+}
+
+function selectLanguage(newLanguage: string) {
+  if (language.value !== newLanguage) {
+    setLanguage(newLanguage);
+    TUIRoomEngine.callExperimentalAPI(JSON.stringify({
+      api: 'setCurrentLanguage',
+      params: {
+        language: mapToRoomEngineLanguage(newLanguage),
+      },
+    }));
+  }
+  showLanguageMenu.value = false;
 }
 
 /**
@@ -354,6 +453,121 @@ onBeforeUnmount(() => {
     }
   }
 
+  .language-switch {
+    position: relative;
+    display: flex;
+    align-items: center;
+    -webkit-app-region: no-drag;
+  }
+
+  .language-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    border: none;
+    background: transparent;
+    color: var(--text-color-primary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    transition: background-color 0.2s ease;
+  }
+
+  .language-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .language-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .language-short {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .language-arrow {
+    width: 0.875rem;
+    height: 0.875rem;
+    transition: transform 0.2s ease;
+  }
+
+  .language-arrow.up-icon {
+    transform: rotate(180deg);
+  }
+
+  .language-menu {
+    position: absolute;
+    top: 1.5rem;
+    right: 0;
+    z-index: 999;
+    min-width: 7.5rem;
+    padding: 0.125rem 0;
+    border-radius: 0.375rem;
+    background-color: var(--dropdown-color-default);
+    box-shadow: 0px 1px 5px var(--shadow-color),
+                0px 8px 12px var(--shadow-color),
+                0px 12px 26px var(--shadow-color);
+    -webkit-app-region: no-drag;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .language-menu--windows-constrained {
+    max-height: 4.5rem;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .language-menu--windows-constrained::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .language-menu::before {
+    content: '';
+    position: absolute;
+    right: 1rem;
+    top: -0.625rem;
+    width: 0rem;
+    border-top: 0.375rem solid transparent;
+    border-right: 0.375rem solid transparent;
+    border-bottom: 0.375rem solid var(--dropdown-color-default);
+    border-left: 0.375rem solid transparent;
+  }
+
+  .language-item {
+    width: 100%;
+    padding: 0.25rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--text-color-primary);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .language-label {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .language-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .language-item.active {
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
   .header-right {
     display: flex;
     align-items: center;
@@ -415,6 +629,7 @@ onBeforeUnmount(() => {
 
       width: auto;
       min-width: 6.25rem;
+      max-width: 10rem;
       height: auto;
       max-height: 10rem;
       overflow-y: auto;
@@ -422,7 +637,7 @@ onBeforeUnmount(() => {
 
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
 
       background-color: var(--dropdown-color-default);
@@ -458,6 +673,7 @@ onBeforeUnmount(() => {
         width: 100%;
         height: 100%;
         padding: 0 0.5rem 0 1rem;
+        box-sizing: border-box;
         border-radius: 0.25rem;
         color: var(--text-color-primary);
         font-size: 0.875rem;
@@ -466,8 +682,18 @@ onBeforeUnmount(() => {
         z-index: 999;
         line-height: 2.5rem;
         min-height: 2.5rem;
+        min-width: 0;
         display: flex;
         align-items: center;
+
+        .user-control-label {
+          display: block;
+          width: 100%;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
 
         &:first-child {
           border-radius: 0.25rem 0.25rem 0 0;

@@ -24,7 +24,7 @@
 
 <script lang="ts" setup>
 import { defineProps, defineEmits } from 'vue';
-import { useI18n } from '../../TUILiveKit/locales';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import { LoginState } from './types';
 import SvgIcon from '../../TUILiveKit/common/base/SvgIcon.vue';
 import UserIcon from '../../TUILiveKit/common/icons/UserIcon.vue';
@@ -41,5 +41,5 @@ const emit = defineEmits([
   'update:password',
 ]);
 
-const { t } = useI18n();
+const { t } = useUIKit();
 </script>

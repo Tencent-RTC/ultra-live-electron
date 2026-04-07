@@ -17,11 +17,12 @@
         <div class="dialog-item">
           <span class="dialog-item-label">{{ t('LiveName') }}</span>
           <TUIInput
+            maxLength="100"
             class="dialog-item-input"
-            v-model="localLiveName"
+            :model-value="localLiveName"
             :placeholder="t('Please enter the live name')"
-            :maxLength="maxLength"
             :spellcheck="false"
+            @update:modelValue="handleLiveNameInput"
           />
         </div>
         <div class="dialog-item dialog-item-cover">
@@ -63,6 +64,8 @@ import {
   UPLOAD_MAX_FILE_SIZE_MB,
   UploadConfig,
 } from '../../../../api/upload';
+import { LIVE_NAME_MAX_UTF8_BYTES } from '../../../constants/tuiConstant';
+import { getUtf8ByteLength } from '../../../utils/utils';
 import LiveCoverUpload from '../LiveCoverUpload.vue';
 
 type CoverType = 'landscape' | 'portrait';
@@ -86,7 +89,7 @@ const uploadConfig = ref<UploadConfig>({
 });
 
 const dialogId = computed(() => props.data?.dialogId || '');
-const maxLength = computed(() => props.data?.maxLength || 20);
+const maxUtf8Bytes = computed(() => props.data?.maxLength || LIVE_NAME_MAX_UTF8_BYTES);
 const maxFileSizeMB = UPLOAD_MAX_FILE_SIZE_MB;
 const allowedMimeTypes = UPLOAD_ALLOWED_MIME_TYPES;
 const uploadEnabled = computed(() => Boolean(uploadConfig.value.enabled));
@@ -116,11 +119,15 @@ watch(localLiveName, () => {
   }
 });
 
+function handleLiveNameInput(value: string | number) {
+  localLiveName.value = String(value ?? '');
+}
+
 function validateLiveName(value: string) {
-  if (!value) {
+  if (!value.trim()) {
     return t('Please enter the live name');
   }
-  if (value.length > maxLength.value) {
+  if (getUtf8ByteLength(value) > maxUtf8Bytes.value) {
     return t('Live name is too long');
   }
   return '';
@@ -143,7 +150,7 @@ function handleCancel() {
 }
 
 function handleConfirm() {
-  const value = localLiveName.value.trim();
+  const value = localLiveName.value;
   const error = validateLiveName(value);
   if (error) {
     liveNameError.value = error;

@@ -7,12 +7,11 @@ import { onMounted, onUnmounted, watch } from 'vue';
 import { TOAST_TYPE, TUIToast, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import {
   useLiveListState, useCoHostState, CoHostEvent, SeatUserInfo, useLiveSeatState,
-  useLoginState, useBattleState, CoHostStatus, useCoGuestState, BattleEvent,
+  useBattleState, CoHostStatus, useCoGuestState, BattleEvent,
 } from 'tuikit-atomicx-vue3-electron';
 
 import { showNotification, hideNotification } from '../../base-component/Notification';
 
-const { loginUserInfo } = useLoginState();
 const { currentLive } = useLiveListState();
 const {
   applicant,
@@ -26,7 +25,7 @@ const {
 } = useCoHostState();
 const { applicants: coGuestApplicants, rejectApplication } = useCoGuestState();
 const { seatList } = useLiveSeatState();
-const { acceptBattle, rejectBattle, subscribeEvent: subscribeBattleEvent, unsubscribeEvent: unsubscribeBattleEvent } = useBattleState();
+const { subscribeEvent: subscribeBattleEvent, unsubscribeEvent: unsubscribeBattleEvent } = useBattleState();
 
 const { t } = useUIKit();
 
@@ -50,42 +49,7 @@ watch(() => coGuestApplicants.value.length, () => {
 });
 
 const handleCoHostRequestReceived = async ({ inviter, extensionInfo }: { inviter: SeatUserInfo, extensionInfo: string }) => {
-  if(coGuestApplicants.value.length > 0) {
-    rejectHostConnection({
-      liveId: inviter.liveId,
-    });
-    return;
-  }
-  const hasMoreSeatUser = seatList.value.filter((item) => item.userInfo?.userId).length > 1;
-  const allSeatUserInCoGuest = seatList.value.filter((item) => item.userInfo?.liveId !== currentLive.value?.liveId).length === 0;
-  if (hasMoreSeatUser && allSeatUserInCoGuest) {
-    await rejectHostConnection({
-      liveId: inviter.liveId,
-    });
-    return;
-  }
-  const extensionInfoObj = safeJsonParse(extensionInfo);
-  const isBattle = extensionInfoObj.withBattle;
-  showNotification({
-    cancelText: t('Reject'),
-    message: isBattle? t('Received battle invitation from userName', { userName: inviter.userName || inviter.userId }) : t('Co-host request received from user', { userName: inviter.userName || inviter.userId }),
-    duration: extensionInfoObj.timeout,
-    onAccept: () => {
-      acceptHostConnection({
-        liveId: inviter.liveId,
-      });
-      hideNotification();
-    },
-    onCancel: () => {
-      rejectHostConnection({
-        liveId: inviter.liveId,
-      });
-      hideNotification();
-    },
-    onTimeout: () => {
-      hideNotification();
-    },
-  });
+  return undefined;
 };
 
 const handleCoHostUserLeft = ({ userInfo }: { userInfo: SeatUserInfo }) => {
@@ -97,32 +61,13 @@ const handleCoHostRequestCancelled = ({ inviter }: { inviter: SeatUserInfo }) =>
   hideNotification();
   TUIToast({ type: TOAST_TYPE.INFO, message: t('Co-host request cancelled by user', { userName: inviter.userName || inviter.userId }) });
 }
-const handleUserExitBattle = (eventInfo: { battleId: string, battleUser: SeatUserInfo }) => {
-  if (eventInfo.battleUser.userId === loginUserInfo.value?.userId) {
-    return;
-  }
+const handleUserExitBattle = () => {
+  return undefined;
 };
-const onBattleRequestReceived = (eventInfo: { battleId: string, inviter: SeatUserInfo, invitee: SeatUserInfo }) => {
-  hideNotification();
-  showNotification({
-    cancelText: t('Reject'),
-    message: t('Received battle invitation from userName', { userName: eventInfo.inviter.userName || eventInfo.inviter.userId}),
-    onAccept: () => {
-      acceptBattle({
-        battleId: eventInfo.battleId,
-      });
-      hideNotification();
-    },
-    onCancel: () => {
-      rejectBattle({
-        battleId: eventInfo.battleId,
-      });
-      hideNotification();
-    },
-    onTimeout: () => {
-      hideNotification();
-    },
-  });
+const onBattleRequestReceived = () => {
+  // Electron pusher does not support anchor battle yet.
+  // Keep silent and let the requester side timeout naturally.
+  return undefined;
 };
 const onBattleRequestCancelled = (eventInfo: { battleId: string, inviter: SeatUserInfo, invitee: SeatUserInfo }) => {
   TUIToast({ type: TOAST_TYPE.INFO, message: t('Battle request cancelled by user', { userName: eventInfo.invitee.userName || eventInfo.invitee.userId}) });

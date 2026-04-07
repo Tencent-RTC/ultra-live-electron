@@ -9,6 +9,8 @@
     :title="t('Live Setting')"
     :visible="settingPanelVisible"
     :customClasses="['live-setting-dialog']"
+    :cancelText="t('Cancel')"
+    :confirmText="t('Confirm')"
     @close="handleClose"
     @confirm="handleConfirm"
     @cancel="handleClose"
@@ -17,10 +19,11 @@
       <div class="setting-panel-content-item">
         <span class="setting-panel-content-item-label">{{ t('LiveName') }}</span>
         <TUIInput
-          v-model="form.liveName"
+          maxLength="100"
+          :model-value="form.liveName"
           :placeholder="t('Please enter the live name')"
-          :maxLength="20"
           :spellcheck="false"
+          @update:modelValue="handleLiveNameInput"
         />
       </div>
       <div class="setting-panel-content-item setting-panel-content-item-cover">
@@ -40,7 +43,7 @@
 <script lang="ts" setup>
 import { computed, defineEmits, defineProps, ref } from 'vue';
 import {
-  IconEditor, TUIDialog, TUIInput, useUIKit
+  IconEditor, TUIDialog, TUIInput, TUIToast, useUIKit
 } from '@tencentcloud/uikit-base-component-vue3';
 import {
   fetchUploadConfig,
@@ -48,6 +51,8 @@ import {
   UPLOAD_MAX_FILE_SIZE_MB,
   UploadConfig
 } from '../../../api/upload';
+import { LIVE_NAME_MAX_UTF8_BYTES } from '../../constants/tuiConstant';
+import { getUtf8ByteLength } from '../../utils/utils';
 import LiveCoverUpload from './LiveCoverUpload.vue';
 
 type CoverType = 'landscape' | 'portrait';
@@ -67,9 +72,10 @@ const { t } = useUIKit();
 const settingPanelVisible = ref(false);
 const coverType = ref<CoverType>('landscape');
 const uploadConfig = ref<UploadConfig>({
-  enabled: false,
+  enabled: true,
   provider: 'none',
 });
+const liveNameMaxUtf8Bytes = LIVE_NAME_MAX_UTF8_BYTES;
 const form = ref<LiveSettingForm>({
   liveName: props.liveName || '',
   coverUrl: props.coverUrl || '',
@@ -109,9 +115,26 @@ const handleClose = () => {
   syncFormWithProps();
 };
 
+const handleLiveNameInput = (value: string | number) => {
+  form.value.liveName = String(value ?? '');
+};
+
 const handleConfirm = () => {
+  const liveName = form.value.liveName;
+  if (!liveName.trim()) {
+    TUIToast.error({
+      message: t('Please enter the live name'),
+    });
+    return;
+  }
+  if (getUtf8ByteLength(liveName) > liveNameMaxUtf8Bytes) {
+    TUIToast.error({
+      message: t('Live name is too long'),
+    });
+    return;
+  }
   emit('confirm', {
-    liveName: form.value.liveName.trim(),
+    liveName,
     coverUrl: form.value.coverUrl.trim(),
   });
   settingPanelVisible.value = false;

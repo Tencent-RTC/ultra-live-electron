@@ -73,8 +73,7 @@ import { ref, Ref, computed, reactive, onMounted, onUnmounted } from 'vue';
 import { getVerifyCode, verifyCodeLogin, TUIServerErrorCode } from '../../api/http';
 import router from '../../router';
 import { getWindowType } from '../../TUILiveKit/utils/envUtils';
-import i18n from '../../TUILiveKit/locales/index';
-import { useI18n } from '../../TUILiveKit/locales';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import { getBasicInfo } from '../../debug/basic-info-config.js';
 import SvgIcon from '../../TUILiveKit/common/base/SvgIcon.vue';
 import MaximizeIcon from '../../TUILiveKit/common/icons/MaximizeIcon.vue';
@@ -91,10 +90,12 @@ import { LoginType, LoginState, VerifyStates } from './types';
 import { MSG_APPID } from './constant';
 import logger from '../../TUILiveKit/utils/logger';
 import { USER_INFO_STORAGE_KEY, stripProfileFields } from '../../TUILiveKit/utils/userInfoStorage';
+import { isChineseLanguage } from '../../TUILiveKit/utils/common';
 
 const privacyGuideEN = 'https://www.tencentcloud.com/document/product/301/17345?lang=en&pg=';
 const privacyGuideCN = 'https://web.sdk.qcloud.com/document/Tencent-RTC-Privacy-Protection-Guidelines.html';
-const privacyGuide = computed(() => (i18n.global.locale.value === 'zh-CN' ? privacyGuideCN : privacyGuideEN ));
+const { language, t } = useUIKit();
+const privacyGuide = computed(() => (isChineseLanguage(language.value) ? privacyGuideCN : privacyGuideEN));
 const userAgreement = 'https://web.sdk.qcloud.com/document/Tencent-RTC-User-Agreement.html';
 
 const loginState:LoginState = reactive({
@@ -118,7 +119,6 @@ const verifyStates:VerifyStates = reactive({
   timer: 0,
 });
 
-const { t } = useI18n();
 
 const loginType: Ref<LoginType> = ref(LoginType.UserSig);
 const isLoggingIn = ref(false);

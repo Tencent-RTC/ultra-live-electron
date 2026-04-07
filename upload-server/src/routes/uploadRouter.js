@@ -10,11 +10,15 @@ const { asyncHandler } = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
 
 const MAX_FILE_SIZE_MB = 2;
-const ALLOWED_MIME_TYPES = [
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const COVER_ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
+];
+const ALLOWED_MIME_TYPES = [
+  ...COVER_ALLOWED_MIME_TYPES,
   'image/svg+xml',
 ];
 const ALLOWED_UPLOAD_TYPES = [
@@ -22,17 +26,45 @@ const ALLOWED_UPLOAD_TYPES = [
   'gift-icon',
   'gift-animation',
 ];
+const ALLOWED_MIME_TYPES_BY_UPLOAD_TYPE = {
+  cover: COVER_ALLOWED_MIME_TYPES,
+  'gift-icon': ALLOWED_MIME_TYPES,
+  'gift-animation': ALLOWED_MIME_TYPES,
+};
+
+function resolveUploadType(type) {
+  if (!type || !ALLOWED_UPLOAD_TYPES.includes(type)) {
+    return null;
+  }
+  return type;
+}
+
+function getAllowedMimeTypesByType(type) {
+  return ALLOWED_MIME_TYPES_BY_UPLOAD_TYPE[type] || COVER_ALLOWED_MIME_TYPES;
+}
+
+function getUnsupportedMimeMessage(type) {
+  if (type === 'cover') {
+    return 'Only JPG/PNG/GIF/WebP images are supported for cover';
+  }
+  return 'Only JPG/PNG/GIF/WebP/SVG images are supported';
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
-  fileFilter: (_req, file, callback) => {
-    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+  // Use a slightly larger parser limit, then enforce precise business rule below.
+  // This avoids edge-case rejection when file size is exactly MAX_FILE_SIZE_BYTES.
+  limits: { fileSize: MAX_FILE_SIZE_BYTES + 1 },
+  fileFilter: (req, file, callback) => {
+    const uploadType = resolveUploadType(req.body?.type);
+    const allowedMimeTypes = uploadType ? getAllowedMimeTypesByType(uploadType) : ALLOWED_MIME_TYPES;
+    if (allowedMimeTypes.includes(file.mimetype)) {
       callback(null, true);
       return;
     }
-    const error = new Error('Only JPG/PNG/GIF/WebP/SVG images are supported');
+    const error = new Error(getUnsupportedMimeMessage(uploadType));
     logger.warn('UPLOAD_FILE_FILTER', error.message, {
+      type: uploadType || req.body?.type,
       mimetype: file.mimetype,
       originalname: file.originalname,
     });
@@ -104,8 +136,39 @@ uploadRouter.post(
         res.status(400).json({ code: -1, message });
         return;
       }
+      if (req.file.size > MAX_FILE_SIZE_BYTES) {
+        const message = `File size cannot exceed ${MAX_FILE_SIZE_MB}MB`;
+        logger.warn('UPLOAD_FILE_SIZE_OVER_LIMIT', message, {
+          type: req.body?.type,
+          originalname: req.file.originalname,
+          size: req.file.size,
+          limit: MAX_FILE_SIZE_BYTES,
+        });
+        res.status(400).json({ code: -1, message });
+        return;
+      }
 
-      const type = ALLOWED_UPLOAD_TYPES.includes(req.body.type) ? req.body.type : 'cover';
+      const type = resolveUploadType(req.body?.type);
+      if (!type) {
+        const message = 'Missing or invalid upload type';
+        logger.warn('UPLOAD_TYPE_INVALID', message, {
+          type: req.body?.type,
+          originalname: req.file.originalname,
+        });
+        res.status(400).json({ code: -1, message });
+        return;
+      }
+      const allowedMimeTypes = getAllowedMimeTypesByType(type);
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        const message = getUnsupportedMimeMessage(type);
+        logger.warn('UPLOAD_MIME_TYPE_NOT_ALLOWED', message, {
+          type,
+          mimetype: req.file.mimetype,
+          originalname: req.file.originalname,
+        });
+        res.status(400).json({ code: -1, message });
+        return;
+      }
       const key = generateKey(type, req.file.originalname);
       const result = await uploadFile(req.file.buffer, key, req.file.mimetype);
 

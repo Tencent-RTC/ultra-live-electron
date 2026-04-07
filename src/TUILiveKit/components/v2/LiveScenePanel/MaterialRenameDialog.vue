@@ -3,6 +3,7 @@
       :visible="true"
       :title="t('Rename')"
       :confirmText="t('Save as new name')"
+      :cancelText="t('Cancel')"
       @confirm="handleConfirm"
       @close="handleClose"
       @cancel="handleClose"
