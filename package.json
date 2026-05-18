@@ -1,6 +1,6 @@
 {
   "name": "ultra-live-electron",
-  "version": "5.8.2",
+  "version": "5.10.0-beta.0",
   "description": "Tencent Cloud Living and Streaming Tool for desktop and laptop",
   "main": "main.js",
   "author": "Tencent Cloud",
@@ -9,7 +9,6 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "prestart": "node ./scripts/prestart.js",
     "start": "concurrently \"npm run serve\" \"npm run electron\"",
     "preelectron": "node scripts/postinstall.js",
     "electron": "electron .",
@@ -23,14 +22,12 @@
     "start:with-upload-server": "concurrently \"npm run serve\" \"npm run upload-server\" \"npm run electron\""
   },
   "dependencies": {
-    "@tencentcloud/tuiroom-engine-electron": "~4.0.2",
-    "@tencentcloud/uikit-base-component-vue3": "1.4.1",
-    "tuikit-atomicx-vue3-electron": "5.8.2",
+    "@tencentcloud/tuiroom-engine-electron": "~4.1.0-beta.0",
+    "@tencentcloud/uikit-base-component-vue3": "1.4.3",
+    "tuikit-atomicx-vue3-electron": "5.10.0-beta.0",
     "core-js": "^3.36.1",
-    "movable-resizable-js": "^0.2.0",
     "pinia": "^2.1.7",
-    "trtc-electron-plugin-xmagic": "^0.0.20",
-    "trtc-electron-sdk": "13.1.709-beta.0",
+    "trtc-electron-sdk": "13.3.801-alpha.1",
     "vue": "^3.4.0",
     "vue-router": "^4.3.1"
   },

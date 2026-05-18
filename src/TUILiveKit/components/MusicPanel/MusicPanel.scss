@@ -1,0 +1,299 @@
+.music-panel {
+  --mp-bg: #0f1722;
+  --mp-bg-elevated: #172236;
+  --mp-bg-hover: #1d2a42;
+  --mp-bg-active: rgba(92, 122, 255, 0.2);
+  --mp-border: rgba(28, 102, 229, 0.24);
+  --mp-primary: #1c66e5;
+  --mp-primary-strong: #1557c4;
+  --mp-primary-light: #3b7ff0;
+  --mp-primary-soft: rgba(28, 102, 229, 0.12);
+  --mp-text: #f3f4f6;
+  --mp-text-secondary: #9ca3af;
+  --mp-text-tertiary: #6b7280;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--mp-bg);
+  color: var(--mp-text);
+  font-size: 13px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+
+  .brand-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--mp-text);
+    letter-spacing: 0.2px;
+  }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Primary action (+ add); plain (close) variant uses .close-btn below.
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--mp-primary);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(28, 102, 229, 0.45);
+
+  &:hover {
+    background: var(--mp-primary-light);
+  }
+}
+
+// Close button: borderless, matches other dialog close buttons in the app.
+.close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--mp-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--mp-text);
+  }
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 12px;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--mp-text-secondary);
+  cursor: pointer;
+  border-radius: 12px;
+  transition: background-color 0.15s ease;
+  outline: none;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+
+    .empty-icon-wrap {
+      background: var(--mp-primary-soft);
+      color: var(--mp-primary);
+    }
+
+    .empty-text {
+      color: var(--mp-primary);
+    }
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--mp-border);
+  }
+
+  .empty-icon-wrap {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--mp-text-tertiary);
+    margin-bottom: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .empty-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mp-text);
+    transition: color 0.15s ease;
+  }
+
+  .empty-subtext {
+    font-size: 12px;
+    color: var(--mp-text-tertiary);
+  }
+}
+
+.music-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(28, 102, 229, 0.5);
+    }
+  }
+}
+
+.playback-control {
+  flex-shrink: 0;
+  padding: 16px 20px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.progress-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .progress-slider {
+    width: 100%;
+  }
+
+  .time-row {
+    display: flex;
+    justify-content: space-between;
+
+    .time {
+      font-size: 11px;
+      color: var(--mp-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .setting-icon {
+    color: var(--mp-text-secondary);
+    flex-shrink: 0;
+  }
+
+  .setting-label {
+    font-size: 12px;
+    color: var(--mp-text-secondary);
+    flex-shrink: 0;
+    min-width: 32px;
+  }
+
+  .setting-slider {
+    flex: 1;
+  }
+
+  .setting-value {
+    font-size: 11px;
+    color: var(--mp-text-secondary);
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+}
+
+// Cross-browser range slider styling.
+.mp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &::-webkit-slider-runnable-track {
+    height: 4px;
+    background: transparent;
+    border-radius: 2px;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--mp-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    margin-top: -5px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover:not(:disabled)::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+
+  &::-moz-range-track {
+    height: 4px;
+    background: transparent;
+    border-radius: 2px;
+  }
+
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--mp-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+  }
+}

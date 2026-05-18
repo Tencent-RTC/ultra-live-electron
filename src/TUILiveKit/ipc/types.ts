@@ -2,6 +2,7 @@
  * IPC Message Types and Interfaces
  * This module defines all message types for inter-window communication
  */
+import { MusicPlayStatus } from 'tuikit-atomicx-vue3-electron';
 
 /**
  * Window type enumeration
@@ -31,6 +32,12 @@ export enum IPCMessageType {
   UPDATE_LAYOUT_TEMPLATE = 'updateLayoutTemplate',
   UPDATE_USER_PROFILE = 'updateUserProfile',
   SYNC_LIVE_INFO = 'syncLiveInfo',
+
+  // ============== Music Panel Related ==============
+  /** Child -> Main: user action dispatched from MusicPanelDialog */
+  MUSIC_ACTION = 'musicAction',
+  /** Main -> Child: music event passthrough (e.g. onPlayError) */
+  MUSIC_EVENT = 'musicEvent',
 
   // ============== Media Source Related ==============
   /** Add a new media source */
@@ -253,31 +260,150 @@ export enum ChildPanelType {
   UserProfile = 'UserProfile',
   LayoutConfig = 'LayoutConfig',
   LiveTitleSetting = 'LiveTitleSetting',
+  Music = 'Music',
 }
 
 /**
  * Payload for SHOW_CHILD_PANEL message
  * Used to open child window with specific panel and optional initial data
  */
-export interface ShowChildPanelPayload {
+export interface ShowChildPanelPayload<T = Record<string, unknown>> {
   /** Panel type to show, determines which component to render */
   panelType: ChildPanelType;
   /** Optional window size override. If omitted, main process uses panelType defaults */
   windowSize?: { width: number; height: number };
   /** Initial data for the panel (optional) */
-  initialData?: Record<string, unknown>;
+  initialData?: T;
 }
 
 /**
  * Payload for UPDATE_CHILD_DATA message
- * Used to push data updates to the currently active child panel
+ * Used to push data updates to the currently active child panel.
+ *
+ * The generic `T` lets call sites strongly type the carried data (e.g.
+ * `UpdateChildDataPayload<MusicPanelSnapshot>`). Defaults to `unknown`
+ * for backward compatibility with untyped call sites.
  */
-export interface UpdateChildDataPayload {
+export interface UpdateChildDataPayload<T = unknown> {
   /** Target panel type - child window will ignore if current panel doesn't match */
   panelType: ChildPanelType;
   /** Data to pass to the panel */
-  data: Record<string, unknown>;
+  data: T;
 }
+
+/**
+ * Discriminator tag for ADD/UPDATE_MEDIA_SOURCE payloads.
+ * Lets the main window dispatch a child-window IPC payload to the correct
+ * MediaSource builder without inspecting field shape.
+ *
+ * Currently only video sources need a tag because their dialog payload shape
+ * (filePath/url/playoutVolume/...) doesn't carry sourceType directly. Camera
+ * and screen payloads already carry sourceType natively, so they skip the tag.
+ */
+export type MediaKind = 'localVideo' | 'onlineVideo';
+
+/**
+ * Payload emitted by LocalVideoDialog when adding a local video file.
+ * Sent through child -> main IPC as ADD_MEDIA_SOURCE with `mediaKind: 'localVideo'`.
+ */
+export interface AddLocalVideoPayload {
+  mediaKind: 'localVideo';
+  /** Absolute file path obtained via Electron's File.path extension */
+  filePath: string;
+  /** Display name, defaults to file basename */
+  fileName: string;
+  /** Playout volume, 0-100 */
+  playoutVolume: number;
+}
+
+/**
+ * Payload emitted by LocalVideoDialog when updating an existing local video.
+ * Carries `predata` (the previous MediaSource) for main-window list lookup.
+ */
+export interface UpdateLocalVideoPayload extends AddLocalVideoPayload {
+  /** Previous MediaSource snapshot for locating the existing entry */
+  predata: Record<string, unknown>;
+}
+
+/**
+ * Payload emitted by OnlineVideoDialog when adding a streaming URL.
+ * Sent through child -> main IPC as ADD_MEDIA_SOURCE with `mediaKind: 'onlineVideo'`.
+ */
+export interface AddOnlineVideoPayload {
+  mediaKind: 'onlineVideo';
+  /** Streaming URL: rtmp/rtmps/http/https */
+  url: string;
+  /** Playout volume, 0-100 */
+  playoutVolume: number;
+  /** Network cache size in KB, used by SDK to control startup latency vs. smoothness */
+  networkCacheSizeKB: number;
+}
+
+/**
+ * Payload emitted by OnlineVideoDialog when updating an existing online video.
+ */
+export interface UpdateOnlineVideoPayload extends AddOnlineVideoPayload {
+  predata: Record<string, unknown>;
+}
+
+/**
+ * Music panel state snapshot pushed from main window to child window.
+ * Used as both SHOW_CHILD_PANEL initialData and UPDATE_CHILD_DATA incremental payload.
+ *
+ * Child window consumes this as a read-only view; it never owns the real music state.
+ * All field semantics mirror the state layer `IMusicState` and app-layer `MusicLibItem`.
+ */
+export interface MusicPanelSnapshot {
+  /** Music library list, owned by useMusicLibrary on the main window */
+  musicList: Array<{
+    id: string;
+    url: string;
+    name: string;
+    durationMs: number;
+    addedAt: number;
+    isNetwork: boolean;
+  }>;
+  /** Current playing URL, null when nothing is playing */
+  playURL: string | null;
+  /** Play status enum (Idle / Playing / Paused / Loading) */
+  playStatus: MusicPlayStatus;
+  /** Current playback position in milliseconds */
+  playProgress: number;
+  /** Total duration in milliseconds, 0 when unknown */
+  totalDuration: number;
+  /** Playback volume, 0-100 */
+  musicVolume: number;
+  /** Pitch value, -1.0 ~ 1.0 */
+  musicPitch: number;
+}
+
+/**
+ * Discriminated union for user intents dispatched from MusicPanelDialog (child window)
+ * back to MusicButton (main window) via IPCMessageType.MUSIC_ACTION.
+ *
+ * Keeps all music intents under a single message type + typed payload, avoiding the
+ * "one IPC type per action" sprawl (compare with CoGuest's 3 separate messages).
+ */
+export type MusicActionPayload =
+  | { action: 'startPlay'; url: string }
+  | { action: 'pausePlay' }
+  | { action: 'resumePlay' }
+  | { action: 'stopPlay' }
+  | { action: 'seek'; positionMs: number }
+  | { action: 'setVolume'; volume: number }
+  | { action: 'setPitch'; pitch: number }
+  | { action: 'addMusic'; urlOrFilePath: string; name?: string; durationMs?: number }
+  | { action: 'removeMusic'; id: string };
+
+/**
+ * Music-related events passthrough from main window state layer to child window UI.
+ * Currently only onPlayError needs to reach child (so it can show a toast);
+ * onPlayCompleted stays on main since the "auto-play next track" logic lives there.
+ */
+export type MusicEventPayload =
+  | { event: 'onPlayError'; url: string; code: number };
+
+
 
 /**
  * Initial data for child live title setting panel.
