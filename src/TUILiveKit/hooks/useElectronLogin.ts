@@ -200,7 +200,7 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
       happenedAt: new Date().toISOString(),
     });
     if (isInLive.value) {
-      void endLive().catch((error) => {
+      void endLive().catch((error: unknown) => {
         logger.warn(`${logPrefix}best-effort endLive failed before force logout:`, {
           reason,
           error,

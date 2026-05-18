@@ -217,10 +217,11 @@ function getDefaultPanelSize(panelType) {
     'ReverbVoice':         { width: 600, height: 560 },
     'ChangeVoice':         { width: 600, height: 560 },
     'PhoneMirror':         { width: 600, height: 560 },
-    'OnlineVideo':         { width: 600, height: 360 },
+    'OnlineVideo':         { width: 600, height: 380 },
     'VideoFile':           { width: 600, height: 360 },
     'UserProfile':         { width: 600, height: 460 },
     'LayoutConfig':        { width: 480, height: 320 },
+    'Music':               { width: 520, height: 560 },
     'LiveTitleSetting':    { width: 600, height: 560 },
   };
   return sizeMap[panelType] || { width: 600, height: 400 };
@@ -464,7 +465,7 @@ async function createWindow(width = 1366, height = 668) {
   windowMap.confirm = new BrowserWindow({
     show: false,
     width: 480,
-    // Match TUILiveKitMacV2 exitLiveDialog size (TUIDialog default width 480, height is content-adaptive).
+    // Match TUILiveKitMac exitLiveDialog size (TUIDialog default width 480, height is content-adaptive).
     // Use a taller fixed height here to fit header/content/footer in confirm BrowserWindow.
     height: 220,
     frame: false,

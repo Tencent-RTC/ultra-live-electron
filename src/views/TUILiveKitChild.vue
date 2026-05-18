@@ -1,16 +1,19 @@
 <template>
   <UIKitProvider theme="dark">
-    <TUILiveKitConfirmView />
+    <TUILiveKitChild />
   </UIKitProvider>
 </template>
 
 <script setup lang="ts">
 import { UIKitProvider } from '@tencentcloud/uikit-base-component-vue3';
-import TUILiveKitConfirmView from '../TUILiveKit/ConfirmView.vue';
+import TUILiveKitChild from '../TUILiveKit/ChildView.vue';
 </script>
 
 <style>
 html, body, #app {
-  background: transparent;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  text-align: initial;
 }
 </style>

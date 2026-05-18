@@ -19,12 +19,12 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/tui-live-kit-main-v2',
     name: 'tui-live-kit-main-v2',
-    component: () => import(/* webpackChunkName: "TUILiveKitMainV2" */ '../views/TUILiveKitMainV2.vue')
+    component: () => import(/* webpackChunkName: "TUILiveKitWin" */ '../views/TUILiveKitWin.vue')
   },
   {
     path: '/tui-livekit-mac-v2',
     name: 'tui-livekit-mac-v2',
-    component: () => import(/* webpackChunkName: "TUILiveKitMacV2" */ '../views/TUILiveKitMacV2.vue')
+    component: () => import(/* webpackChunkName: "TUILiveKitMac" */ '../views/TUILiveKitMac.vue')
   },
   {
     path: '/tui-live-kit-child',
@@ -34,7 +34,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/tui-live-kit-child-v2',
     name: 'tui-live-kit-child-v2',
-    component: () => import(/* webpackChunkName: "TUILiveKitChildV2" */ '../views/TUILiveKitChild2.vue'),
+    component: () => import(/* webpackChunkName: "TUILiveKitChild" */ '../views/TUILiveKitChild.vue'),
   },
   {
     path: '/tui-live-kit-cover',
@@ -44,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/tui-live-kit-cover-v2',
     name: 'tui-live-kit-cover-v2',
-    component: () => import(/* webpackChunkName: "TUILiveKitCoverV2" */ '../views/TUILiveKitCoverV2.vue'),
+    component: () => import(/* webpackChunkName: "TUILiveKitCover" */ '../views/TUILiveKitCover.vue'),
   },
   {
     path: '/tui-live-kit-confirm',
