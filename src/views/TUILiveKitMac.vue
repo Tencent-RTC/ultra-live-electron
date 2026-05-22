@@ -1,6 +1,6 @@
 <template>
   <UIKitProvider theme="dark">
-    <div class="tui-livekit-mac-v2">
+    <div class="tui-livekit-mac">
       <LiveHeader @logout="handleLogout" />
       <div class="live-pusher-main">
         <div class="main-left">
@@ -418,6 +418,14 @@ const handleAppRequestQuit = () => {
   }
   isAppQuitConfirming.value = true;
   const shouldEndLiveBeforeQuit = isInLive.value;
+  // Notify the main process that the confirm dialog is about to be shown so
+  // the 5s force-quit timeout (initiateQuitSequence → forceQuitApp) is
+  // cleared. The Win path does this implicitly via the 'showConfirmDialog'
+  // IPC route to the confirm BrowserWindow; on Mac the dialog is rendered
+  // inside the main window (TUIMessageBox), so we have to send the ack
+  // explicitly. Without this the app force-quits while the user is still
+  // looking at the confirmation dialog.
+  window.ipcRenderer?.send('app-quit-confirm-shown');
   TUIMessageBox.confirm({
     title: shouldEndLiveBeforeQuit ? t('End live and quit?') : t('Quit app?'),
     content: shouldEndLiveBeforeQuit
@@ -425,6 +433,18 @@ const handleAppRequestQuit = () => {
       : t('Do you want to quit the app? Scene source settings will not be saved.'),
     confirmText: shouldEndLiveBeforeQuit ? t('End live and quit') : t('Quit app'),
     cancelText: t('Cancel'),
+    // Disable mask click to dismiss. Reason: when the user clicks outside
+    // the dialog, TUIMessageBox closes the dialog DOM but does NOT invoke
+    // the callback (see base/MessageBox/index.vue handleMaskClick). That
+    // leaves `isAppQuitConfirming=true` forever, so the next click on the
+    // window close (X) button is swallowed by the early-return guard above
+    // and the user sees no confirmation dialog at all. Disabling mask
+    // dismiss forces all close paths (X icon / Confirm / Cancel buttons)
+    // through handleClose → callback, keeping renderer + main process
+    // states in sync. This also matches macOS NSAlert / Windows MessageBox
+    // conventions: destructive confirmations should not be dismissible by
+    // clicking outside.
+    modal: false,
     callback: async (action) => {
       try {
         if (action !== 'confirm') {
@@ -571,7 +591,7 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 @import "../TUILiveKit/assets/mac.scss";
 
-.tui-livekit-mac-v2 {
+.tui-livekit-mac {
   width: 100%;
   height: 100%;
   display: flex;

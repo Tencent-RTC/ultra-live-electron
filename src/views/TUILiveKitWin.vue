@@ -1,6 +1,6 @@
 <template>
   <UIKitProvider theme="dark">
-    <div class="tui-livekit-main-v2" :class="{ 'is-logout-transitioning': isGoingToLoginPage }">
+    <div class="tui-livekit-main" :class="{ 'is-logout-transitioning': isGoingToLoginPage }">
       <LiveHeader @logout="handleLogout" :is-showing-in-child-window="true"/>
       <div class="tui-livekit-main">
         <div class="main-left">
@@ -814,7 +814,7 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 @import "../TUILiveKit/assets/mac.scss";
 
-.tui-livekit-main-v2 {
+.tui-livekit-main {
   width: 100%;
   height: 100%;
   display: flex;

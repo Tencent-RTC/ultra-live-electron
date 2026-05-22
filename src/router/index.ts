@@ -10,40 +10,24 @@ const routes: Array<RouteRecordRaw> = [
     name: 'loading',
     component: Loading,
   },
-  // TODO: v1 legacy routes kept as redirects for IPC compatibility, remove after IPC messages are updated to v2 names
   {
     path: '/tui-live-kit-main',
     name: 'tui-live-kit-main',
-    redirect: { name: 'tui-live-kit-main-v2' },
-  },
-  {
-    path: '/tui-live-kit-main-v2',
-    name: 'tui-live-kit-main-v2',
     component: () => import(/* webpackChunkName: "TUILiveKitWin" */ '../views/TUILiveKitWin.vue')
   },
   {
-    path: '/tui-livekit-mac-v2',
-    name: 'tui-livekit-mac-v2',
+    path: '/tui-livekit-mac',
+    name: 'tui-livekit-mac',
     component: () => import(/* webpackChunkName: "TUILiveKitMac" */ '../views/TUILiveKitMac.vue')
   },
   {
     path: '/tui-live-kit-child',
     name: 'tui-live-kit-child',
-    redirect: { name: 'tui-live-kit-child-v2' },
-  },
-  {
-    path: '/tui-live-kit-child-v2',
-    name: 'tui-live-kit-child-v2',
     component: () => import(/* webpackChunkName: "TUILiveKitChild" */ '../views/TUILiveKitChild.vue'),
   },
   {
     path: '/tui-live-kit-cover',
     name: 'tui-live-kit-cover',
-    redirect: { name: 'tui-live-kit-cover-v2' },
-  },
-  {
-    path: '/tui-live-kit-cover-v2',
-    name: 'tui-live-kit-cover-v2',
     component: () => import(/* webpackChunkName: "TUILiveKitCover" */ '../views/TUILiveKitCover.vue'),
   },
   {
@@ -69,10 +53,10 @@ window.ipcRenderer.on('window-type', (event: any, type: string) => {
 });
 
 router.beforeEach((to) => {
-  if (isMacPlatform() && to.name === 'tui-live-kit-main-v2') {
-    return { name: 'tui-livekit-mac-v2' };
+  if (isMacPlatform() && to.name === 'tui-live-kit-main') {
+    return { name: 'tui-livekit-mac' };
   }
-  if (to.name === 'tui-live-kit-main-v2') {
+  if (to.name === 'tui-live-kit-main') {
     let storedUserInfo: string | null = null;
     try {
       storedUserInfo = window.localStorage.getItem(USER_INFO_STORAGE_KEY);

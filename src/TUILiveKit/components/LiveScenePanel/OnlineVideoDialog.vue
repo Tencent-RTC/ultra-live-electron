@@ -7,7 +7,7 @@
     @close="handleClose"
     @cancel="handleClose"
     @confirm="handleConfirm"
-    :confirmDisabled="!videoUrl || isSubmitting"
+    :confirmDisabled="!videoUrl.trim() || isSubmitting"
     :title="title"
     :customClasses="dialogCustomClasses"
   >

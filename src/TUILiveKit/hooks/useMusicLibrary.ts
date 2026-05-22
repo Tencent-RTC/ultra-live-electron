@@ -35,6 +35,15 @@ export interface MusicLibItem {
   addedAt: number;
   /** Whether this is a network URL (for UI marking and playback differentiation) */
   isNetwork: boolean;
+  /** Runtime flag: this track recently failed to play and should be skipped by
+   *  the auto-play loop. Toggled true when MusicState fires `onPlayError`,
+   *  toggled false when the user explicitly retries or the entry is removed.
+   *
+   *  ⚠️ Not persisted to storage on purpose: the underlying cause (file moved,
+   *  network blip, host offline) is often transient, so a fresh app session
+   *  should not inherit a permanent "unplayable" sticker. Persisted entries
+   *  are rehydrated as playable. */
+  isUnplayable: boolean;
 }
 
 // ============================================================
@@ -105,6 +114,19 @@ function isValidItem(item: any): item is MusicLibItem {
   );
 }
 
+/**
+ * Normalize a deserialized entry: fill in fields that may be missing from
+ * older persisted payloads (e.g. `isUnplayable` was added later) and reset
+ * any runtime-only flags so a fresh session starts from a clean state.
+ */
+function normalizeItem(item: MusicLibItem): MusicLibItem {
+  return {
+    ...item,
+    // Always reset on load; see `MusicLibItem.isUnplayable` doc-comment.
+    isUnplayable: false,
+  };
+}
+
 // ============================================================
 // Persistence
 // ============================================================
@@ -117,7 +139,7 @@ function loadFromStorage(userId: string | null | undefined): MusicLibItem[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidItem);
+    return parsed.filter(isValidItem).map(normalizeItem);
   } catch (error) {
     console.warn('[useMusicLibrary] load failed:', error);
     return [];
@@ -128,7 +150,10 @@ function persistToStorage(userId: string | null | undefined, list: MusicLibItem[
   const key = getStorageKey(userId);
   if (!key) return;
   try {
-    localStorage.setItem(key, JSON.stringify(list));
+    // Strip runtime-only fields so a fresh session never inherits them.
+    // Currently only `isUnplayable` is runtime-only — see its doc-comment.
+    const persistable = list.map(({ isUnplayable: _ignored, ...rest }) => rest);
+    localStorage.setItem(key, JSON.stringify(persistable));
   } catch (error) {
     console.warn('[useMusicLibrary] persist failed:', error);
   }
@@ -197,6 +222,7 @@ function addMusic(payload: {
     durationMs: typeof payload.durationMs === 'number' && payload.durationMs > 0 ? payload.durationMs : 0,
     addedAt: Date.now(),
     isNetwork: isNetworkURL(url),
+    isUnplayable: false,
   };
   musicList.value = [...musicList.value, item];
   persistToStorage(currentUserId, musicList.value);
@@ -250,6 +276,42 @@ function updateMusic(id: string, patch: Partial<Pick<MusicLibItem, 'name' | 'dur
   persistToStorage(currentUserId, musicList.value);
 }
 
+/**
+ * Mark a track as unplayable (typically after `MusicEvent.onPlayError`).
+ *
+ * Side effects:
+ * - Reactive `musicList` is updated (via array replacement) so the UI shows
+ *   the "Unplayable" tag and downstream snapshot watchers re-push to the
+ *   child window.
+ * - Not persisted: see `MusicLibItem.isUnplayable` doc-comment.
+ *
+ * No-op when the entry is already marked unplayable, when no entry has the
+ * given url, or when `url` is empty.
+ */
+function markUnplayable(url: string): void {
+  if (!url) return;
+  const idx = musicList.value.findIndex((i) => i.url === url);
+  if (idx === -1) return;
+  if (musicList.value[idx].isUnplayable) return;
+  const next = [...musicList.value];
+  next[idx] = { ...next[idx], isUnplayable: true };
+  musicList.value = next;
+}
+
+/**
+ * Clear the unplayable flag on a single track. Called when the user explicitly
+ * retries a previously failing track, so the auto-play loop will visit it again.
+ */
+function clearUnplayable(id: string): void {
+  if (!id) return;
+  const idx = musicList.value.findIndex((i) => i.id === id);
+  if (idx === -1) return;
+  if (!musicList.value[idx].isUnplayable) return;
+  const next = [...musicList.value];
+  next[idx] = { ...next[idx], isUnplayable: false };
+  musicList.value = next;
+}
+
 // ============================================================
 // Public hook
 // ============================================================
@@ -269,6 +331,10 @@ export interface UseMusicLibraryReturn {
   findMusicByUrl: typeof findMusicByUrl;
   /** Update entry metadata */
   updateMusic: typeof updateMusic;
+  /** Mark an entry as unplayable (typically after `MusicEvent.onPlayError`) */
+  markUnplayable: typeof markUnplayable;
+  /** Clear the unplayable flag on an entry (typically on user-initiated retry) */
+  clearUnplayable: typeof clearUnplayable;
 }
 
 export function useMusicLibrary(): UseMusicLibraryReturn {
@@ -281,6 +347,8 @@ export function useMusicLibrary(): UseMusicLibraryReturn {
     findMusicById,
     findMusicByUrl,
     updateMusic,
+    markUnplayable,
+    clearUnplayable,
   };
 }
 

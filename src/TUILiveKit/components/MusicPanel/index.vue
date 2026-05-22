@@ -167,15 +167,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { TUIToast, TOAST_TYPE, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import {
-  MusicEvent,
   MusicPlayStatus,
   useMusicState,
 } from 'tuikit-atomicx-vue3-electron';
 import { useMusicLibrary } from '../../hooks/useMusicLibrary';
-import { planNextTrack, shouldAutoPlayAfterAdd } from '../../hooks/useMusicPlaybackPolicy';
+import { shouldAutoPlayAfterAdd } from '../../hooks/useMusicPlaybackPolicy';
 import type { MusicLibItem } from '../../hooks/useMusicLibrary';
 import type { MusicPanelSnapshot, MusicActionPayload } from '../../ipc';
 import AddMusicDialog from './AddMusicDialog.vue';
@@ -266,12 +265,18 @@ function dispatch(action: MusicActionPayload): void {
   }
   if (!localState || !localLibrary) return;
   switch (action.action) {
-  case 'startPlay':
+  case 'startPlay': {
+    // User-initiated play (including re-trying a previously failed entry).
+    // Clear any prior unplayable mark so the auto-play loop visits this
+    // track again on the next round.
+    const item = localLibrary.musicList.value.find(i => i.url === action.url);
+    if (item) localLibrary.clearUnplayable(item.id);
     localState.startPlay(action.url).catch((error) => {
       console.error('[MusicPanel] startPlay failed:', error);
       TUIToast({ type: TOAST_TYPE.ERROR, message: t('MusicPanel.PlayFailed') });
     });
     break;
+  }
   case 'pausePlay':
     localState.pausePlay().catch((error) => console.error('[MusicPanel] pausePlay failed:', error));
     break;
@@ -417,49 +422,6 @@ function handlePitchInput(event: Event) {
   const target = event.target as HTMLInputElement;
   const val = Number(target.value);
   dispatch({ action: 'setPitch', pitch: val });
-}
-
-// ==================== Event subscriptions (self-managed mode only) ====================
-// Controlled mode: the main window owns event handling (auto-play next on completion,
-// toast on error); child window just renders whatever snapshot/MUSIC_EVENT arrives.
-//
-// Self-managed mode: subscribe directly to MusicState events for auto-play-next and
-// error toasts, identical to the pre-refactor behavior.
-if (!props.controlled && localState && localLibrary) {
-  const onPlayCompleted = ({ url }: { url: string }) => {
-    const next = planNextTrack(localLibrary.musicList.value, url);
-    if (next) {
-      localState.startPlay(next.url).catch((error) => {
-        console.error('[MusicPanel] auto-play next failed:', error);
-      });
-    }
-  };
-
-  const onPlayError = ({ url, code }: { url: string; code: number }) => {
-    console.error('[MusicPanel] play error:', code, url);
-    TUIToast({
-      type: TOAST_TYPE.ERROR,
-      message: t('MusicPanel.PlayFailedWithCode').replace('{code}', String(code)),
-    });
-  };
-
-  localState.subscribeEvent(MusicEvent.onPlayCompleted, onPlayCompleted);
-  localState.subscribeEvent(MusicEvent.onPlayError, onPlayError);
-
-  onBeforeUnmount(() => {
-    localState.unsubscribeEvent(MusicEvent.onPlayCompleted, onPlayCompleted);
-    localState.unsubscribeEvent(MusicEvent.onPlayError, onPlayError);
-  });
-
-  // Backfill track duration into library once known from onPlayProgress.
-  // Only in self-managed mode: library is owned here.
-  watch([() => localState.playURL.value, () => localState.totalDuration.value], ([url, duration]) => {
-    if (!url || duration <= 0) return;
-    const item = localLibrary.findMusicByUrl(url);
-    if (item && item.durationMs <= 0) {
-      localLibrary.updateMusic(item.id, { durationMs: duration });
-    }
-  });
 }
 </script>
 

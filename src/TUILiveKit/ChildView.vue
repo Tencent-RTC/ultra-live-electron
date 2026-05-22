@@ -1,5 +1,5 @@
 <template>
-  <div class="tui-live-kit-child-v2 dark-theme">
+  <div class="tui-live-kit-child dark-theme">
     <CameraSettingDialog
       v-if="currentPanel === ChildPanelType.Camera"
       custom-classes="dialog-in-child-window"
@@ -112,6 +112,7 @@ import type {
 } from './ipc';
 import { useDeviceState, MusicPlayStatus } from 'tuikit-atomicx-vue3-electron';
 import type { MediaSource } from 'tuikit-atomicx-vue3-electron';
+import { getPlayErrorMessage } from './components/MusicPanel/helpers';
 import logger from './utils/logger';
 
 const logPrefix = '[ChildView]';
@@ -313,7 +314,7 @@ function onMusicEvent(event: MusicEventPayload) {
   if (event.event === 'onPlayError') {
     TUIToast({
       type: TOAST_TYPE.ERROR,
-      message: t('MusicPanel.PlayFailedWithCode').replace('{code}', String(event.code)),
+      message: getPlayErrorMessage(event.code, t),
     });
   }
 }
@@ -357,7 +358,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.tui-live-kit-child-v2 {
+.tui-live-kit-child {
   position: relative;
   height: 100%;
   background-color: var(--bg-color-dialog, #1f2024);

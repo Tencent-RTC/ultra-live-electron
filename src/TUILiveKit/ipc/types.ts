@@ -362,6 +362,10 @@ export interface MusicPanelSnapshot {
     durationMs: number;
     addedAt: number;
     isNetwork: boolean;
+    /** Whether this entry has been auto-marked as unplayable (e.g. after a
+     *  recent `onPlayError`). Mirrors `MusicLibItem.isUnplayable`; child
+     *  window uses it to render the "Unplayable" tag in the list. */
+    isUnplayable: boolean;
   }>;
   /** Current playing URL, null when nothing is playing */
   playURL: string | null;

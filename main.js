@@ -1,5 +1,31 @@
-const { app, ipcMain, globalShortcut, Menu } = require('electron');
+const { app, ipcMain, globalShortcut, Menu, BrowserWindow } = require('electron');
 const { TUILiveKitMain } = require('./TUILiveKit.main');
+
+// Ensure single instance: prevent multiple app instances from running simultaneously,
+// which would otherwise compete for camera/microphone/screen-capture devices and TRTC userId.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  console.log('[main.js] another instance is already running, quit this one.');
+  app.quit();
+  process.exit(0);
+} else {
+  app.on('second-instance', () => {
+    console.log('[main.js] second-instance detected, focus the existing main window.');
+    try {
+      const wins = BrowserWindow.getAllWindows();
+      const target = wins.find(w => !w.getParentWindow()) || wins[0];
+      if (target) {
+        if (target.isMinimized()) target.restore();
+        if (!target.isVisible()) target.show();
+        target.focus();
+      } else {
+        TUILiveKitMain.open();
+      }
+    } catch (e) {
+      console.error('[main.js] second-instance handler error:', e);
+    }
+  });
+}
 
 function quitApplication() {
   console.log('quit application');

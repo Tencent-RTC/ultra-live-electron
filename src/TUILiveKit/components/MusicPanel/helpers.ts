@@ -6,6 +6,7 @@
  * imported by both the panel itself and any future sibling component (e.g.
  * a mini player widget) without dragging the whole SFC along.
  */
+import { MusicErrorCode } from 'tuikit-atomicx-vue3-electron';
 
 /** Primary slider fill color (matches the panel's CSS `--mp-primary`). */
 export const SLIDER_PRIMARY = '#1c66e5';
@@ -38,3 +39,50 @@ export function formatDuration(ms: number): string {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
+
+/** Translation function shape compatible with `useUIKit().t`. */
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
+/**
+ * App-layer mapping from a raw `MusicErrorCode` to the demo's i18n key.
+ *
+ * Kept in this UI module (not in the AtomicX `types/music.ts`) on purpose:
+ * the AtomicX layer ships **codes only**, leaving translations entirely to
+ * the consuming application. Other demos / business apps can copy this
+ * table verbatim, swap it for a different naming convention, or merge
+ * several codes into one message — without forking the AtomicX package.
+ */
+const ERROR_CODE_TO_I18N_KEY: Record<number, string> = {
+  [MusicErrorCode.OpenFailed]:             'MusicPanel.Error.OpenFailed',
+  [MusicErrorCode.DecodeFailed]:           'MusicPanel.Error.DecodeFailed',
+  [MusicErrorCode.OverLimit]:              'MusicPanel.Error.OverLimit',
+  [MusicErrorCode.InvalidOperation]:       'MusicPanel.Error.InvalidOperation',
+  [MusicErrorCode.InvalidPath]:            'MusicPanel.Error.InvalidPath',
+  [MusicErrorCode.InvalidUrl]:             'MusicPanel.Error.InvalidUrl',
+  [MusicErrorCode.NoAudioStream]:          'MusicPanel.Error.NoAudioStream',
+  [MusicErrorCode.FormatNotSupported]:     'MusicPanel.Error.FormatNotSupported',
+  [MusicErrorCode.ConcurrentBgmOverLimit]: 'MusicPanel.Error.ConcurrentBgmOverLimit',
+};
+
+/**
+ * Translate a raw music playback error code into a user-friendly localized
+ * message.
+ *
+ * Strategy:
+ * 1. Look up the code in {@link ERROR_CODE_TO_I18N_KEY}. Known codes produce
+ *    a plain-language explanation of *why* playback failed (e.g. "Invalid
+ *    file path. Please check whether the file exists." rather than
+ *    "Playback failed (code=-4005)").
+ * 2. Fall back to `MusicPanel.PlayFailedUnknown` (still surfaces the raw
+ *    code, so diagnostics aren't lost) for codes not in the table.
+ *
+ * @param code Raw error code from `MusicEvent.onPlayError`.
+ * @param t    i18n translate function (typically `useUIKit().t`).
+ */
+export function getPlayErrorMessage(code: number, t: TranslateFn): string {
+  const key = ERROR_CODE_TO_I18N_KEY[code];
+  if (key) return t(key);
+  return t('MusicPanel.PlayFailedUnknown').replace('{code}', String(code));
+}
+
+

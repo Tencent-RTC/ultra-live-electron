@@ -46,11 +46,17 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { TUIDialog, TUIToast, TOAST_TYPE, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import {
   MusicEvent,
+  MusicPlayStatus,
   useMusicState,
 } from 'tuikit-atomicx-vue3-electron';
 import { useMusicLibrary } from '../hooks/useMusicLibrary';
-import { planNextTrack, shouldAutoPlayAfterAdd } from '../hooks/useMusicPlaybackPolicy';
+import {
+  planNextTrackOnCompleted,
+  planNextTrackOnError,
+  shouldAutoPlayAfterAdd,
+} from '../hooks/useMusicPlaybackPolicy';
 import MusicPanel from './MusicPanel/index.vue';
+import { getPlayErrorMessage } from './MusicPanel/helpers';
 import { ipcBridge, IPCMessageType, toPlainIpcPayload, ChildPanelType } from '../ipc';
 import type {
   MusicActionPayload,
@@ -146,6 +152,14 @@ function handleToggleMusicPanel() {
 function onMusicAction(payload: MusicActionPayload) {
   switch (payload.action) {
   case 'startPlay':
+    // User-initiated play (including re-trying a previously failed entry).
+    // Clear any prior unplayable mark and reset the error-round guard so the
+    // auto-play loop treats this as a brand-new probing round.
+    {
+      const item = library.musicList.value.find(i => i.url === payload.url);
+      if (item) library.clearUnplayable(item.id);
+      errorRoundOriginUrl.value = null;
+    }
     musicState.startPlay(payload.url).catch((error) => {
       console.error('[MusicButton] startPlay failed:', error);
     });
@@ -182,6 +196,10 @@ function onMusicAction(payload: MusicActionPayload) {
           type: TOAST_TYPE.SUCCESS,
           message: t('MusicPanel.AddedToast').replace('{name}', item.name),
         });
+        // A brand-new entry may be exactly what the user adds to break a
+        // currently halted error round. Reset the guard so the next failure
+        // (if any) starts a fresh probing round that includes this new entry.
+        errorRoundOriginUrl.value = null;
       } else {
         // Same url/path was already in the library — surface a clear warning
         // instead of misleading "Added" success toast.
@@ -224,10 +242,25 @@ function onMusicAction(payload: MusicActionPayload) {
 }
 
 // ==================== MusicState event handlers (main window) ====================
-// onPlayCompleted: app-layer decides the "play next" policy. Keep it in the main
-// window so child windows don't need to coordinate scheduling.
+// Error-round guard. The auto-play loop walks the whole library on every
+// `onPlayError` (including tracks previously marked unplayable), so the user
+// gets a chance to recover transient failures automatically. Without a guard,
+// a library where *every* track is unplayable would loop forever, producing a
+// toast / IPC storm.
+//
+// `errorRoundOriginUrl` records the url that kicked off the current failure
+// round. As soon as `planNextTrackOnError` would route us back to this url —
+// meaning we've already tried every other entry without success — we stop the
+// loop and wait for the user to act (or for `onPlayCompleted` / Playing-state
+// to signal a recovered track and clear the guard).
+const errorRoundOriginUrl = ref<string | null>(null);
+
+// onPlayCompleted: a track played end-to-end → the round is definitively
+// "healthy". Reset the guard so the next error (if any) restarts a fresh
+// round of probing.
 const onPlayCompleted = ({ url }: { url: string }) => {
-  const next = planNextTrack(library.musicList.value, url);
+  errorRoundOriginUrl.value = null;
+  const next = planNextTrackOnCompleted(library.musicList.value, url);
   if (next) {
     musicState.startPlay(next.url).catch((error) => {
       console.error('[MusicButton] auto-play next failed:', error);
@@ -235,9 +268,10 @@ const onPlayCompleted = ({ url }: { url: string }) => {
   }
 };
 
-// onPlayError: forward to child window for toast (child owns its own localized toast
-// UI); also surface as a local toast when child is closed / Mac self-managed mode,
-// so the user always sees the error.
+// onPlayError: surface a toast (locally on Mac / forwarded via IPC on Windows),
+// mark the failing entry as unplayable (UI hint only — never used as a filter),
+// then advance to the next track. The error-round guard breaks the loop once
+// we've cycled through the whole library without any successful playback.
 const onPlayError = (payload: { url: string; code: number }) => {
   if (props.isShowingInChildWindow && isMusicChildOpen.value) {
     ipcBridge.sendToChild(IPCMessageType.MUSIC_EVENT, {
@@ -248,10 +282,180 @@ const onPlayError = (payload: { url: string; code: number }) => {
   } else {
     TUIToast({
       type: TOAST_TYPE.ERROR,
-      message: t('MusicPanel.PlayFailedWithCode').replace('{code}', String(payload.code)),
+      message: getPlayErrorMessage(payload.code, t),
     });
   }
+
+  library.markUnplayable(payload.url);
+
+  const next = planNextTrackOnError(library.musicList.value, payload.url);
+  if (!next) {
+    // Library is empty or single-track — definitive stop, no further probing.
+    errorRoundOriginUrl.value = null;
+    return;
+  }
+  // Multi-track path: detect "we've come full circle on this failure round".
+  if (errorRoundOriginUrl.value === null) {
+    // Start a fresh round, with the failed url as its origin.
+    errorRoundOriginUrl.value = payload.url;
+  } else if (next.url === errorRoundOriginUrl.value) {
+    // Every track in the library has failed in this round → halt to avoid a
+    // tight error loop. Wait for the user to manually retry or add a new
+    // track.
+    errorRoundOriginUrl.value = null;
+    return;
+  }
+  musicState.startPlay(next.url).catch((error) => {
+    console.error('[MusicButton] auto-play after error failed:', error);
+  });
 };
+
+// playStatus transitions into Playing → a track is actually producing audio.
+//
+// Two follow-up effects:
+// 1) End the error-probing round so the next failure (if any) starts fresh.
+// 2) Clear the "Unplayable" mark on the now-playing entry. The flag was a
+//    snapshot of an older failure; if the same track is now producing audio
+//    (e.g. file was replaced, network came back), the UI should reflect the
+//    current reality rather than show a stale red tag.
+watch(() => musicState.playStatus.value, (status) => {
+  if (status !== MusicPlayStatus.Playing) return;
+  errorRoundOriginUrl.value = null;
+  const url = musicState.playURL.value;
+  if (!url) return;
+  const item = library.musicList.value.find(i => i.url === url);
+  if (item && item.isUnplayable) {
+    library.clearUnplayable(item.id);
+  }
+});
+
+// Authoritative-duration backfill into the library.
+//
+// MusicState exposes two duration sources that may differ:
+//  1) `getMusicDurationInMS()`, called synchronously by AtomicX `startPlay`
+//     before the SDK has decoded anything. For some formats (notably VBR mp3)
+//     this returns a rough estimate based on bitrate × filesize that can be
+//     off by several seconds.
+//  2) `onPlayProgress(id, curPtsMS, durationMS)`, fired once the SDK is
+//     actually decoding the file. This durationMS is the authoritative value.
+//
+// The progress bar shows whatever `totalDuration` currently holds, so it
+// updates from estimate → authoritative seamlessly. The library entry's
+// `durationMs`, however, used to be filled exactly once from whatever value
+// happened to be in `totalDuration` first — which is usually the estimate.
+// That left the list row showing a stale, inaccurate duration forever.
+//
+// Naive fix v1: "only backfill once playStatus reaches Playing, then always
+// overwrite". That works for the steady-state but loses against a track-
+// switch race: when track N fails and we auto-advance to track N+1, the
+// SDK's `onPlayProgress` does not carry a url and so its durationMS is
+// written into the shared `totalDuration` ref under whatever `playURL` is
+// currently observed. If reactive scheduling lands in just the wrong order
+// a watch tick could read `[playURL = failed track, totalDuration = next
+// track's real duration]` and pollute the failed track's library entry.
+//
+// Naive fix v2 (url-stability grace): the watch defers backfill until the
+// current `playURL` has been stable for `BACKFILL_URL_STABILITY_MS`. Each
+// `playURL` change cancels pending writes. Re-validates the snapshot url
+// against `playURL.value` at write time.
+//
+// Hardened fix v3 (this version): v2 still permits a single failure mode in
+// which the SDK delivers `onPlayProgress` for the new track before the JS-
+// side `startPlay(newUrl)` finishes running, leaving the snapshot inside the
+// watch with mixed-track values. To kill that residual race, in addition to
+// v2 we apply two stricter invariants:
+//   1) **Never backfill into a track that is marked unplayable.** A track
+//      can only be marked unplayable by `onPlayError`, which happens before
+//      we advance to the next track. So if a stray `totalDuration` from
+//      track N+1 reaches a watch tick whose snapshot `url` is still the
+//      failed track N, the unplayable flag will already be true and we
+//      refuse to write — this is the hard backstop that the user-visible
+//      bug needed.
+//   2) **Per-url duration stability**: only backfill once we have observed
+//      the same `(url, totalDuration)` pair at least twice in a row. A
+//      stale single-frame `totalDuration` that briefly mismatches the
+//      current url will never get a second frame in agreement, so it is
+//      filtered out.
+const BACKFILL_URL_STABILITY_MS = 1500;
+let backfillUrlChangedAt = 0;
+let backfillScheduled: { url: string; timer: ReturnType<typeof setTimeout> } | null = null;
+// Track the last `(url, duration)` we saw arrive together so we can require
+// two consecutive agreeing frames before writing to the library.
+let lastObservedUrl: string | null = null;
+let lastObservedDuration = 0;
+
+function cancelScheduledBackfill() {
+  if (backfillScheduled) {
+    clearTimeout(backfillScheduled.timer);
+    backfillScheduled = null;
+  }
+}
+
+// Reset the stability clock the moment `playURL` changes. Any in-flight
+// `totalDuration` write that arrives within the grace window after a url
+// switch is treated as suspect (it may belong to the previous track) and
+// the backfill is deferred until url has been stable again.
+watch(() => musicState.playURL.value, () => {
+  backfillUrlChangedAt = Date.now();
+  cancelScheduledBackfill();
+  lastObservedUrl = null;
+  lastObservedDuration = 0;
+});
+
+watch(
+  [() => musicState.playStatus.value, () => musicState.playURL.value, () => musicState.totalDuration.value],
+  ([status, url, duration]) => {
+    if (status !== MusicPlayStatus.Playing) return;
+    if (!url || duration <= 0) return;
+
+    // Invariant 2: require two consecutive frames to agree on `(url, duration)`
+    // before treating the value as trustworthy. A single stray progress
+    // callback from a different track cannot fake this — its next progress
+    // tick will carry a different duration or arrive after the url has
+    // already switched.
+    const sameAsLast = lastObservedUrl === url && lastObservedDuration === duration;
+    lastObservedUrl = url;
+    lastObservedDuration = duration;
+    if (!sameAsLast) {
+      return;
+    }
+
+    const sinceUrlChange = Date.now() - backfillUrlChangedAt;
+    const performBackfill = () => {
+      // Re-validate everything at the moment we actually write. By this
+      // time a later url switch could have happened and we must not pollute
+      // the previous track's library entry.
+      if (musicState.playURL.value !== url) return;
+      if (musicState.playStatus.value !== MusicPlayStatus.Playing) return;
+      const currentDuration = musicState.totalDuration.value;
+      if (currentDuration <= 0) return;
+      const item = library.musicList.value.find(i => i.url === url);
+      if (!item) return;
+      // Invariant 1: never backfill into a track that is currently flagged
+      // unplayable. Such tracks are the failed pivot of an error round; any
+      // duration arriving against this url must be a leak from the
+      // subsequently-started replacement track.
+      if (item.isUnplayable) return;
+      if (item.durationMs !== currentDuration) {
+        library.updateMusic(item.id, { durationMs: currentDuration });
+      }
+    };
+    if (sinceUrlChange >= BACKFILL_URL_STABILITY_MS) {
+      // Url has already been stable long enough; safe to write right away.
+      performBackfill();
+      return;
+    }
+    // Defer the write until the url has been stable for the full grace
+    // window. If another url change comes in before then, the url-change
+    // watch above will cancel this pending write entirely.
+    cancelScheduledBackfill();
+    const timer = setTimeout(() => {
+      backfillScheduled = null;
+      performBackfill();
+    }, BACKFILL_URL_STABILITY_MS - sinceUrlChange);
+    backfillScheduled = { url, timer };
+  },
+);
 
 // Observe HIDE_CHILD_PANEL so we know when to stop pushing snapshots.
 // NOTE: we do NOT stopPlay on close — the BGM deliberately survives the panel
@@ -313,6 +517,9 @@ onBeforeUnmount(() => {
     clearTimeout(progressThrottleTimer);
     progressThrottleTimer = null;
   }
+  // Drop any pending duration backfill so a late timer cannot touch the
+  // library after the component is gone.
+  cancelScheduledBackfill();
 });
 </script>
 

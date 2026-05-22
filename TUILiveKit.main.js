@@ -347,7 +347,7 @@ const mainProcessHandlers = {
 
 // 开启crash捕获
 crashReporter.start({
-  productName: 'tui-live-kit-electron',
+  productName: 'tui-live-studio',
   companyName: 'Tencent Cloud',
   submitURL: 'https://www.xxx.com',
   uploadToServer: false,
@@ -928,6 +928,18 @@ function bindIPCEvent() {
   ipcMain.on('app-quit-cancel', () => {
     console.log(`${logPrefix}app-quit-cancel`);
     handleQuitCancel();
+  });
+
+  // Mac path: TUIMessageBox is rendered inside the main window and does NOT
+  // go through the 'window-message' → 'showConfirmDialog' route used by the
+  // Win confirm BrowserWindow. This handshake mirrors the same intent for
+  // the Mac path: as soon as the confirm dialog is visible to the user,
+  // clear the force-quit timeout so the user has unlimited time to decide.
+  // Without this, Mac users who do not respond within QUIT_TIMEOUT_MS see
+  // the app force-quit while the confirmation dialog is still showing.
+  ipcMain.on('app-quit-confirm-shown', () => {
+    console.log(`${logPrefix}app-quit-confirm-shown`);
+    clearQuitTimers();
   });
 
   // Confirm window ready handshake - called when confirm window's Vue component is mounted

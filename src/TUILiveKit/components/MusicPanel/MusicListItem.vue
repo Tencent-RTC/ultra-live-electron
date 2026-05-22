@@ -1,7 +1,7 @@
 <template>
   <div
     class="music-item"
-    :class="{ 'is-active': isActive }"
+    :class="{ 'is-active': isActive, 'is-unplayable': item.isUnplayable }"
   >
     <div class="music-item-main" @click="handlePlay">
       <div class="music-icon">
@@ -63,6 +63,11 @@
       </div>
     </div>
     <div class="music-item-actions">
+      <span
+        v-if="item.isUnplayable"
+        class="unplayable-tag"
+        :title="t('MusicPanel.UnplayableTag')"
+      >{{ t('MusicPanel.UnplayableTag') }}</span>
       <button class="action-btn remove-btn" :title="t('MusicPanel.Remove')" @click.stop="handleRemove">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
@@ -233,13 +238,25 @@ function formatDuration(ms: number): string {
 .music-item-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   opacity: 0;
   transition: opacity 0.15s ease;
 
-  .music-item:hover & {
+  .music-item:hover &,
+  .music-item.is-unplayable & {
+    /* Keep the "Unplayable" tag visible without requiring hover so the user
+       can immediately spot tracks that have been auto-skipped. */
     opacity: 1;
   }
+}
+
+.unplayable-tag {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 500;
+  color: #ef4444;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .action-btn {
