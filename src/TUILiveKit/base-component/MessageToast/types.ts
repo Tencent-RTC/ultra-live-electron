@@ -1,4 +1,9 @@
-export type MessageToastType = 'info' | 'success' | 'warning' | 'error'
+export enum MessageToastType {
+  Info = 'info',
+  Success = 'success',
+  Warning = 'warning',
+  Error = 'error',
+}
 
 export interface MessageToastOptions {
   message: string

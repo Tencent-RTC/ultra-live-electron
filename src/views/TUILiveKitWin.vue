@@ -154,6 +154,7 @@
 import { ref, computed, onMounted, onBeforeMount, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import trtcCloud from '../TUILiveKit/utils/trtcCloud';
+import { releaseMediaResourcesBeforeQuit } from '../TUILiveKit/utils/appQuitCleanup';
 import TUIRoomEngine, { TUISeatMode } from '@tencentcloud/tuiroom-engine-electron';
 import {
   UIKitProvider,
@@ -162,9 +163,9 @@ import {
   IconLiveLoading,
   IconLiveStart,
   IconEndLive,
-  TUIToast,
   IconArrowStrokeSelectDown,
 } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../TUILiveKit/base-component/MessageToast';
 import {
   LiveAudienceList,
   BarrageList,
@@ -185,8 +186,9 @@ import {
   BattleEvent,
 } from 'tuikit-atomicx-vue3-electron';
 import { useElectronLogin, type ForceLogoutNoticePayload } from '../TUILiveKit/hooks/useElectronLogin';
+import { releaseBeautyResourcesOnLogout } from '../TUILiveKit/utils/beautyLogoutCleanup';
 import LiveHeader from '../TUILiveKit/components/LiveHeader/index.vue';
-import LiveScenePanel from '../TUILiveKit/components/LiveScene/LiveScenePanel.vue';
+import LiveScenePanel from '../TUILiveKit/components/LiveScenePanel/index.vue';
 import LiveSettingButton from '../TUILiveKit/components/LiveSettingButton.vue';
 import LiveURLCopy from '../TUILiveKit/components/LiveURLCopy.vue';
 import CoGuestButton from '../TUILiveKit/components/CoGuestButton.vue';
@@ -337,13 +339,15 @@ const handleStartLive = async () => {
       return;
     }
     if (!loginUserInfo.value?.userId) {
-      TUIToast.info({
+      showMessage({
+        type: MessageToastType.Info,
         message: t('Please login first'),
       });
       return;
     }
     if (isNetworkOffline()) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return;
@@ -369,7 +373,8 @@ const handleStartLive = async () => {
   } catch (error: any) {
     loading.value = false;
     if (isNetworkTimeoutError(error)) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return;
@@ -383,7 +388,7 @@ const handleStartLive = async () => {
       startSystemAudioLoopbackSafely();
       return;
     }
-    TUIToast.error({
+    showMessage({ type: MessageToastType.Error,
       message: t('Failed to create live'),
     });
   }
@@ -599,19 +604,25 @@ const onConfirmDialogAction = async (payload: ConfirmDialogActionPayload) => {
 
     isAppQuitHandling.value = true;
     try {
-      if (!shouldEndLiveBeforeQuit) {
-        window.ipcRenderer?.send('app-quit-confirmed');
-        return;
+      let canQuit = true;
+      if (shouldEndLiveBeforeQuit) {
+        const endLiveSuccess = loading.value
+          ? !isInLive.value
+          : await handleEndLive({ showErrorToast: false });
+        canQuit = endLiveSuccess && !isInLive.value;
       }
-      const endLiveSuccess = loading.value
-        ? !isInLive.value
-        : await handleEndLive({ showErrorToast: false });
-      if (!endLiveSuccess || isInLive.value) {
-        TUIToast.error({
+      if (!canQuit) {
+        showMessage({
+          type: MessageToastType.Error,
           message: t('Failed to end live, please try again later'),
         });
         window.ipcRenderer?.send('app-quit-cancel');
       } else {
+        // Release the camera/mic held by the native (isIPCMode) TRTC engine
+        // BEFORE signalling quit. The main process hard-exits right after
+        // receiving app-quit-confirmed, so without this the camera LED would
+        // linger for a few seconds. See releaseMediaResourcesBeforeQuit.
+        await releaseMediaResourcesBeforeQuit();
         window.ipcRenderer?.send('app-quit-confirmed');
       }
     } finally {
@@ -648,7 +659,8 @@ const handleEndLive = async (options: { showErrorToast?: boolean } = {}): Promis
     }
     if (isNetworkOffline()) {
       if (showErrorToast) {
-        TUIToast.error({
+        showMessage({
+          type: MessageToastType.Error,
           message: t('Network error, please check your connection and try again'),
         });
       }
@@ -662,7 +674,8 @@ const handleEndLive = async (options: { showErrorToast?: boolean } = {}): Promis
   } catch (error: any) {
     console.error('End live error:', error);
     if (showErrorToast && isNetworkTimeoutError(error)) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
     }
@@ -712,6 +725,7 @@ const {
   cleanupEventListeners,
   handleLogout: handleElectronLogout,
 } = useElectronLogin({
+  onBeforeLogout: releaseBeautyResourcesOnLogout,
   onLogout: onLoggedOut,
   onLoginFailed,
   onForceLogoutNotice: (payload) => {
@@ -870,14 +884,14 @@ const handleLiveEnded = (eventInfo: LiveListEventInfo) => {
     return;
   }
   if (eventInfo.reason === LiveEndedReason.endedByServer) {
-    TUIToast.warning({
+    showMessage({ type: MessageToastType.Warning,
       message: t('Stream closed due to content violation'),
       duration: 5000,
     });
     return;
   }
   // Fallback for unknown ending reasons
-  TUIToast.warning({
+  showMessage({ type: MessageToastType.Warning,
     message: t('The live room has been closed'),
     duration: 5000,
   });
@@ -928,7 +942,7 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
     coverUrl: (form.coverUrl || '').trim(),
   };
   if (isSvgCoverUrl(updatedForm.coverUrl)) {
-    TUIToast.error({
+    showMessage({ type: MessageToastType.Error,
       message: t('Unsupported image format'),
     });
     return;
@@ -939,7 +953,7 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
   }
 
   if (isNetworkOffline()) {
-    TUIToast.error({
+    showMessage({ type: MessageToastType.Error,
       message: t('Network error, please check your connection and try again'),
     });
     return;
@@ -963,7 +977,8 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
     liveParamsEditForm.value = updatedForm;
   } catch (error: unknown) {
     if (isNetworkTimeoutError(error)) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return;
@@ -973,7 +988,7 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
       liveName: updatedForm.liveName,
       hasCoverUrl: Boolean(updatedForm.coverUrl),
     });
-    TUIToast.error({
+    showMessage({ type: MessageToastType.Error,
       message: t('Save failed'),
     });
   } finally {

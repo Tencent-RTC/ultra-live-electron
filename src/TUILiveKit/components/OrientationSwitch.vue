@@ -23,11 +23,10 @@ import { ref, watch } from 'vue';
 import { TUISeatLayoutTemplate } from '../types';
 import {
   useUIKit,
-  TUIToast,
-  TOAST_TYPE,
   IconPortrait,
   IconHorizontalMode,
 } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { useLiveListState, LiveOrientation } from 'tuikit-atomicx-vue3-electron';
 
 const { t } = useUIKit();
@@ -91,9 +90,9 @@ watch(
 
 const handleOrientationSwitch = () => {
   if (currentLive.value?.liveId) {
-    TUIToast({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Cannot switch orientation during live streaming'),
-      type: TOAST_TYPE.ERROR,
     });
     return;
   }

@@ -8,7 +8,8 @@
 </template>
 
 <script lang="ts" setup>
-import { IconCopy, TUIToast, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { IconCopy, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { copyToClipboard } from '../utils/utils';
 
 const props = defineProps<{
@@ -22,7 +23,8 @@ const handleCopyLiveID = async () => {
     return;
   }
   if (!props.liveId) {
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Copy failed'),
     });
     return;
@@ -30,12 +32,14 @@ const handleCopyLiveID = async () => {
 
   try {
     await copyToClipboard(props.liveId);
-    TUIToast.success({
+    showMessage({
+      type: MessageToastType.Success,
       message: t('Copy successful'),
     });
   } catch (error) {
     console.warn('[LiveURLCopy] copyToClipboard failed:', error);
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Copy failed'),
     });
   }

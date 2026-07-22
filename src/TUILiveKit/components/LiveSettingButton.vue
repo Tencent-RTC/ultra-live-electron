@@ -43,8 +43,9 @@
 <script lang="ts" setup>
 import { computed, defineEmits, defineProps, ref } from 'vue';
 import {
-  IconEditor, TUIDialog, TUIInput, TUIToast, useUIKit
+  IconEditor, TUIDialog, TUIInput, useUIKit
 } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import {
   fetchUploadConfig,
   UPLOAD_ALLOWED_MIME_TYPES,
@@ -122,13 +123,15 @@ const handleLiveNameInput = (value: string | number) => {
 const handleConfirm = () => {
   const liveName = form.value.liveName;
   if (!liveName.trim()) {
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Please enter the live name'),
     });
     return;
   }
   if (getUtf8ByteLength(liveName) > liveNameMaxUtf8Bytes) {
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Live name is too long'),
     });
     return;

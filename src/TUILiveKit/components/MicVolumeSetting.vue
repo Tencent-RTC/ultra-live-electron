@@ -19,7 +19,8 @@
 
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
-import { TUISlider, TUIToast, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { TUISlider, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { DeviceError, DeviceStatus, useDeviceState, useLiveListState } from 'tuikit-atomicx-vue3-electron';
 import AudioIcon from '../base-component/AudioIcon.vue';
 
@@ -67,17 +68,20 @@ const switchMicrophoneStatus = () => {
   if (microphoneLastError.value !== DeviceError.NoError) {
     switch (microphoneLastError.value) {
     case DeviceError.NoDeviceDetected:
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('No device detected'),
       });
       break;
     case DeviceError.NoSystemPermission:
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('No system permission'),
       });
       break;
     case DeviceError.NotSupportCapture:
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Not support capture'),
       });
       break;

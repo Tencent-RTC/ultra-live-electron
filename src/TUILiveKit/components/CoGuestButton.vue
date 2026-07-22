@@ -28,7 +28,8 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { useUIKit, TUIDialog, TUIToast, TOAST_TYPE, IconCoGuest } from '@tencentcloud/uikit-base-component-vue3';
+import { useUIKit, TUIDialog, IconCoGuest } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { CoGuestPanel, CoHostStatus, useCoGuestState, useCoHostState, useLiveListState, useLiveSeatState, useLoginState } from 'tuikit-atomicx-vue3-electron';
 import { ipcBridge, IPCMessageType, toPlainIpcPayload, ChildPanelType } from '../ipc';
 import { ERROR_MESSAGE } from './CoGuestPanel/constants';
@@ -74,7 +75,7 @@ const handleCoGuest = () => {
     const message = !currentLive.value?.liveId
       ? t('Cannot use co-guest before live starts')
       : t('Cannot enable audience co-hosting while co-hosting with other hosts');
-    TUIToast({ type: TOAST_TYPE.ERROR, message });
+    showMessage({ type: MessageToastType.Error, message });
     return;
   }
 
@@ -115,7 +116,7 @@ const onAcceptCoGuest = async (payload: { userId: string }) => {
   } catch (error: any) {
     console.warn('[CoGuestButton] onAcceptCoGuest error', error);
     const message = t(ERROR_MESSAGE[error.code as keyof typeof ERROR_MESSAGE] || 'Accept co-guest request failed');
-    TUIToast.error({ message });
+    showMessage({ type: MessageToastType.Error, message });
   }
 };
 
@@ -124,7 +125,8 @@ const onRejectCoGuest = async (payload: { userId: string }) => {
     await rejectApplication({userId: payload.userId});
   } catch (error) {
     console.warn('[CoGuestButton] onRejectCoGuest error', error);
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Reject co-guest request failed'),
     });
   }
@@ -135,7 +137,8 @@ const onKickOffSeat = async (payload: { userId: string }) => {
     await kickUserOutOfSeat({userId: payload.userId});
   } catch (error) {
     console.warn('[CoGuestButton] onKickOffSeat error', error);
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Disconnect co-guest failed'),
     });
   }

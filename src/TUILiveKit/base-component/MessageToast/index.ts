@@ -5,9 +5,11 @@ import { MESSAGE_TOAST_CONTAINER_ID } from './constants'
 // the notification container does not introduce a cross-barrel circular
 // dependency. See `../Notification/constants.ts` for the rationale.
 import { NOTIFICATION_CONTAINER_ID } from '../Notification/constants'
-import type { MessageToastOptions, MessageToastType } from './types'
+import { MessageToastType } from './types'
+import type { MessageToastOptions } from './types'
 
-export type { MessageToastOptions, MessageToastType }
+export type { MessageToastOptions }
+export { MessageToastType }
 // Re-export from the leaf module to keep the public API stable.
 export { MESSAGE_TOAST_CONTAINER_ID }
 
@@ -21,10 +23,10 @@ interface MessageToastItem {
 // Type-based auto-dismiss defaults (in milliseconds):
 // success results disappear faster; failure/abnormal results stay longer.
 const DEFAULT_DURATION: Record<MessageToastType, number> = {
-  success: 3000,
-  info: 5000,
-  warning: 5000,
-  error: 5000,
+  [MessageToastType.Success]: 3000,
+  [MessageToastType.Info]: 5000,
+  [MessageToastType.Warning]: 5000,
+  [MessageToastType.Error]: 5000,
 }
 
 // Default top offset (px) when no Notification card is on screen.
@@ -124,16 +126,23 @@ const ensureMounted = (): void => {
 }
 
 /**
- * Show a lightweight, auto-dismissing message toast at the top-right corner.
- * Multiple toasts stack vertically. This is used for result notifications
- * (e.g. invitation rejected/timeout) on the main window so they are not
- * covered by child windows on Windows.
+ * Show a lightweight, auto-dismissing message toast at the top-right corner of
+ * the main window. Multiple toasts stack vertically. Use this everywhere on the
+ * main window instead of calling the kit's TUIToast directly.
+ *
+ * Both macOS and Windows main windows now render their video preview through a
+ * native surface and open dialogs as real child windows, so the kit's TUIToast
+ * (rendered inside the web layer) can be occluded by that native surface / an
+ * opened child window on either platform. This in-house toast is rendered into
+ * `document.body` at a fixed top-right position that stays clear of those
+ * surfaces, so it remains visible on both platforms — hence there is no longer
+ * a platform branch here.
  */
 export const showMessage = (options: MessageToastOptions): void => {
   ensureMounted()
   // Avoid overlapping a visible Notification invitation card.
   applyContainerPosition()
-  const type = options.type || 'info'
+  const type = options.type || MessageToastType.Info
   messages.push({
     id: ++seed,
     type,
@@ -141,3 +150,11 @@ export const showMessage = (options: MessageToastOptions): void => {
     duration: options.duration ?? DEFAULT_DURATION[type],
   })
 }
+
+/**
+ * Backward-compatible alias for {@link showMessage}. Historically this was the
+ * "raw in-house" variant used when `showMessage` still branched to TUIToast on
+ * macOS; the branch has since been removed, so the two are identical. Kept as an
+ * export to avoid breaking any existing import sites.
+ */
+export const showWindowMessage = showMessage

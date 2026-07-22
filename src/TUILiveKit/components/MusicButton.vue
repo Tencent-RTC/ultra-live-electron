@@ -43,7 +43,8 @@
 
 <script lang="ts" setup>
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { TUIDialog, TUIToast, TOAST_TYPE, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { TUIDialog, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import {
   MusicEvent,
   MusicPlayStatus,
@@ -192,8 +193,8 @@ function onMusicAction(payload: MusicActionPayload) {
       });
       const isNewlyAdded = library.musicList.value.length > before;
       if (isNewlyAdded) {
-        TUIToast({
-          type: TOAST_TYPE.SUCCESS,
+        showMessage({
+          type: MessageToastType.Success,
           message: t('MusicPanel.AddedToast').replace('{name}', item.name),
         });
         // A brand-new entry may be exactly what the user adds to break a
@@ -203,8 +204,8 @@ function onMusicAction(payload: MusicActionPayload) {
       } else {
         // Same url/path was already in the library — surface a clear warning
         // instead of misleading "Added" success toast.
-        TUIToast({
-          type: TOAST_TYPE.WARNING,
+        showMessage({
+          type: MessageToastType.Warning,
           message: t('MusicPanel.AlreadyExistsToast'),
         });
       }
@@ -215,7 +216,7 @@ function onMusicAction(payload: MusicActionPayload) {
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('MusicPanel.AddFailed');
-      TUIToast({ type: TOAST_TYPE.ERROR, message });
+      showMessage({ type: MessageToastType.Error, message });
     }
     break;
   }
@@ -280,8 +281,8 @@ const onPlayError = (payload: { url: string; code: number }) => {
       code: payload.code,
     });
   } else {
-    TUIToast({
-      type: TOAST_TYPE.ERROR,
+    showMessage({
+      type: MessageToastType.Error,
       message: getPlayErrorMessage(payload.code, t),
     });
   }

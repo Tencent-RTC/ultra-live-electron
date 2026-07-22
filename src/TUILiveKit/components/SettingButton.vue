@@ -63,8 +63,8 @@ import {
   TUISelect,
   TUIOption,
   IconSetting,
-  TUIToast,
 } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { AudioSettingPanel, useVideoMixerState, useLiveListState, useDeviceState } from 'tuikit-atomicx-vue3-electron';
 import {
   ipcBridge,
@@ -220,7 +220,7 @@ const onApplyLiveSetting = async (payload: ApplyLiveSettingPayload, from?: Windo
   } catch (error) {
     console.warn('[SettingButton] apply live setting failed:', payload, error);
     if (payload.action === 'startSpeakerTest') {
-      TUIToast.error({ message: t('Speaker test failed to start, please check device connection') });
+      showMessage({ type: MessageToastType.Error, message: t('Speaker test failed to start, please check device connection') });
     }
   }
 };

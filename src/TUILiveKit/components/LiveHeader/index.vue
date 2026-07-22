@@ -100,7 +100,8 @@
 
 <script lang="ts" setup>
 import { onMounted, onBeforeUnmount, ref, computed, type Ref } from 'vue';
-import { useUIKit, TUIToast, TOAST_TYPE, IconArrowStrokeSelectDown } from '@tencentcloud/uikit-base-component-vue3';
+import { useUIKit, IconArrowStrokeSelectDown } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../../base-component/MessageToast';
 import TUIRoomEngine from '@tencentcloud/tuiroom-engine-electron';
 import { useLoginState, Avatar } from 'tuikit-atomicx-vue3-electron';
 import type { TRTCStatistics } from 'trtc-electron-sdk';
@@ -311,17 +312,17 @@ async function onSaveProfileDialog(data: { userName: string; avatarUrl: string }
       avatarUrl: data.avatarUrl,
     });
 
-    TUIToast({
+    showMessage({
+      type: MessageToastType.Success,
       message: t('Save successfully'),
-      type: TOAST_TYPE.SUCCESS,
     });
 
     showProfileDialog.value = false;
   } catch (error) {
     logger.error(`${logPrefix} Save user profile error:`, error);
-    TUIToast({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Save failed'),
-      type: TOAST_TYPE.ERROR,
     });
   }
 }
@@ -369,6 +370,7 @@ onBeforeUnmount(() => {
   -webkit-user-select: none;
   -webkit-app-region: drag;
   background-color: var(--bg-color-topbar);
+  cursor: move;
 
   .left {
     margin-left: 8px;
