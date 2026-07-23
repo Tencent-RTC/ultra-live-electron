@@ -1,11 +1,13 @@
 import trtcCloud from '../utils/trtcCloud';
-import { TUIToast, useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 
 export function useSystemAudioLoopback(tag: string) {
   const { t } = useUIKit();
 
   const notifySystemAudioEnableFailed = () => {
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Failed to enable system audio. Please check permissions or driver support'),
     });
   };

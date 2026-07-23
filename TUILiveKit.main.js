@@ -206,7 +206,7 @@ function getDefaultPanelSize(panelType) {
     ? windowMap.main.getSize()
     : [1200, 800];
   const sizeMap = {
-    'Camera':              { width: 600, height: 400 },
+    'Camera':              { width: 680, height: 600 },
     'Screen':              { width: mainW - 150, height: mainH - 80 },
     'Image':               { width: 600, height: 500 },
     'Rename':              { width: 480, height: 176 },
@@ -619,6 +619,15 @@ function bindIPCEvent() {
         // Confirm dialog is now visible and the user can interact with it.
         // Clear the force-quit timeout so the user has unlimited time to decide.
         clearQuitTimers();
+        // On macOS the confirm window is a document-modal sheet attached to
+        // the main window. Its z-order relative to the camera/setting child
+        // BrowserWindow (also a child of main) is ambiguous, so the child can
+        // occlude the confirm sheet. Hide the child here as a safety net so
+        // the confirmation is always visible. Windows keeps the child intact
+        // because its centered modal confirm window already sits on top.
+        if (process.platform === 'darwin' && isWindowAlive(windowMap.child) && windowMap.child.isVisible()) {
+          windowMap.child.hide();
+        }
         if (isWindowAlive(windowMap.confirm)) {
           windowMap.confirm.show();
         }
@@ -772,6 +781,10 @@ function bindIPCEvent() {
     } else {
       sendToWindow(windowMap.main, 'user-logout', { from: 'child' });
     }
+    // Clear the last panel command so the next open after re-login always
+    // re-centers / re-sizes the child window instead of short-circuiting to a
+    // bare show() (see the open-child handler's `lastChildWindowCommand` guard).
+    lastChildWindowCommand = '';
     if (isWindowAlive(windowMap.child)) {
       windowMap.child.hide();
     }

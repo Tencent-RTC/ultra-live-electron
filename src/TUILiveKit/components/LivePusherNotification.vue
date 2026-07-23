@@ -4,16 +4,14 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch } from 'vue';
-import { useUIKit, TUIToast, TOAST_TYPE } from '@tencentcloud/uikit-base-component-vue3';
+import { useUIKit } from '@tencentcloud/uikit-base-component-vue3';
 import {
   useLiveListState, useCoHostState, CoHostEvent, SeatUserInfo, useLiveSeatState,
   useBattleState, CoHostStatus, useCoGuestState, BattleEvent, useLoginState,
 } from 'tuikit-atomicx-vue3-electron';
 
 import { showNotification, hideNotification } from '../base-component/Notification';
-import { showMessage as showWindowMessage } from '../base-component/MessageToast';
-import type { MessageToastType } from '../base-component/MessageToast';
-import { isMacPlatform } from '../../TUILiveKit/utils/platform';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { BATTLE_REQUEST_TIMEOUT_SECONDS } from './CoHostPanel/constants';
 
 const { loginUserInfo } = useLoginState();
@@ -33,27 +31,6 @@ const { seatList } = useLiveSeatState();
 const { acceptBattle, rejectBattle, subscribeEvent: subscribeBattleEvent, unsubscribeEvent: unsubscribeBattleEvent } = useBattleState();
 
 const { t } = useUIKit();
-
-// Map the in-house MessageToast severity to the kit's TOAST_TYPE enum.
-const TOAST_TYPE_MAP = {
-  info: TOAST_TYPE.INFO,
-  success: TOAST_TYPE.SUCCESS,
-  warning: TOAST_TYPE.WARNING,
-  error: TOAST_TYPE.ERROR,
-} as const;
-
-// Platform-specific transient message:
-//   - macOS: render via the kit's TUIToast.
-//   - Windows: render via the in-house MessageToast (showWindowMessage).
-// Keeping the same `showMessage` signature lets all call sites stay untouched.
-const showMessage = (options: { type?: MessageToastType; message: string }) => {
-  const type = options.type || 'info';
-  if (isMacPlatform()) {
-    TUIToast({ type: TOAST_TYPE_MAP[type], message: options.message });
-  } else {
-    showWindowMessage({ type, message: options.message });
-  }
-};
 
 function safeJsonParse(extensionInfo: string) {
   try {
@@ -115,21 +92,21 @@ const handleCoHostRequestReceived = async ({ inviter, extensionInfo }: { inviter
 
 const handleCoHostUserLeft = ({ userInfo }: { userInfo: SeatUserInfo }) => {
   if (coHostStatus.value === CoHostStatus.Connected) {
-    showMessage({ type: 'info', message: t('Co-host user left event', { userName: userInfo.userName || userInfo.userId }) });
+    showMessage({ type: MessageToastType.Info, message: t('Co-host user left event', { userName: userInfo.userName || userInfo.userId }) });
   }
 };
 const handleCoHostRequestCancelled = ({ inviter }: { inviter: SeatUserInfo }) => {
   hideNotification();
-  showMessage({ type: 'info', message: t('Co-host request cancelled by user', { userName: inviter.userName || inviter.userId }) });
+  showMessage({ type: MessageToastType.Info, message: t('Co-host request cancelled by user', { userName: inviter.userName || inviter.userId }) });
 }
 
 const handleCoHostRequestRejected = ({ invitee }: { invitee: SeatUserInfo }) => {
-  showMessage({ type: 'info', message: t('Invitation rejected by user', { userName: invitee.userName || invitee.userId }) });
+  showMessage({ type: MessageToastType.Info, message: t('Invitation rejected by user', { userName: invitee.userName || invitee.userId }) });
 };
 
 const handleCoHostRequestTimeout = ({ inviter, invitee }: { inviter: SeatUserInfo; invitee: SeatUserInfo }) => {
   if (inviter.userId === loginUserInfo.value?.userId) {
-    showMessage({ type: 'info', message: t('Invitation timeout for user', { userName: invitee.userName || invitee.userId }) });
+    showMessage({ type: MessageToastType.Info, message: t('Invitation timeout for user', { userName: invitee.userName || invitee.userId }) });
   }
 };
 
@@ -161,13 +138,13 @@ const onBattleRequestReceived = (eventInfo: { battleId: string, inviter: SeatUse
   });
 };
 const onBattleRequestCancelled = (eventInfo: { battleId: string, inviter: SeatUserInfo, invitee: SeatUserInfo }) => {
-  showMessage({ type: 'info', message: t('Battle request cancelled by user', { userName: eventInfo.inviter.userName || eventInfo.inviter.userId}) });
+  showMessage({ type: MessageToastType.Info, message: t('Battle request cancelled by user', { userName: eventInfo.inviter.userName || eventInfo.inviter.userId}) });
   hideNotification();
 };
 
 const onBattleRequestRejected = (eventInfo: { battleId: string, inviter: SeatUserInfo, invitee: SeatUserInfo }) => {
   if (eventInfo.inviter.userId === loginUserInfo.value?.userId) {
-    showMessage({ type: 'info', message: t('Battle request rejected by user', { userName: eventInfo.invitee.userName || eventInfo.invitee.userId }) });
+    showMessage({ type: MessageToastType.Info, message: t('Battle request rejected by user', { userName: eventInfo.invitee.userName || eventInfo.invitee.userId }) });
   }
 };
 
@@ -189,12 +166,12 @@ const onBattleRequestTimeout = (eventInfo: { battleId: string, inviter: SeatUser
   timeoutTimer = setTimeout(() => {
     if (timeoutUsers.length === 1) {
       showMessage({
-        type: 'info',
+        type: MessageToastType.Info,
         message: t('Battle request timeout for user', { userName: timeoutUsers[0] })
       });
     } else {
       showMessage({
-        type: 'info',
+        type: MessageToastType.Info,
         message: t('Battle request timeout for multiple users', { userName: timeoutUsers.join('、') })
       });
     }

@@ -177,7 +177,7 @@ function handleClose() {
   max-height: 100% !important;
   min-height: 0 !important;
   border-radius: 0;
-  padding: 20px !important;
+  padding: 0 20px 20px 20px !important;
   display: flex;
   flex-direction: column;
 

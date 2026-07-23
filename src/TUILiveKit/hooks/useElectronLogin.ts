@@ -1,6 +1,7 @@
 import { ref, Ref, computed } from 'vue';
 import { useLoginState, useRoomEngine, useLiveListState, useLiveErrorModal } from 'tuikit-atomicx-vue3-electron';
-import { TUIToast, TOAST_TYPE, useUIKit, TUIMessageBox } from '@tencentcloud/uikit-base-component-vue3';
+import { useUIKit, TUIMessageBox } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import TUIRoomEngine, { TUIRoomEvents } from '@tencentcloud/tuiroom-engine-electron';
 import logger from '../utils/logger';
 import { USER_INFO_STORAGE_KEY } from '../utils/userInfoStorage';
@@ -52,6 +53,13 @@ export interface ForceLogoutNoticePayload {
 }
 
 export interface UseElectronLoginOptions {
+  /**
+   * Invoked inside the logout cleanup, right BEFORE the underlying `logout()`
+   * runs. Use it to release resources that must be torn down while the native
+   * session is still alive (e.g. beauty plugins). Covers both manual and force
+   * logout. Failures are caught and logged so they never block logout.
+   */
+  onBeforeLogout?: () => void | Promise<void>;
   onLogout?: () => void | Promise<void>;
   onLoginFailed?: () => void;
   onForceLogoutNotice?: (payload: ForceLogoutNoticePayload) => void | Promise<void>;
@@ -84,6 +92,7 @@ interface LiveModalErrorInput {
  */
 export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElectronLoginReturn {
   const {
+    onBeforeLogout,
     onLogout,
     onLoginFailed,
     onForceLogoutNotice,
@@ -138,6 +147,13 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
     logoutInProgress = true;
     try {
       cleanupEventListeners();
+      // Release pre-logout resources (e.g. beauty plugins) while the native
+      // session is still alive. Best-effort: never block logout on failure.
+      try {
+        await Promise.resolve(onBeforeLogout?.());
+      } catch (error) {
+        logger.error(`${logPrefix}onBeforeLogout callback failed:`, { source, error });
+      }
       await logout();
       window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
       resetLoginRuntimeState();
@@ -374,8 +390,8 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
     }
 
     if (errorMessage) {
-      TUIToast({
-        type: TOAST_TYPE.ERROR,
+      showMessage({
+        type: MessageToastType.Error,
         message: errorMessage,
       });
     }
@@ -592,8 +608,8 @@ export function useElectronLogin(options: UseElectronLoginOptions = {}): UseElec
         } catch (error) {
           logger.error(`${logPrefix}handleLogout: end live failed:`, error);
           // Show error message but continue with logout
-          TUIToast({
-            type: TOAST_TYPE.ERROR,
+          showMessage({
+            type: MessageToastType.Error,
             message: t('End live failed when log out'),
           });
           // Continue with logout even if end live failed

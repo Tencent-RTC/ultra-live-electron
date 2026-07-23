@@ -17,7 +17,8 @@
 
 <script lang="ts" setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { useUIKit, TUIToast, TOAST_TYPE, IconLayoutTemplate } from '@tencentcloud/uikit-base-component-vue3';
+import { useUIKit, IconLayoutTemplate } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { useCoHostState, CoHostStatus, useLiveListState, TUIErrorCode } from 'tuikit-atomicx-vue3-electron';
 import LayoutConfigPanelDialog from './LayoutConfigPanel/LayoutConfigPanelDialog.vue';
 import { TUISeatLayoutTemplate } from '../types';
@@ -66,7 +67,7 @@ watch(
 
 const handleSwitchLayout = () => {
   if (disabled.value) {
-    TUIToast({ type: TOAST_TYPE.ERROR, message: t('Layout switching is not available during co-hosting') });
+    showMessage({ type: MessageToastType.Error, message: t('Layout switching is not available during co-hosting') });
     return;
   }
   if (props.isShowingInChildWindow) {
@@ -93,7 +94,7 @@ async function handleLayoutConfirm(options: { template: TUISeatLayoutTemplate | 
       if (error.code === TUIErrorCode.ERR_FREQ_LIMIT) {
         errorMessage = t('Operation too frequent, please try again later');
       }
-      TUIToast({ type: TOAST_TYPE.ERROR, message: errorMessage });
+      showMessage({ type: MessageToastType.Error, message: errorMessage });
     }
   } else {
     layoutSwitchVisible.value = false;

@@ -60,6 +60,8 @@ import MoreIcon from './icons/MoreIcon.vue';
 import CameraIcon from './icons/CameraIcon.vue';
 import VideoIcon from './icons/VideoIcon.vue';
 import vClickOutside from '../../utils/vClickOutside';
+import useVideoEffectManager from '../../utils/useVideoEffectManager';
+import { deleteBeautyProperties } from '../../utils/beautyPropertiesStore';
 
 const { t } = useUIKit();
 
@@ -92,6 +94,7 @@ type SceneMenuSyncDetail = {
 const SCENE_MENU_SYNC_EVENT = 'live-scene-panel:menu-sync';
 
 const { updateMediaSource, removeMediaSource, activeMediaSource } = useVideoMixerState();
+const videoEffectManager = useVideoEffectManager();
 
 const getMaterialKey = (source: Partial<MediaSource> | null | undefined) => `${source?.sourceType ?? ''}::${source?.sourceId ?? ''}`;
 const isMaterialActive = computed(() => getMaterialKey(activeMediaSource.value) === getMaterialKey(props.material));
@@ -247,6 +250,30 @@ const getMaterialControls = (mediaSourceType: TRTCMediaSourceType) => {
 
 const handleDeleteMaterial = async (material: MediaSource) => {
   try {
+    // For camera sources, tear down the beauty/video-effect plugin BEFORE
+    // removing the media source. The plugin is keyed by the camera deviceId
+    // (== sourceId) and lives in a module-level singleton, so stopping it here
+    // releases the native BeautyPlugin (emits "[I]BeautyPlugin: destroyed").
+    // Without this, removing the camera leaves the plugin running on a device
+    // that is no longer in the mixer.
+    if (material.sourceType === TRTCMediaSourceType.kCamera && material.sourceId != null) {
+      const cameraId = String(material.sourceId);
+      try {
+        // Flush a clean (un-beautified) frame through the still-capturing
+        // source BEFORE removing it, so liteav's per-device cached last frame
+        // is clean. Otherwise quickly re-adding the same deviceId flashes the
+        // previous beauty effect for the first few frames. See
+        // useVideoEffectManager.stopEffectWithCleanFlush for the full rationale.
+        await videoEffectManager.stopEffectWithCleanFlush(cameraId);
+      } catch (effectError) {
+        // Non-fatal: a camera may never have had a beauty plugin attached.
+        console.warn('[LiveScenePanel] stopEffect before remove failed:', effectError, material);
+      }
+      // Drop the cached beauty properties so that re-adding the same deviceId
+      // later starts from a clean state instead of resurrecting the previous
+      // camera's effects (and auto-enabling the corresponding group switches).
+      deleteBeautyProperties(cameraId);
+    }
     await removeMediaSource(material);
   } catch (error) {
     console.error('[LiveScenePanel] removeMediaSource failed:', error, material);
@@ -269,10 +296,18 @@ const handleControlClick = async (control: MaterialControlItem, material: MediaS
   if (props.isMoving || control.disabled) {
     return;
   }
+  // Close the menu synchronously BEFORE awaiting the action. Some actions (e.g.
+  // delete) remove this media source, which unmounts this component; if we
+  // emitted 'closeMenu' after the await, the emit would fire from an unmounted
+  // instance and fail to reset the parent's visibleMenuKey. The stale key then
+  // re-matches when the same source (e.g. re-adding the same camera deviceId)
+  // is added back, causing the dropdown to reappear. Emitting first, while the
+  // component is still mounted, guarantees the parent state is cleared.
+  emits('closeMenu');
   try {
     await control.onClick(material);
-  } finally {
-    emits('closeMenu');
+  } catch (error) {
+    console.error('[LiveScenePanel] material control action failed:', error, control.key, material);
   }
 };
 

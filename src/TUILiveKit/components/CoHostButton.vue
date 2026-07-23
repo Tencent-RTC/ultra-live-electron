@@ -35,10 +35,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   IconCoHost,
-  TOAST_TYPE,
-  TUIToast,
   useUIKit,
 } from '@tencentcloud/uikit-base-component-vue3';
+import { showMessage, MessageToastType } from '../base-component/MessageToast';
 import { TUIBattleCode, TUIConnectionCode } from '@tencentcloud/tuiroom-engine-electron';
 import {
   BattleEvent,
@@ -354,7 +353,7 @@ const handleCoHost = () => {
     const message = !currentLive.value?.liveId
       ? t('Cannot use co-host before live starts')
       : t('Cannot co-host with other hosts while audience co-hosting is active');
-    TUIToast({ type: TOAST_TYPE.ERROR, message });
+    showMessage({ type: MessageToastType.Error, message });
     return;
   }
   if (props.isShowingInChildWindow) {

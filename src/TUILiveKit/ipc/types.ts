@@ -57,6 +57,38 @@ export enum IPCMessageType {
   ADD_MEDIA_SOURCE = 'addMediaSource',
   /** Update existing media source */
   UPDATE_MEDIA_SOURCE = 'updateMediaSource',
+  /**
+   * Main -> Child: a camera media source was removed from the scene. The child
+   * closes the currently-open camera panel only when it is editing that exact
+   * camera, validating against its own live editing-camera id. This lets an
+   * unrelated removal (or the stale id dropped during an in-dialog device
+   * switch) be ignored safely.
+   */
+  CAMERA_REMOVED = 'cameraRemoved',
+  /**
+   * Main -> Child: adding a camera media source failed (e.g. the device is
+   * occupied by another app or its driver is abnormal). The child surfaces an
+   * error toast so the user understands why no preview appeared, while keeping
+   * the camera panel open so a different (working) camera can still be picked.
+   */
+  CAMERA_ADD_FAILED = 'cameraAddFailed',
+  /**
+   * Main -> Child: a camera add / switch operation has finished on the main
+   * side (success OR failure). The child uses this purely to release the
+   * "operation in flight" lock that disables the camera dropdown while the
+   * previous pick is still being applied, preventing rapid out-of-order
+   * switches. Sent from the finally of the add/update handlers.
+   */
+  CAMERA_OP_DONE = 'cameraOpDone',
+
+  // ============== Beauty / Video Effect Related ==============
+  /**
+   * Child -> Main: full snapshot of the camera's beauty effect properties.
+   * The child window's effectStore holds the source-of-truth state and emits
+   * the full property set on every change (slider drag / item pick / reset),
+   * so the main window can apply it to videoEffectManager without merging.
+   */
+  BEAUTY_UPDATE = 'beautyUpdate',
 
   // ============== Device Related ==============
   /** Set current device (camera/mic/speaker) */
@@ -285,8 +317,95 @@ export interface ShowChildPanelPayload<T = Record<string, unknown>> {
   panelType: ChildPanelType;
   /** Optional window size override. If omitted, main process uses panelType defaults */
   windowSize?: { width: number; height: number };
-  /** Initial data for the panel (optional) */
+  /** Initial data for the panel (optional). Typically the edited MediaSource. */
   initialData?: T;
+  /**
+   * Per-panel extra context that is NOT part of the edited media source itself.
+   * Currently used by the camera dialog to carry:
+   *   - usedCameraIds: deviceIds already in the main window's media source list
+   *     so the dropdown can disable already-used cameras.
+   *   - effectConstant: the result of TRTCXmagicFactory.getEffectConstant(custom, history).
+   *     In edit mode the main window passes the camera's existing properties
+   *     so details[i].effValue/isSelected are already merged; the child renders
+   *     it directly without doing its own initValue merge.
+   * Kept generic so future panels can carry their own auxiliary context without
+   * bloating `initialData`'s shape contract.
+   */
+  extra?: Record<string, unknown>;
+}
+
+/**
+ * Payload for IPCMessageType.BEAUTY_UPDATE.
+ * Sent from child window's CameraSettingDialog to the main window every time
+ * the user adjusts a slider, picks an effect option, or hits a reset entry.
+ *
+ * Incremental contract: `properties` is the FULL deduped snapshot the child
+ * considers active (kept for the main-window per-camera cache + camera-switch
+ * migration); `delta` is the INCREMENTAL set to push to the native plugin this
+ * tick (changed/added props + 0-clears for ones that disappeared). When `delta`
+ * is omitted, the main window does a forced FULL apply (startEffect) — used on
+ * first apply / camera switch. An empty `properties` means "clear everything".
+ */
+export interface BeautyUpdatePayload {
+  /** Camera deviceId (== MediaSource.sourceId for camera-typed sources). */
+  cameraId: string;
+  /**
+   * Full set of TRTCXmagicEffectProperty entries currently active for the camera.
+   * Typed loosely as `unknown[]` here to avoid pulling the xmagic plugin types
+   * into the IPC layer; the main and child sides share a typed helper module.
+   */
+  properties: unknown[];
+  /**
+   * Incremental changes since the previous emit, to push to native this tick.
+   * Absent for a forced full apply (the main window then applies `properties`).
+   */
+  delta?: unknown[];
+  /**
+   * Stable identity (labelKey/key) of the currently-selected beautyTemplate
+   * tile, or null/absent when none. The main window persists this per camera so
+   * re-editing can restore the template highlight by identity, instead of
+   * reverse-matching the expanded effValues (which drift once the user tweaks a
+   * mapped intensity slider and would otherwise lose the highlight — and strand
+   * the effect on native — across a dialog reopen).
+   */
+  selectedTemplateKey?: string | null;
+}
+
+/**
+ * Payload for IPCMessageType.CAMERA_REMOVED.
+ * Sent from the main window to the child window when a camera source is removed
+ * from the media source list, so the child can self-close the camera panel if
+ * it is currently editing that exact camera.
+ */
+export interface CameraRemovedPayload {
+  /** deviceId (== MediaSource.sourceId) of the removed camera source. */
+  cameraId: string;
+}
+
+/**
+ * Payload for IPCMessageType.CAMERA_ADD_FAILED.
+ * Sent from the main window to the child window when addMediaSource() rejects
+ * for a camera source, so the child can show an error toast without closing the
+ * camera panel.
+ */
+export interface CameraAddFailedPayload {
+  /** deviceId (== MediaSource.sourceId) of the camera that failed to add. */
+  cameraId: string;
+  /** Localized, user-facing failure message rendered by the child toast. */
+  message: string;
+}
+
+/**
+ * Payload for IPCMessageType.CAMERA_OP_DONE.
+ * Sent from the main window to the child window when a camera add / switch
+ * operation finishes (regardless of success), so the child can release the
+ * camera-dropdown lock that blocks further picks until the previous op settles.
+ */
+export interface CameraOpDonePayload {
+  /** deviceId (== MediaSource.sourceId) of the camera the operation targeted. */
+  cameraId: string;
+  /** Whether the operation succeeded (false when add/switch failed). */
+  ok: boolean;
 }
 
 /**

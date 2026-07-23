@@ -1,7 +1,7 @@
 <template>
   <UIKitProvider theme="dark">
     <div class="tui-livekit-mac">
-      <LiveHeader @logout="handleLogout" />
+      <LiveHeader @logout="handleLogout" :is-showing-in-child-window="true" />
       <div class="live-pusher-main">
         <div class="main-left">
           <div class="main-left-top">
@@ -34,9 +34,9 @@
               v-show="isToolsExpanded"
               class="main-left-bottom-tools"
             >
-              <CoGuestButton />
-              <CoHostButton />
-              <MusicButton />
+              <CoGuestButton :isShowingInChildWindow="true" />
+              <CoHostButton :isShowingInChildWindow="true" />
+              <MusicButton :isShowingInChildWindow="true" />
             </div>
           </div>
         </div>
@@ -71,8 +71,8 @@
                 <SpeakerVolumeSetting />
                 <div class="main-center-bottom-tools">
                   <OrientationSwitch />
-                  <LayoutSwitch />
-                  <SettingButton />
+                  <LayoutSwitch :isShowingInChildWindow="true" />
+                  <SettingButton :isShowingInChildWindow="true" />
                 </div>
               </div>
               <div class="main-center-bottom-right">
@@ -93,7 +93,7 @@
                   v-else
                   color="red"
                   :disabled="loading"
-                  @click="showEndLiveDialog"
+                  @click="showEndLiveConfirmWindow"
                 >
                   <IconLiveLoading
                     v-if="loading"
@@ -137,36 +137,6 @@
           </div>
         </div>
         <LivePusherNotification />
-        <TUIDialog
-          v-model:visible="exitLiveDialogVisible"
-          :title="t('End live')"
-        >
-          {{ endLiveDialogMessage }}
-          <template #footer>
-            <div class="action-buttons">
-              <TUIButton
-                color="gray"
-                @click="exitLiveDialogVisible = false"
-              >
-                {{ t('Cancel') }}
-              </TUIButton>
-              <TUIButton
-                color="red"
-                @click="handleEndLive"
-              >
-                {{ t('End live') }}
-              </TUIButton>
-              <TUIButton
-                v-if="coHostStatus === CoHostStatus.Connected && !currentBattleInfo?.battleId"
-                type="primary"
-                color="red"
-                @click="handleExitConnection"
-              >
-                {{ t('Exit connection') }}
-              </TUIButton>
-            </div>
-          </template>
-        </TUIDialog>
       </div>
     </div>
   </UIKitProvider>
@@ -176,15 +146,13 @@
 import { onMounted, onBeforeUnmount, computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import trtcCloud from '../TUILiveKit/utils/trtcCloud';
+import { releaseMediaResourcesBeforeQuit } from '../TUILiveKit/utils/appQuitCleanup';
 import {
   IconEndLive,
   IconLiveLoading,
   IconLiveStart,
   IconArrowStrokeSelectDown,
   TUIButton,
-  TUIDialog,
-  TUIMessageBox,
-  TUIToast,
   UIKitProvider,
   useUIKit
 } from '@tencentcloud/uikit-base-component-vue3';
@@ -197,7 +165,6 @@ import {
   useCoHostState,
   useBattleState,
   CoHostStatus,
-  LiveScenePanel,
   StreamMixer,
   LiveAudienceList,
   BarrageList,
@@ -209,6 +176,13 @@ import {
 } from 'tuikit-atomicx-vue3-electron';
 import TUIRoomEngine, { TUISeatMode } from '@tencentcloud/tuiroom-engine-electron';
 import { useElectronLogin } from '../TUILiveKit/hooks/useElectronLogin';
+import { releaseBeautyResourcesOnLogout } from '../TUILiveKit/utils/beautyLogoutCleanup';
+// Use the demo-local LiveScenePanel (same source as TUILiveKitWin.vue) so the
+// Mac main window gets the advanced beauty pipeline: it opens the camera child
+// window via ipcBridge.sendToChild(SHOW_CHILD_PANEL) and consumes BEAUTY_UPDATE
+// to drive videoEffectManager. The package version bundled in
+// tuikit-atomicx-vue3-electron is a slim variant without beauty support.
+import LiveScenePanel from '../TUILiveKit/components/LiveScenePanel/index.vue';
 import CoGuestButton from '../TUILiveKit/components/CoGuestButton.vue';
 import CoHostButton from '../TUILiveKit/components/CoHostButton.vue';
 import LayoutSwitch from '../TUILiveKit/components/LayoutSwitch.vue';
@@ -221,6 +195,7 @@ import LiveHeader from '../TUILiveKit/components/LiveHeader/index.vue';
 import LiveSettingButton from '../TUILiveKit/components/LiveSettingButton.vue';
 import LiveURLCopy from '../TUILiveKit/components/LiveURLCopy.vue';
 import LivePusherNotification from '../TUILiveKit/components/LivePusherNotification.vue';
+import { showMessage, MessageToastType } from '../TUILiveKit/base-component/MessageToast';
 import {
   isNetworkOffline,
   isNetworkTimeoutError,
@@ -230,6 +205,13 @@ import { USER_INFO_STORAGE_KEY } from '../TUILiveKit/utils/userInfoStorage';
 import { useSystemAudioLoopback } from '../TUILiveKit/hooks/useSystemAudioLoopback';
 import useRoomEngine from '../TUILiveKit/utils/useRoomEngine';
 import { mapToRoomEngineLanguage } from '../TUILiveKit/utils/common';
+import { TUIButtonAction, TUIButtonActionType } from '../TUILiveKit/types';
+import {
+  ipcBridge,
+  IPCMessageType,
+  ConfirmDialogActionPayload,
+  EndLiveActionValue,
+} from '../TUILiveKit/ipc';
 
 console.log('TRTC SDK version:', trtcCloud.getSDKVersion());
 
@@ -253,9 +235,15 @@ const { currentBattleInfo } = useBattleState();
 const roomEngine = useRoomEngine();
 const isInLive = computed(() => !!currentLive.value?.liveId);
 const loading = ref(false);
-const exitLiveDialogVisible = ref(false);
-const isAppQuitConfirming = ref(false);
 const isToolsExpanded = ref(true);
+// Confirm dialog bookkeeping for the shared confirm BrowserWindow. Mac now
+// reuses the same real confirm window as Win (instead of an in-window
+// TUIDialog / TUIMessageBox) so the confirmation is never occluded by the
+// camera/setting child BrowserWindow.
+const currentAppQuitDialogId = ref('');
+const currentAppQuitNeedsEndLive = ref(false);
+const isAppQuitHandling = ref(false);
+const currentLogoutDialogId = ref('');
 const liveParamsEditForm = ref({
   liveName: '',
   coverUrl: undefined as string | undefined,
@@ -286,25 +274,34 @@ TUIRoomEngine.once('ready', () => {
   }));
 });
 
-const showEndLiveDialog = async () => {
+const showEndLiveConfirmWindow = () => {
   if (loading.value) {
     return;
   }
-  exitLiveDialogVisible.value = true;
-};
 
-// "Exit connection" branch in the end-live confirmation dialog
-const handleExitConnection = async () => {
-  if (coHostStatus.value === CoHostStatus.Disconnected) {
-    exitLiveDialogVisible.value = false;
-    return;
+  const dialogId = `end-live-${Date.now()}`;
+  // Action ordering mirrors the Web LivePusherView dialog footer:
+  //   [Cancel, End live, Exit connection?]
+  // The third action ("Exit connection") only appears when the host is
+  // co-hosting but NOT in PK. During PK no third action is offered: a host
+  // in PK can only end the whole live, not exit the PK alone. This matches
+  // the gating in `endLiveDialogMessage` below so the dialog content and the
+  // visible actions stay consistent.
+  const actions: Array<TUIButtonAction> = [
+    { text: t('Cancel'), value: EndLiveActionValue.Cancel, type: TUIButtonActionType.Normal },
+    { text: t('End live'), value: EndLiveActionValue.EndLive, type: TUIButtonActionType.Dangerous },
+  ];
+  if (!currentBattleInfo.value?.battleId && coHostStatus.value === CoHostStatus.Connected) {
+    actions.push({ text: t('Exit connection'), value: EndLiveActionValue.ExitConnection, type: TUIButtonActionType.Dangerous });
   }
-  exitLiveDialogVisible.value = false;
-  try {
-    await exitHostConnection();
-  } catch (error) {
-    console.error('[TUILiveKitMac] exitHostConnection from end-live dialog failed', error);
-  }
+
+  ipcBridge.sendToConfirm(IPCMessageType.SHOW_CONFIRM_DIALOG, {
+    scene: 'end-live',
+    dialogId,
+    title: t('End live'),
+    content: endLiveDialogMessage.value,
+    actions,
+  });
 };
 
 // Setup useElectronLogin Hook
@@ -314,6 +311,7 @@ const {
   cleanupEventListeners,
   handleLogout: handleElectronLogout,
 } = useElectronLogin({
+  onBeforeLogout: releaseBeautyResourcesOnLogout,
   onLogout: () => {
     router.replace({ name: 'login' });
   },
@@ -322,33 +320,9 @@ const {
   },
 });
 
-// Handle logout with live status check
-const handleLogout = async () => {
-  // When still live streaming, ask the host to confirm first: logging out
-  // will automatically end the ongoing live stream.
-  if (isInLive.value) {
-    TUIMessageBox.confirm({
-      title: t('Logout'),
-      content: t('You are currently live streaming. Logging out will automatically end the live stream. Are you sure you want to log out?'),
-      confirmText: t('Logout'),
-      cancelText: t('Cancel'),
-      // Disable mask click to dismiss, consistent with the app-quit
-      // confirmation: destructive confirmations should only be resolved via
-      // the explicit Confirm / Cancel buttons.
-      modal: false,
-      callback: async (action) => {
-        if (action !== 'confirm') {
-          return;
-        }
-        try {
-          await handleElectronLogout();
-        } catch (error) {
-          redirectToLogin();
-        }
-      },
-    });
-    return;
-  }
+// Perform the actual logout. On failure fall back to the local logout
+// redirect so the user is never stuck on the pusher view.
+const performLogout = async () => {
   try {
     await handleElectronLogout();
   } catch (error) {
@@ -356,7 +330,50 @@ const handleLogout = async () => {
   }
 };
 
+/**
+ * Active logout confirm: shown when the host clicks "Logout" while still
+ * live streaming. Reuses the shared confirm BrowserWindow (same as
+ * end-live / app-quit) so the confirmation is never occluded by the camera /
+ * setting child BrowserWindow.
+ */
+const showLogoutConfirmWindow = () => {
+  if (currentLogoutDialogId.value) {
+    return;
+  }
+  const dialogId = `logout-${Date.now()}`;
+  currentLogoutDialogId.value = dialogId;
+  const actions: Array<TUIButtonAction> = [
+    { text: t('Cancel'), value: 'cancel', type: TUIButtonActionType.Normal },
+    { text: t('Logout'), value: 'logout-confirm', type: TUIButtonActionType.Dangerous },
+  ];
+  ipcBridge.sendToConfirm(IPCMessageType.SHOW_CONFIRM_DIALOG, {
+    scene: 'logout',
+    dialogId,
+    title: t('Logout'),
+    content: t('You are currently live streaming. Logging out will automatically end the live stream. Are you sure you want to log out?'),
+    actions,
+  });
+};
+
+// Handle logout with live status check
+const handleLogout = async () => {
+  // When still live streaming, ask the host to confirm first: logging out
+  // will automatically end the ongoing live stream.
+  if (isInLive.value) {
+    showLogoutConfirmWindow();
+    return;
+  }
+  await performLogout();
+};
+
 function redirectToLogin() {
+  if (currentLogoutDialogId.value) {
+    ipcBridge.sendToConfirm(IPCMessageType.CLOSE_CONFIRM_DIALOG, {
+      scene: 'logout',
+      dialogId: currentLogoutDialogId.value,
+    });
+    currentLogoutDialogId.value = '';
+  }
   window.localStorage.removeItem(USER_INFO_STORAGE_KEY);
   router.replace({ name: 'login' });
 }
@@ -385,13 +402,15 @@ const handleStartLive = async () => {
       return;
     }
     if (!loginUserInfo.value?.userId) {
-      TUIToast.info({
+      showMessage({
+        type: MessageToastType.Info,
         message: t('Please login first'),
       });
       return;
     }
     if (isNetworkOffline()) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return;
@@ -417,7 +436,8 @@ const handleStartLive = async () => {
   } catch (error: any) {
     loading.value = false;
     if (isNetworkTimeoutError(error)) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return;
@@ -434,7 +454,8 @@ const handleStartLive = async () => {
     if (handleErrorWithModal(error)) {
       return;
     }
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Failed to create live'),
     });
   }
@@ -445,21 +466,22 @@ const handleEndLive = async (options: { showErrorToast?: boolean } = {}): Promis
   try {
     if (isNetworkOffline()) {
       if (showErrorToast) {
-        TUIToast.error({
+        showMessage({
+          type: MessageToastType.Error,
           message: t('Network error, please check your connection and try again'),
         });
       }
       return false;
     }
     loading.value = true;
-    exitLiveDialogVisible.value = false;
     await endLive();
     stopSystemAudioLoopbackSafely();
     return true;
   } catch (error: any) {
     console.error('End live error:', error);
     if (showErrorToast && isNetworkTimeoutError(error)) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return false;
@@ -467,73 +489,155 @@ const handleEndLive = async (options: { showErrorToast?: boolean } = {}): Promis
     if (showErrorToast && handleErrorWithModal(error)) {
       return false;
     }
-    exitLiveDialogVisible.value = false;
     return false;
   } finally {
     loading.value = false;
   }
 };
 
-/** Handles app quit request (e.g. Cmd+Q / close main window): always ask confirm before quit. */
-const handleAppRequestQuit = () => {
-  if (isAppQuitConfirming.value) {
+const showAppQuitConfirmWindow = () => {
+  if (isAppQuitHandling.value || currentAppQuitDialogId.value) {
     return;
   }
-  isAppQuitConfirming.value = true;
+
   const shouldEndLiveBeforeQuit = isInLive.value;
-  // Notify the main process that the confirm dialog is about to be shown so
-  // the 5s force-quit timeout (initiateQuitSequence → forceQuitApp) is
-  // cleared. The Win path does this implicitly via the 'showConfirmDialog'
-  // IPC route to the confirm BrowserWindow; on Mac the dialog is rendered
-  // inside the main window (TUIMessageBox), so we have to send the ack
-  // explicitly. Without this the app force-quits while the user is still
-  // looking at the confirmation dialog.
-  window.ipcRenderer?.send('app-quit-confirm-shown');
-  TUIMessageBox.confirm({
+  const dialogId = `app-quit-${Date.now()}`;
+  currentAppQuitDialogId.value = dialogId;
+  currentAppQuitNeedsEndLive.value = shouldEndLiveBeforeQuit;
+
+  const actions: Array<TUIButtonAction> = shouldEndLiveBeforeQuit
+    ? [
+      { text: t('Cancel'), value: 'cancel', type: TUIButtonActionType.Normal },
+      { text: t('End live and quit'), value: 'end-live-and-quit', type: TUIButtonActionType.Dangerous },
+    ]
+    : [
+      { text: t('Cancel'), value: 'cancel', type: TUIButtonActionType.Normal },
+      { text: t('Quit app'), value: 'quit-app', type: TUIButtonActionType.Dangerous },
+    ];
+
+  // The shared confirm BrowserWindow is a real window (modal + parent), so it
+  // is never occluded by the child window. The main process clears the
+  // force-quit timeout inside the 'showConfirmDialog' route, so the previous
+  // Mac-only 'app-quit-confirm-shown' ack is no longer needed.
+  ipcBridge.sendToConfirm(IPCMessageType.SHOW_CONFIRM_DIALOG, {
+    scene: 'app-quit',
+    dialogId,
     title: shouldEndLiveBeforeQuit ? t('End live and quit?') : t('Quit app?'),
     content: shouldEndLiveBeforeQuit
       ? t('You are currently live streaming. Do you want to end the live and quit the app?')
       : t('Do you want to quit the app? Scene source settings will not be saved.'),
-    confirmText: shouldEndLiveBeforeQuit ? t('End live and quit') : t('Quit app'),
-    cancelText: t('Cancel'),
-    // Disable mask click to dismiss. Reason: when the user clicks outside
-    // the dialog, TUIMessageBox closes the dialog DOM but does NOT invoke
-    // the callback (see base/MessageBox/index.vue handleMaskClick). That
-    // leaves `isAppQuitConfirming=true` forever, so the next click on the
-    // window close (X) button is swallowed by the early-return guard above
-    // and the user sees no confirmation dialog at all. Disabling mask
-    // dismiss forces all close paths (X icon / Confirm / Cancel buttons)
-    // through handleClose → callback, keeping renderer + main process
-    // states in sync. This also matches macOS NSAlert / Windows MessageBox
-    // conventions: destructive confirmations should not be dismissible by
-    // clicking outside.
-    modal: false,
-    callback: async (action) => {
-      try {
-        if (action !== 'confirm') {
-          window.ipcRenderer?.send('app-quit-cancel');
-          return;
+    actions,
+  });
+};
+
+/**
+ * Dispatch confirm dialog actions coming back from the shared confirm
+ * BrowserWindow. Mirrors `TUILiveKitWin.onConfirmDialogAction`.
+ */
+const onConfirmDialogAction = async (payload: ConfirmDialogActionPayload) => {
+  if (!payload?.scene) {
+    return;
+  }
+
+  if (payload.scene === 'logout') {
+    const dialogId = payload.dialogId || currentLogoutDialogId.value || undefined;
+    ipcBridge.sendToConfirm(IPCMessageType.CLOSE_CONFIRM_DIALOG, {
+      scene: payload.scene,
+      dialogId,
+    });
+    currentLogoutDialogId.value = '';
+    // Only the explicit "Logout" action proceeds; closing / cancel is a no-op.
+    if (payload.action === 'logout-confirm') {
+      await performLogout();
+    }
+    return;
+  }
+
+  if (payload.scene === 'end-live') {
+    ipcBridge.sendToConfirm(IPCMessageType.CLOSE_CONFIRM_DIALOG, {
+      scene: payload.scene,
+      dialogId: payload.dialogId,
+    });
+    // Route the contextual third button back to the appropriate SDK call.
+    // Mirrors `LivePusherView.handleExitConnection` on the Web side. Ending
+    // the PK alone is no longer offered, so there is no `EndBattle` action.
+    if (payload.action === EndLiveActionValue.ExitConnection) {
+      if (coHostStatus.value === CoHostStatus.Connected) {
+        try {
+          await exitHostConnection();
+        } catch (error) {
+          console.error('[TUILiveKitMac] exitHostConnection from end-live dialog failed', error);
         }
-        if (!shouldEndLiveBeforeQuit) {
-          window.ipcRenderer?.send('app-quit-confirmed');
-          return;
-        }
+      }
+      return;
+    }
+    if (payload.action !== EndLiveActionValue.EndLive) {
+      return;
+    }
+    if (!loading.value) {
+      await handleEndLive();
+    }
+    return;
+  }
+
+  if (payload.scene === 'app-quit') {
+    if (isAppQuitHandling.value) {
+      // First handler is still processing; it will resolve quit/cancel.
+      return;
+    }
+    if (payload.dialogId && currentAppQuitDialogId.value && payload.dialogId !== currentAppQuitDialogId.value) {
+      return;
+    }
+
+    const dialogId = payload.dialogId || currentAppQuitDialogId.value || undefined;
+    ipcBridge.sendToConfirm(IPCMessageType.CLOSE_CONFIRM_DIALOG, {
+      scene: payload.scene,
+      dialogId,
+    });
+
+    const shouldEndLiveBeforeQuit = currentAppQuitNeedsEndLive.value;
+    const confirmAction = shouldEndLiveBeforeQuit ? 'end-live-and-quit' : 'quit-app';
+    if (payload.action !== confirmAction) {
+      currentAppQuitDialogId.value = '';
+      currentAppQuitNeedsEndLive.value = false;
+      window.ipcRenderer?.send('app-quit-cancel');
+      return;
+    }
+
+    isAppQuitHandling.value = true;
+    try {
+      let canQuit = true;
+      if (shouldEndLiveBeforeQuit) {
         const endLiveSuccess = loading.value
           ? !isInLive.value
           : await handleEndLive({ showErrorToast: false });
-        if (!endLiveSuccess || isInLive.value) {
-          TUIToast.error({
-            message: t('Failed to end live, please try again later'),
-          });
-          window.ipcRenderer?.send('app-quit-cancel');
-        } else {
-          window.ipcRenderer?.send('app-quit-confirmed');
-        }
-      } finally {
-        isAppQuitConfirming.value = false;
+        canQuit = endLiveSuccess && !isInLive.value;
       }
-    },
-  });
+      if (!canQuit) {
+        showMessage({
+          type: MessageToastType.Error,
+          message: t('Failed to end live, please try again later'),
+        });
+        window.ipcRenderer?.send('app-quit-cancel');
+      } else {
+        // Release the camera/mic held by the native (isIPCMode) TRTC engine
+        // BEFORE signalling quit. The main process hard-exits right after
+        // receiving app-quit-confirmed, so without this the camera LED would
+        // linger for a few seconds. See releaseMediaResourcesBeforeQuit.
+        await releaseMediaResourcesBeforeQuit();
+        window.ipcRenderer?.send('app-quit-confirmed');
+      }
+    } finally {
+      currentAppQuitDialogId.value = '';
+      currentAppQuitNeedsEndLive.value = false;
+      isAppQuitHandling.value = false;
+    }
+  }
+};
+
+/** Handles app quit request (e.g. Cmd+Q / close main window): always ask confirm before quit. */
+const handleAppRequestQuit = () => {
+  showAppQuitConfirmWindow();
 };
 
 const handleLiveEnded = (eventInfo: LiveListEventInfo) => {
@@ -541,14 +645,16 @@ const handleLiveEnded = (eventInfo: LiveListEventInfo) => {
     return;
   }
   if (eventInfo.reason === LiveEndedReason.endedByServer) {
-    TUIToast.warning({
+    showMessage({
+      type: MessageToastType.Warning,
       message: t('Stream closed due to content violation'),
       duration: 5000,
     });
     return;
   }
   // Fallback for unknown ending reasons
-  TUIToast.warning({
+  showMessage({
+    type: MessageToastType.Warning,
     message: t('The live room has been closed'),
     duration: 5000,
   });
@@ -560,6 +666,7 @@ onMounted(async () => {
 
   // Setup event listeners
   setupEventListeners();
+  ipcBridge.on(IPCMessageType.CONFIRM_DIALOG_ACTION, onConfirmDialogAction);
   if (window.ipcRenderer) {
     window.ipcRenderer.on('app-request-quit', handleAppRequestQuit);
   }
@@ -592,7 +699,8 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
     coverUrl: (form.coverUrl || '').trim(),
   };
   if (isSvgCoverUrl(updatedForm.coverUrl)) {
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Unsupported image format'),
     });
     return;
@@ -603,7 +711,8 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
   }
 
   if (isNetworkOffline()) {
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Network error, please check your connection and try again'),
     });
     return;
@@ -627,12 +736,14 @@ const handleLiveSettingConfirm = async (form: { liveName: string; coverUrl?: str
     liveParamsEditForm.value = updatedForm;
   } catch (error: unknown) {
     if (isNetworkTimeoutError(error)) {
-      TUIToast.error({
+      showMessage({
+        type: MessageToastType.Error,
         message: t('Network error, please check your connection and try again'),
       });
       return;
     }
-    TUIToast.error({
+    showMessage({
+      type: MessageToastType.Error,
       message: t('Save failed'),
     });
   } finally {
@@ -644,6 +755,23 @@ onBeforeUnmount(() => {
   unsubscribeEvent(LiveListEvent.onLiveEnded, handleLiveEnded);
   stopSystemAudioLoopbackSafely();
   cleanupEventListeners();
+  ipcBridge.off(IPCMessageType.CONFIRM_DIALOG_ACTION, onConfirmDialogAction);
+  // Close any lingering confirm dialogs so the shared confirm window does not
+  // stay visible after this view is torn down.
+  if (currentLogoutDialogId.value) {
+    ipcBridge.sendToConfirm(IPCMessageType.CLOSE_CONFIRM_DIALOG, {
+      scene: 'logout',
+      dialogId: currentLogoutDialogId.value,
+    });
+    currentLogoutDialogId.value = '';
+  }
+  if (currentAppQuitDialogId.value) {
+    ipcBridge.sendToConfirm(IPCMessageType.CLOSE_CONFIRM_DIALOG, {
+      scene: 'app-quit',
+      dialogId: currentAppQuitDialogId.value,
+    });
+    currentAppQuitDialogId.value = '';
+  }
   if (window.ipcRenderer) {
     window.ipcRenderer.off('app-request-quit', handleAppRequestQuit);
   }
@@ -965,10 +1093,6 @@ onBeforeUnmount(() => {
   .card-title {
     @include text-size-16;
     @include dividing-line;
-  }
-  .action-buttons {
-    display: flex;
-    gap: 10px;
   }
 }
 </style>

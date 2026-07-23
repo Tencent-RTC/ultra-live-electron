@@ -1,6 +1,6 @@
 import TRTCCloud, { TRTCVideoPixelFormat, TRTCPluginType, TRTCPluginInfo, TRTCVideoProcessPluginOptions, } from 'trtc-electron-sdk';
 import trtcCloud from './trtcCloud';
-import { TRTCXmagicFactory, XmagicLicense, TRTCXmagicEffectProperty } from './beauty';
+import { TRTCXmagicFactory, XmagicLicense, TRTCXmagicEffectProperty, hasEffectiveBeautyProperties } from './beauty';
 import logger from '../utils/logger';
 
 export enum TUIVideoEffectEvents {
@@ -143,22 +143,35 @@ class TUIVideoEffectManager {
 
     let plugin = this.beautyPluginMap.get(cameraId) || null;
     if (!plugin) {
+      // Guard: a set with NO effective beauty means "no beauty". Creating a
+      // plugin here would only add an effect-less native plugin (extra native
+      // resource + a redundant frame-processing hop). We must check for
+      // effective beauty rather than array length: on a camera switch the
+      // snapshot is non-empty even with zero beauty because getProperties()
+      // emits explicit { effValue: 0, resPath: '' } clears for every unselected
+      // point-makeup part. Those clears only matter for resetting an EXISTING
+      // plugin; with no plugin there is nothing to reset, so skip creation and
+      // rely on the caller-side cache — a later effective apply creates it.
+      if (!hasEffectiveBeautyProperties(beautyConfig.beautyProperties)) {
+        logger.debug(`${this.logPrefix}startEffect skipped: no effective beauty and no existing plugin for camera: ${cameraId}`);
+        return;
+      }
       plugin = this.addPlugin(cameraId);
       if (!plugin) {
         logger.error(`${this.logPrefix}startEffect failed. Cannot create effect plugin.`);
         return;
       }
     }
-    setTimeout(()=> {
-      // Get from Map to avoid the plugin has been removed
-      let pluginAdded = this.beautyPluginMap.get(cameraId) || null;
-      if (pluginAdded) {
-        pluginAdded.setParameter(JSON.stringify({
-          beautySetting: beautyConfig.beautyProperties
-        }));
-        pluginAdded = null;
-      }
-    }, 3000); // Wait 3 seconds to make sure C++ plugin created
+    // Apply immediately. The native plugin caches beautySetting received before
+    // its xmagic instance finishes creating (CacheOrUpdateBeautySetting →
+    // HandleCachedBeautySetting on CreateXmagic), so no client-side delay is
+    // needed. A previous 3s setTimeout here captured a (possibly stale) full
+    // snapshot and, once incremental updateEffect() calls were introduced, could
+    // fire late and overwrite a newer delta — applying synchronously keeps the
+    // native apply order strictly FIFO and correct.
+    plugin.setParameter(JSON.stringify({
+      beautySetting: beautyConfig.beautyProperties,
+    }));
   }
 
   stopEffect(cameraId: string) {
@@ -169,11 +182,49 @@ class TUIVideoEffectManager {
         videoEffectPluginManager.removeVideoPlugin(plugin.deviceId, plugin.id);
         this.beautyPluginMap.delete(cameraId);
       } else {
-        logger.error(`${this.logPrefix}stopEffect failed. No effect plugin for camera:`, cameraId);
+        logger.log(`${this.logPrefix}stopEffect failed. No effect plugin for camera:`, cameraId);
       }
     } else {
       logger.error(`${this.logPrefix} video effect plugin manager not inited`);
     }
+  }
+
+  /**
+   * Gracefully tear down the effect for a camera that is ABOUT TO BE REMOVED.
+   *
+   * Root cause this addresses: liteav's capture/mixer keeps the LAST
+   * post-plugin frame for a cameraDeviceId (used for fast device reuse). That
+   * cached frame is beautified. When the same deviceId is quickly re-added,
+   * liteav flushes this stale cached frame out for the first few frames before
+   * the fresh capture arrives, so preview/publish briefly shows the PREVIOUS
+   * beauty effect. liteav itself cannot be modified, so instead of clearing
+   * that cache we make it clean: disable the effect (native ProcessVideoFrame
+   * then drops this plugin and copies the raw frame) WHILE the camera is still
+   * capturing, wait a few frames so a clean frame reaches the mixer, then
+   * remove the plugin.
+   *
+   * IMPORTANT: callers MUST `await` this BEFORE stopping/removing the camera
+   * source (e.g. removeMediaSource). Once the source is gone no clean frame can
+   * refresh liteav's per-device cache and the flush would be a no-op.
+   *
+   * @param cameraId Camera device id (== plugin key).
+   * @param flushMs  Time to keep the camera capturing clean frames. 150ms
+   *                 comfortably covers the async native `setEnabled` dispatch
+   *                 plus several frames at 15~30fps.
+   */
+  async stopEffectWithCleanFlush(cameraId: string, flushMs = 150): Promise<void> {
+    logger.debug(`${this.logPrefix}stopEffectWithCleanFlush ${cameraId}`);
+    const plugin = this.beautyPluginMap.get(cameraId);
+    if (!plugin) {
+      logger.debug(`${this.logPrefix}stopEffectWithCleanFlush: no plugin for camera:`, cameraId);
+      return;
+    }
+    // Switch the still-running source to passthrough so it emits clean frames.
+    plugin.enable(false);
+    // Let a couple of clean frames flow to the mixer and refresh liteav's
+    // per-device cached last frame before the source is stopped.
+    await new Promise<void>((resolve) => setTimeout(resolve, flushMs));
+    this.stopEffect(cameraId);
   }
 
   muteEffect(cameraId: string, mute: boolean) {
@@ -198,6 +249,11 @@ class TUIVideoEffectManager {
     }
   }
 
+  /** Whether a beauty plugin has already been created for this camera. */
+  hasPlugin(cameraId: string): boolean {
+    return this.beautyPluginMap.has(cameraId);
+  }
+
   clear() {
     logger.debug(`${this.logPrefix}clear`);
     this.beautyPluginMap.forEach((plugin) => {
@@ -208,6 +264,31 @@ class TUIVideoEffectManager {
       }
     });
     this.beautyPluginMap.clear();
+  }
+
+  /**
+   * Reset the manager so the NEXT startEffect re-runs init().
+   *
+   * Root cause this addresses: init() calls
+   * `setPluginParams(TRTCPluginTypeVideoProcess, { pixelFormat: I420 })`, the
+   * GLOBAL liteav pipeline switch that makes captured frames flow into the
+   * video-process plugin. It is guarded by `this.inited` and, since both this
+   * manager and trtcCloud are module-level singletons, only ever runs once per
+   * app lifetime. On logout liteav exits the room / stops the mixer and drops
+   * that global pipeline config, but `inited` stays true — so after re-login
+   * startEffect skips init(), setPluginParams is never re-sent, the plugin is
+   * created but no frame is routed to it (no `onProcessVideoFrame` /
+   * `CreateXmagic`) and beauty silently fails.
+   *
+   * Clearing leftover plugins and flipping `inited` back to false forces the
+   * next startEffect to re-apply setPluginParams / setCallback, restoring the
+   * pipeline for the new session. setPluginParams is idempotent, so re-running
+   * init() has no side effect beyond one extra global config write.
+   */
+  resetForRelogin() {
+    logger.debug(`${this.logPrefix}resetForRelogin`);
+    this.clear();
+    this.inited = false;
   }
 
   private addPlugin(cameraId: string): TUIVideoEffectPlugin | null {
